@@ -505,7 +505,7 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "compact-idle-threads",
     title: "Compact idle threads",
-    to: "/settings/providers",
+    to: "/settings/threads",
     scope: "environment-defaults",
     searchTerms: ["claude context compaction idle cache tokens usage summary resume"],
   },
@@ -1220,6 +1220,7 @@ const RENAMED_SETTINGS_PATHS: Readonly<Record<string, SettingsPath>> = {
 const SPLIT_SETTINGS_PATHS: ReadonlySet<string> = new Set([
   "/settings/general",
   "/settings/labs",
+  "/settings/providers",
   "/settings/appearance",
   "/settings/source-control",
   "/settings/connections",

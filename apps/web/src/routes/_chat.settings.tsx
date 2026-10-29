@@ -1,9 +1,7 @@
 import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { Outlet, createFileRoute, redirect, useLocation } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { RotateCcwIcon } from "lucide-react";
-import { Button } from "../components/ui/button";
-import { useSettingsRestore } from "../components/settings/SettingsPanels";
+import { SettingsRestoredContext } from "../components/settings/SettingsPanels";
 
 import { AppRouteModal } from "../components/AppRouteModal";
 import { SettingsPageHeader } from "../components/settings/SettingsPageHeader";
@@ -26,21 +24,6 @@ import {
   isSettingsSearchScopeAvailable,
   movedSettingsPath,
 } from "../components/settings/settingsSearch";
-
-function RestoreDeviceDefaultsButton({ onRestored }: { onRestored: () => void }) {
-  const { changedSettingLabels, restoreDefaults } = useSettingsRestore(onRestored);
-  return (
-    <Button
-      size="sm"
-      variant="ghost"
-      disabled={changedSettingLabels.length === 0}
-      onClick={() => void restoreDefaults()}
-    >
-      <RotateCcwIcon />
-      <span className="max-sm:sr-only">Restore defaults</span>
-    </Button>
-  );
-}
 
 function SettingsScopeBoundary({ pathname, children }: { pathname: string; children: ReactNode }) {
   const { scope, connectedEnvironments } = useSettingsScope();
@@ -128,20 +111,13 @@ function SettingsContentLayout() {
           {...contentArea}
           className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-card md:rounded-2xl md:shadow-card"
         >
-          <SettingsPageHeader
-            pathname={location.pathname}
-            actions={
-              location.pathname === "/settings/general" ? (
-                <RestoreDeviceDefaultsButton
-                  onRestored={() => setRestoreSignal((value) => value + 1)}
-                />
-              ) : null
-            }
-          />
+          <SettingsPageHeader pathname={location.pathname} />
           <div key={`${contentScopeKey}:${restoreSignal}`} className="min-h-0 flex flex-1 flex-col">
-            <SettingsScopeBoundary pathname={location.pathname}>
-              <Outlet />
-            </SettingsScopeBoundary>
+            <SettingsRestoredContext value={() => setRestoreSignal((value) => value + 1)}>
+              <SettingsScopeBoundary pathname={location.pathname}>
+                <Outlet />
+              </SettingsScopeBoundary>
+            </SettingsRestoredContext>
           </div>
         </div>
       </div>

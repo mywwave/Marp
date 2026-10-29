@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeftIcon } from "lucide-react";
-import type { ReactNode } from "react";
 
 import { AppRouteModalClose } from "../AppRouteModal";
 import { SettingsStorageBadge } from "./SettingsScopeSentence";
@@ -25,13 +24,7 @@ function isSettingsPath(pathname: string): pathname is SettingsPath {
   return pathname in SETTINGS_SECTION_LABELS;
 }
 
-export function SettingsPageHeader({
-  pathname,
-  actions,
-}: {
-  pathname: string;
-  actions?: ReactNode;
-}) {
+export function SettingsPageHeader({ pathname }: { pathname: string }) {
   const normalized = pathname.replace(/\/+$/, "") || "/";
   const detail = SETTINGS_DETAIL_PAGES[normalized];
   const parent: SettingsPath | null =
@@ -62,7 +55,6 @@ export function SettingsPageHeader({
       </div>
       <div className="flex min-w-0 shrink-0 items-center gap-2 pt-0.5">
         <SettingsStorageBadge />
-        {actions}
         <AppRouteModalClose />
       </div>
     </header>

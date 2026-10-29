@@ -1,8 +1,8 @@
 import { NotificationSettings } from "./NotificationSettings";
 import { PRIVACY_POLICY_URL } from "../../legalLinks";
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, RotateCcwIcon } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import {
   type DesktopUpdateChannel,
   IDLE_COMPACTION_MODES,
@@ -372,7 +372,38 @@ function AboutVersionSection() {
   );
 }
 
-export function useSettingsRestore(onRestored?: () => void) {
+/** Remounts settings content after a restore so local drafts drop their stale values. */
+export const SettingsRestoredContext = createContext<() => void>(() => {});
+
+function RestoreDefaultsSection() {
+  const onRestored = useContext(SettingsRestoredContext);
+  const { changedSettingLabels, restoreDefaults } = useSettingsRestore(onRestored);
+  return (
+    <SettingsSection id="restore-defaults" title="Reset">
+      <SettingsRow
+        title="Restore defaults"
+        description={
+          changedSettingLabels.length === 0
+            ? "Nothing to restore. Every setting here is at its default."
+            : `Resets ${changedSettingLabels.length} changed ${changedSettingLabels.length === 1 ? "setting" : "settings"}. A few of them live on your machines, not only this device; the next step lists them all.`
+        }
+        control={
+          <Button
+            size="sm"
+            variant="destructive-outline"
+            disabled={changedSettingLabels.length === 0}
+            onClick={() => void restoreDefaults()}
+          >
+            <RotateCcwIcon />
+            Restore defaults…
+          </Button>
+        }
+      />
+    </SettingsSection>
+  );
+}
+
+function useSettingsRestore(onRestored?: () => void) {
   const {
     theme,
     setTheme,
@@ -1019,6 +1050,7 @@ export function GeneralSettingsPanel() {
           }
         />
       </SettingsSection>
+      <RestoreDefaultsSection />
     </SettingsPageContainer>
   );
 }
@@ -1408,7 +1440,7 @@ export function DiffsSettingsSections() {
 }
 
 /** The Providers panel can render without a settings scope, as its tests do; this row needs one. */
-export function CompactIdleThreadsRow() {
+function CompactIdleThreadsRow() {
   return useOptionalSettingsScope() === null ? null : <ScopedCompactIdleThreadsRow />;
 }
 
@@ -1572,6 +1604,9 @@ export function ThreadsSettingsPanel() {
         </SettingsSection>
       ) : null}
 
+      <SettingsSection id="idle-threads" title="Idle threads">
+        <CompactIdleThreadsRow />
+      </SettingsSection>
       <SettingsSection id="usage-limits" title="Usage limits">
         <SettingsRow
           serverScoped

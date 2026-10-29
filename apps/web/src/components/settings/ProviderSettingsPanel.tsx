@@ -99,7 +99,6 @@ import { readCodexSetupMode } from "./CodexSetupSection.logic";
 import { providerClients } from "./providerDriverMeta";
 import { confirmDestructiveAction } from "~/confirmDialog";
 import { searchableSetting } from "./settingsSearch";
-import { CompactIdleThreadsRow } from "./SettingsPanels";
 import {
   backgroundActivityOverrideSettings,
   buildProviderInstanceUpdatePatch,
@@ -379,7 +378,6 @@ function providerPaneForSearchTarget(targetId: string | null): ProviderPane | nu
     case searchableSetting("cursor-keychain-usage").id:
       return "usage";
     case searchableSetting("provider-health-check-interval").id:
-    case searchableSetting("compact-idle-threads").id:
       return "health";
     default:
       return null;
@@ -1002,7 +1000,6 @@ export function EnvironmentProviderSettings({
                   </div>
                 }
               />
-              <CompactIdleThreadsRow />
             </SettingsSection>
           ) : selectedRow ? (
             renderProviderInstance(selectedRow, "editor")
