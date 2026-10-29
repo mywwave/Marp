@@ -83,12 +83,27 @@
         width: 12px;
         height: 12px;
       }
-      .thr.sel {
-        background: var(--accent-soft);
+      /* Selection is quiet: a neutral fill and a check where the status dot was. */
+      .thr.sel,
+      .thr.sel:hover {
+        background: var(--surface-3);
         color: var(--ink);
       }
-      .thr.sel:hover {
-        background: var(--accent-soft);
+      .sel-check {
+        width: 16px;
+        height: 16px;
+        flex: none;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--accent-ink);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sel-check .i {
+        width: 10px;
+        height: 10px;
+        stroke-width: 3;
       }
       .thr .trm {
         color: var(--ink-4);
@@ -113,34 +128,52 @@
         gap: 3px;
         align-items: center;
       }
-      .drag-ghost {
+      /* The dragged row floats off the list, so it never reads as the current thread. */
+      .drag-ghost,
+      .drag-ghost:hover {
         box-shadow: var(--shadow-pop);
         background: var(--surface);
-        transform: rotate(-1deg);
+        opacity: 0.92;
+        translate: 10px -2px;
+        cursor: grabbing;
       }
+      /* Insertion point starts where row text starts, so it reads as "between these titles". */
       .drop-line {
+        position: relative;
         height: 2px;
         border-radius: 2px;
         background: var(--accent);
-        margin: 1px 8px;
+        margin: 0 var(--space-12) 0 36px;
       }
+      .drop-line::before {
+        content: "";
+        position: absolute;
+        left: -6px;
+        top: -3px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 2px var(--accent);
+        background: var(--bg);
+      }
+      /* Bulk actions dock above the footer as one card: count + icon actions, always fits the width. */
       .multi-bar {
         display: flex;
         align-items: center;
-        gap: var(--space-8);
-        padding: 6px 6px 6px 10px;
+        gap: 2px;
+        height: var(--row-md);
+        padding: 0 var(--space-4) 0 var(--space-12);
         border-radius: var(--radius-md);
-        background: var(--inverse);
-        color: var(--inverse-ink);
-        font: var(--text-caption);
-        font-weight: 500;
+        background: var(--surface);
+        box-shadow: var(--shadow-pop);
+        margin-bottom: var(--space-8);
       }
-      .multi-bar .btn {
-        height: 24px;
-        padding: 0 8px;
-        font-size: 12px;
-        background: rgba(127, 127, 127, 0.22);
-        color: inherit;
+      .multi-bar .count {
+        flex: 1;
+        min-width: 0;
+        color: var(--ink);
+        font-weight: 500;
+        white-space: nowrap;
       }
       .rail {
         width: 56px;
@@ -518,7 +551,7 @@
             ? `<span class="sdot working">${I("loader", "i-14 spin")}</span>`
             : `<span class="sdot ${s}"></span>`;
         const row = (t, o = {}) =>
-          `<button class="thr${o.cur ? " current" : ""}${o.unread ? " unread" : ""}${o.sub ? " two" : ""}${o.sel ? " sel" : ""}${o.dim ? " dim" : ""}${o.cls ? " " + o.cls : ""}">${dot(o.s || "idle")}<span class="t">${t}${o.sub ? `<span class="sub">${o.sub}</span>` : ""}</span>${o.pin ? I("pin", "i-14 pin") : ""}${o.term ? I("terminal", "trm") : ""}${o.pr ? `<span class="pr">${I("git-pull-request")}#${o.pr}</span>` : ""}${o.when ? `<span class="when">${o.when}</span>` : ""}<span class="more" data-pop="pop-row-menu" data-pop-align="end" aria-label="Thread actions">${I("more", "i-14")}</span></button>`;
+          `<button class="thr${o.cur ? " current" : ""}${o.unread ? " unread" : ""}${o.sub ? " two" : ""}${o.sel ? " sel" : ""}${o.dim ? " dim" : ""}${o.cls ? " " + o.cls : ""}">${o.sel ? `<span class="sel-check">${I("check")}</span>` : dot(o.s || "idle")}<span class="t">${t}${o.sub ? `<span class="sub">${o.sub}</span>` : ""}</span>${o.pin ? I("pin", "i-14 pin") : ""}${o.term ? I("terminal", "trm") : ""}${o.pr ? `<span class="pr">${I("git-pull-request")}#${o.pr}</span>` : ""}${o.when ? `<span class="when">${o.when}</span>` : ""}<span class="more" data-pop="pop-row-menu" data-pop-align="end" aria-label="Thread actions">${I("more", "i-14")}</span></button>`;
         const proj = (m, name, o = {}) =>
           `<div class="proj"><span class="mono-mark">${m}</span>${name}${o.conn ? `<span class="conn ${o.conn}" style="margin-left:6px"></span>` : ""}<span class="acts"><button aria-label="New thread in ${name}" data-tip="New thread">${I("plus", "i-14")}</button><button aria-label="Project actions">${I("more", "i-14")}</button></span></div>`;
         const header =
@@ -646,12 +679,12 @@
           "multi",
           app(
             "multi",
-            `${header()}<div class="side-scroll"><div class="multi-bar">3 selected<span class="grow"></span><button class="btn">Settle</button><button class="btn">Snooze</button><button class="btn">Archive</button><button class="btn" aria-label="Clear selection">${I("x", "i-14")}</button></div>
-    <div class="sb-sec">Projects</div>${proj("M", "Modelion")}${row("Refactor session refresh", { s: "working", cur: true, when: "2m" })}${row("Fix flaky checkout e2e test", { s: "done", sel: true, when: "12m" })}${row("Migrate billing to Stripe v2", { sel: true, pin: true })}${row("Dark mode for marketing site", { sel: true, when: "3h" })}
-    <div class="drop-line"></div>${row("Add rate limiting to /api/upload", { s: "working", when: "6m", cls: "drag-ghost" })}</div>${foot()}`,
+            `${header()}<div class="side-scroll"><div class="sb-sec">Projects</div>${proj("M", "Modelion")}${row("Refactor session refresh", { s: "working", cur: true, when: "2m" })}${row("Fix flaky checkout e2e test", { s: "done", sel: true, when: "12m" })}${row("Migrate billing to Stripe v2", { sel: true, pin: true })}${row("Dark mode for marketing site", { sel: true, when: "3h" })}
+    ${row("Translate onboarding emails", { when: "1h" })}<div class="drop-line"></div>${row("Add rate limiting to /api/upload", { s: "working", when: "6m", cls: "drag-ghost" })}${row("Q4 roadmap notes", { when: "Oct 20" })}</div>
+    <div class="multi-bar" role="toolbar" aria-label="3 threads selected"><span class="count">3 selected</span><button class="btn ghost icon sm" aria-label="Settle" data-tip="Settle" data-tip-kbd="⌘ ⇧ S">${I("check")}</button><button class="btn ghost icon sm" aria-label="Snooze" data-tip="Snooze">${I("snooze")}</button><button class="btn ghost icon sm" aria-label="Archive" data-tip="Archive">${I("archive")}</button><button class="btn ghost icon sm" aria-label="More actions" data-tip="More">${I("more")}</button><button class="btn ghost icon sm" aria-label="Clear selection" data-tip="Clear selection" data-tip-kbd="Esc">${I("x")}</button></div>${foot()}`,
           ) +
             doc(
-              "⌘/Ctrl-клик и Shift-клик выделяют несколько; появляется тёмная панель действий вверху списка (была только в контекстном меню). Перетаскивание: в Pinned, в полку, в другой порядок, в композер как контекст.",
+              "⌘/Ctrl-клик и Shift-клик выделяют несколько. Выделенная строка — нейтральная подложка и галочка вместо точки статуса. Над подвалом появляется карточка «3 selected» с иконками Settle, Snooze, Archive, «⋯» и сбросом (Esc); раньше массовые действия были только в контекстном меню. Перетаскивание: тонкая линия вставки от начала текста, строка-«призрак» без поворота. Перетаскивание: в Pinned, в полку, в другой порядок, в композер как контекст.",
             ),
         ]);
 
