@@ -4,6 +4,8 @@
 
   const DOC_PAGES = [
     ["reference.html", "Design system"],
+    ["sidebar.html", "Sidebar"],
+    ["thread.html", "Thread"],
     ["settings.html", "Settings"],
   ];
 
