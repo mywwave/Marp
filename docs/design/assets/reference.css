@@ -38,8 +38,13 @@
 
   --control-h: 36px;
   --control-h-sm: 28px;
-  --row-h: 32px;
-  --table-row-h: 40px;
+  /* Row scale: 28 compact in content, 32 one-line nav and menus, 44 two-line and touch, 56 label + hint + control. */
+  --row-xs: 28px;
+  --row-sm: 32px;
+  --row-md: 44px;
+  --row-lg: 56px;
+  --row-h: var(--row-sm);
+  --table-row-h: var(--row-md);
   --table-head-h: 32px;
   --sidebar-w: 272px;
   --read-w: 760px;
@@ -1930,7 +1935,7 @@ html.frame .frame {
   display: none;
 }
 .show-more {
-  height: 28px;
+  height: var(--row-xs);
   padding: 0 var(--space-8) 0 32px;
   color: var(--ink-3);
   font: var(--text-caption);
@@ -2158,7 +2163,7 @@ html.frame .frame {
 }
 .msg-acts button {
   width: 28px;
-  height: 28px;
+  height: var(--row-xs);
   border-radius: 50%;
   color: var(--ink-3);
   display: inline-flex;
@@ -2275,7 +2280,7 @@ html.frame .frame {
   display: flex;
   align-items: center;
   gap: var(--space-8);
-  min-height: 28px;
+  min-height: var(--row-xs);
   padding: 0 var(--space-8);
   margin: 0 calc(-1 * var(--space-8));
   border-radius: var(--radius-sm);
@@ -2523,7 +2528,7 @@ button.step:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
+  height: var(--row-xs);
   padding: 0 var(--space-8);
   border-radius: var(--radius-sm);
   font: var(--text-code-sm);
@@ -2701,7 +2706,7 @@ button.step:hover {
   overflow: auto;
 }
 .pal-list .opt {
-  height: 36px;
+  height: var(--row-sm);
 }
 .pal-foot {
   display: flex;
@@ -2787,7 +2792,7 @@ button.step:hover {
   display: flex;
   align-items: center;
   gap: var(--space-16);
-  min-height: 52px;
+  min-height: var(--row-lg);
   padding: var(--space-12) var(--space-16);
 }
 .set-row + .set-row {

@@ -15,7 +15,7 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        height: 28px;
+        height: var(--row-xs);
         padding: 0 var(--space-8);
         margin-top: var(--space-12);
         color: var(--ink-3);
@@ -66,9 +66,7 @@
         text-overflow: ellipsis;
       }
       .thr.two {
-        height: 44px;
-        align-items: flex-start;
-        padding-top: 6px;
+        height: var(--row-md);
       }
       .thr.two .t {
         line-height: 18px;
@@ -216,7 +214,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        height: 32px;
+        height: var(--row-sm);
         padding: 0 8px;
       }
       .hovercard {
@@ -226,7 +224,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        min-height: 26px;
+        min-height: var(--row-xs);
         color: var(--ink-2);
       }
       .hovercard .hc-row .i {
@@ -257,7 +255,7 @@
         border-radius: 0 28px 28px 0;
       }
       .phone .thr {
-        height: 44px;
+        height: var(--row-md);
       }
       .phone .thr .more {
         display: inline-flex;
@@ -300,9 +298,14 @@
         display: none;
       }
       #sb-default[data-density="one"] .thr.two {
-        height: 32px;
-        padding-top: 0;
-        align-items: center;
+        height: var(--row-sm);
+      }
+      /* Two-line rows need air between them, or titles and meta lines read as one block. */
+      .thr.two + .thr.two {
+        margin-top: var(--space-4);
+      }
+      .thr.two + .show-more {
+        margin-top: var(--space-4);
       }
     </style>
   </head>
