@@ -119,6 +119,7 @@ const SETTINGS_SECTION_ICONS: Readonly<
 const SETTINGS_DETAIL_PAGE_PARENTS: Readonly<Record<string, SettingsPath>> = {
   "/settings/diagnostics": "/settings/maintenance",
   "/settings/open-source-licenses": "/settings/about",
+  "/settings/access": "/settings/connections",
 };
 
 /** Nav dots for sections that need the user, from the same rules as the Overview page. */

@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { SessionPermissions } from "./SessionPermissions";
 import { ChevronRightIcon, EllipsisIcon } from "lucide-react";
 import { useAtomValue } from "@effect/atom-react";
@@ -31,6 +32,7 @@ import {
   missingTailscaleEndpointDescription,
   resolveLocalVersionStatusLabel,
 } from "./ConnectionsSettings.logic";
+import { Tabs, TabsCount, TabsList, TabsTab } from "../ui/tabs";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
 import { LocalEnvironmentSetting } from "./LocalEnvironmentSetting";
 import { searchableSetting } from "./settingsSearch";
@@ -154,6 +156,39 @@ function LocalVersionStatusLabel() {
 }
 
 /** Environments lists the machines this app connects to; access covers who may reach this one. */
+/** One Machines page: the machine serving this app, and every other machine you connect to. */
+function MachineTabs({
+  view,
+  thisMachineLabel,
+  otherMachineCount,
+}: {
+  readonly view: "environments" | "access";
+  readonly thisMachineLabel: string;
+  readonly otherMachineCount: number;
+}) {
+  const navigate = useNavigate();
+  return (
+    <Tabs
+      value={view}
+      onValueChange={(next) => {
+        void navigate({
+          to: next === "access" ? "/settings/access" : "/settings/connections",
+          replace: true,
+          hash: "",
+        });
+      }}
+    >
+      <TabsList aria-label="Machines">
+        <TabsTab value="access">{thisMachineLabel}</TabsTab>
+        <TabsTab value="environments">
+          Other machines
+          {otherMachineCount > 0 ? <TabsCount>{otherMachineCount}</TabsCount> : null}
+        </TabsTab>
+      </TabsList>
+    </Tabs>
+  );
+}
+
 export function ConnectionsSettings({ view }: { readonly view: "environments" | "access" }) {
   const desktopBridge = window.desktopBridge;
   const { environments } = useEnvironments();
@@ -1494,10 +1529,28 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
     </>
   );
 
-  if (showsAccess) return <SettingsPageContainer>{primarySettings}</SettingsPageContainer>;
+  const machineTabs = (
+    <MachineTabs
+      view={view}
+      thisMachineLabel={
+        primaryEnvironment?.label ?? (desktopBridge ? "This machine" : "This server")
+      }
+      otherMachineCount={listedEnvironments.length}
+    />
+  );
+
+  if (showsAccess) {
+    return (
+      <SettingsPageContainer>
+        {machineTabs}
+        {primarySettings}
+      </SettingsPageContainer>
+    );
+  }
 
   return (
     <SettingsPageContainer>
+      {machineTabs}
       {desktopBridge ? (
         <SettingsSection id="this-app" title="This app">
           <LocalEnvironmentSetting />
