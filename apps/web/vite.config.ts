@@ -46,7 +46,10 @@ const configuredReleaseChannel =
   process.env.MARP_BUILT_DEV === "1" ? "dev" : process.env.VITE_RELEASE_CHANNEL?.trim() || "";
 const configuredAppVersion = process.env.APP_VERSION?.trim() || pkg.version;
 const configuredDesktopUpdateRepository =
-  process.env.MARP_DESKTOP_UPDATE_REPOSITORY?.trim() || process.env.GITHUB_REPOSITORY?.trim() || "";
+  process.env.MARP_DESKTOP_UPDATE_REPOSITORY?.trim() ||
+  process.env.GITHUB_REPOSITORY?.trim() ||
+  "";
+const configuredFeatureSecrets = process.env.MARP_FEATURE_SECRETS?.trim() || "";
 const configuredHostedAppUrl = (() => {
   const explicitHostedAppUrl = process.env.VITE_HOSTED_APP_URL?.trim();
   if (explicitHostedAppUrl) {
@@ -314,6 +317,7 @@ export default defineConfig(() => {
       "import.meta.env.MARP_DESKTOP_UPDATE_REPOSITORY": JSON.stringify(
         configuredDesktopUpdateRepository,
       ),
+      "import.meta.env.MARP_FEATURE_SECRETS": JSON.stringify(configuredFeatureSecrets),
       "import.meta.env.VITE_RELEASE_CHANNEL": JSON.stringify(configuredReleaseChannel),
       "import.meta.env.APP_VERSION": JSON.stringify(configuredAppVersion),
     },

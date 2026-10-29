@@ -6,6 +6,6 @@ export const IOS_APP_STORE_URL =
 export const ANDROID_PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.marp.marp";
 
 export const MARKETING_STATS = {
-  githubStars: "24k+",
+  githubStars: "31k+",
   users: "500,000",
 } as const;

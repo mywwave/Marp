@@ -15,6 +15,7 @@ interface ImportMetaEnv {
   readonly VITE_RELAY_OTLP_TRACES_DATASET: string;
   readonly VITE_RELAY_OTLP_TRACES_TOKEN: string;
   readonly MARP_DESKTOP_UPDATE_REPOSITORY: string;
+  readonly MARP_FEATURE_SECRETS: string;
   readonly APP_VERSION: string;
 }
 

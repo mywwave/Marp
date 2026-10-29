@@ -412,6 +412,37 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       }),
     );
 
+    it.effect("expands a home-relative Marp home the way the server does", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const homeFor = (marpHome: string) =>
+          createDevRunnerEnv({
+            mode: "dev",
+            baseEnv: {},
+            serverOffset: 0,
+            webOffset: 0,
+            marpHome,
+            browser: undefined,
+            autoBootstrapProjectFromCwd: undefined,
+            logWebSocketEvents: undefined,
+            host: undefined,
+            port: undefined,
+            devUrl: undefined,
+          }).pipe(
+            Effect.provideService(HostProcess.HomeDirectory, "/home/dev"),
+            Effect.map((env) => env.MARP_HOME),
+          );
+
+        assert.equal(yield* homeFor("~/marp-dev"), path.join("/home/dev", "marp-dev"));
+        assert.equal(yield* homeFor("~"), "/home/dev");
+        assert.equal(yield* homeFor("~\\marp-dev"), path.join("/home/dev", "marp-dev"));
+        assert.equal(yield* homeFor("  ~/marp-dev  "), path.join("/home/dev", "marp-dev"));
+        assert.equal(yield* homeFor("~someone/marp-dev"), path.resolve("~someone/marp-dev"));
+        assert.equal(yield* homeFor("relative/marp-dev"), path.resolve("relative/marp-dev"));
+        assert.equal(yield* homeFor("/tmp/marp-dev"), path.resolve("/tmp/marp-dev"));
+      }),
+    );
+
     it.effect("rejects a specific non-loopback --host for browser dev modes", () => {
       const spawnerLayer = Layer.succeed(
         ChildProcessSpawner.ChildProcessSpawner,
