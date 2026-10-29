@@ -1319,8 +1319,8 @@ function liveCommandRun(count: number) {
         runId: fixture.runId,
         ordinal: 10 + index,
         status: running ? ("running" as const) : ("completed" as const),
-        input: `rg step-${index}`,
-        description: `Search step ${index}`,
+        input: `pnpm test step-${index}`,
+        description: `Test step ${index}`,
         output: "",
         exitCode: running ? null : 0,
         completedAt: running ? null : command.item.completedAt,
@@ -1356,8 +1356,8 @@ describe("MessagesTimeline live runs", () => {
     await vi.waitFor(() => expect(screen.buttons("26 earlier steps")).toHaveLength(1));
     expect(screen.text()).toContain("Running…");
     expect(compactRows()).toHaveLength(4);
-    expect(screen.text()).toContain("Search step 29");
-    expect(screen.text()).not.toContain("Search step 25");
+    expect(screen.text()).toContain("Test step 29");
+    expect(screen.text()).not.toContain("Test step 25");
     expect(screen.buttons("Show output")).toHaveLength(0);
 
     await click(compactRows()[0]!);

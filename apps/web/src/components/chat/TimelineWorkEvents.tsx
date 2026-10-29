@@ -589,27 +589,27 @@ export function CommandCard({
       ) : null}
     </span>
   );
-  if (compact && !open) {
-    return (
-      <WorkLogButton
-        data-v2-item-type="command_execution"
-        data-command-row="compact"
-        aria-expanded={false}
-        onClick={() => setOpen(true)}
-        icon={icon}
-        label={
-          <Shimmering active={shimmer && running}>
-            {description || !command ? (
-              <span className="truncate">{header}</span>
-            ) : (
-              <span className="truncate font-mono text-xs">{command}</span>
-            )}
-          </Shimmering>
-        }
-        trailing={<span className="flex shrink-0 pe-1">{status}</span>}
-      />
-    );
-  }
+  // In a multi-step run the header is the same row open or closed, so opening never moves it.
+  const compactRow = compact ? (
+    <WorkLogButton
+      data-v2-item-type="command_execution"
+      data-command-row="compact"
+      aria-expanded={open}
+      onClick={() => setOpen((value) => !value)}
+      icon={icon}
+      label={
+        <Shimmering active={shimmer && running}>
+          {description || !command ? (
+            <span className="truncate">{header}</span>
+          ) : (
+            <span className="truncate font-mono text-xs">{command}</span>
+          )}
+        </Shimmering>
+      }
+      trailing={<span className="flex shrink-0 pe-1">{status}</span>}
+    />
+  ) : null;
+  if (compactRow && !open) return compactRow;
   const headerContent = (
     <>
       {icon}
@@ -621,21 +621,12 @@ export function CommandCard({
       {status}
     </>
   );
-  return (
-    <div className={cardClassName} data-v2-item-type="command_execution">
-      {compact ? (
-        <button
-          type="button"
-          className={cn(
-            "flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 px-3 text-left",
-            cardFocusClassName,
-          )}
-          aria-expanded
-          onClick={() => setOpen(false)}
-        >
-          {headerContent}
-        </button>
-      ) : (
+  const card = (
+    <div
+      className={cn(cardClassName, compactRow && "mt-0.5 pt-2")}
+      data-v2-item-type={compactRow ? undefined : "command_execution"}
+    >
+      {compactRow ? null : (
         <div className="flex h-8 min-w-0 items-center gap-2 px-3">{headerContent}</div>
       )}
       {command ? (
@@ -684,5 +675,12 @@ export function CommandCard({
         </div>
       ) : null}
     </div>
+  );
+  if (!compactRow) return card;
+  return (
+    <>
+      {compactRow}
+      {card}
+    </>
   );
 }
