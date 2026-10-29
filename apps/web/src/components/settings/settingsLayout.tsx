@@ -588,12 +588,13 @@ export function SettingsPageContainer({
       <div
         className="topbar-scroll-fade scrollbar-gutter-both flex-1 overflow-y-auto"
         data-settings-page-scroll
+        data-settings-width={width}
       >
         <WorkspacePageContainer
           width={width}
-          // Settings align with the page header instead of centering in the sheet.
+          // The page header centers on the same column; see SettingsPageHeader.
           className={cn(
-            "mx-0 gap-8 pt-2 sm:px-8 max-md:px-4",
+            "gap-8 pt-2 sm:px-8 max-md:px-4",
             width === "readable" && "max-w-[calc(48rem+4rem)]",
             className,
           )}

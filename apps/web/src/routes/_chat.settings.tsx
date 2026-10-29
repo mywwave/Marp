@@ -109,7 +109,7 @@ function SettingsContentLayout() {
         <SettingsSidebarNav pathname={location.pathname} />
         <div
           {...contentArea}
-          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-card md:rounded-2xl md:shadow-card"
+          className="group/settings-sheet flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-card md:rounded-2xl md:shadow-card"
         >
           <SettingsPageHeader pathname={location.pathname} />
           <div key={`${contentScopeKey}:${restoreSignal}`} className="min-h-0 flex flex-1 flex-col">
