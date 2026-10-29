@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useEffectEvent, useLayoutEffect, useState } from "react";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "~/lib/utils";
 import { type TimestampFormat } from "@marp/contracts/settings";
@@ -27,8 +27,11 @@ export function TimelineRowTimestamp({
         render={
           <span
             className={cn(
-              "pointer-events-none absolute me-1 shrink-0 whitespace-nowrap rounded-md text-muted-foreground text-xs tabular-nums opacity-0 group-hover/timeline-row:pointer-events-auto group-hover/timeline-row:static group-hover/timeline-row:opacity-100 group-focus-within/timeline-row:pointer-events-auto group-focus-within/timeline-row:static group-focus-within/timeline-row:opacity-100",
-              alwaysVisible && "pointer-events-auto static opacity-100",
+              // Stays in flow so revealing it never re-truncates the label or moves the chevron.
+              "me-1 shrink-0 whitespace-nowrap rounded-md text-muted-foreground text-xs tabular-nums",
+              alwaysVisible
+                ? "opacity-100"
+                : "pointer-events-none opacity-0 transition-opacity duration-100 group-hover/timeline-row:pointer-events-auto group-hover/timeline-row:opacity-100 group-hover/timeline-row:duration-150 group-focus-within/timeline-row:pointer-events-auto group-focus-within/timeline-row:opacity-100 group-focus-within/timeline-row:duration-150",
               className,
             )}
           />
@@ -52,4 +55,27 @@ export function ActivityShimmerOverlay({ children }: { children: ReactNode }) {
       </span>
     </span>
   );
+}
+
+/** True once a spinner this mount showed gave way to the finished icon. */
+export function useSpinnerFinished(spinning: boolean): boolean {
+  const [spun, setSpun] = useState(spinning);
+  if (spinning && !spun) setSpun(true);
+  return spun && !spinning;
+}
+
+/**
+ * True once an approval card this mount showed resolved into its compact row. `onResolved` runs
+ * then, before paint, so the timeline anchors the reader while the card shrinks.
+ */
+export function useApprovalResolved(pending: boolean, onResolved: (() => void) | undefined) {
+  const [phase, setPhase] = useState<"none" | "pending" | "resolved">(pending ? "pending" : "none");
+  if (pending && phase !== "pending") setPhase("pending");
+  else if (!pending && phase === "pending") setPhase("resolved");
+  const notifyResolved = useEffectEvent(() => onResolved?.());
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- pins the timeline's scroll anchor in the commit that shrinks the card, before LegendList measures it
+  useLayoutEffect(() => {
+    if (phase === "resolved") notifyResolved();
+  }, [phase]);
+  return phase === "resolved";
 }

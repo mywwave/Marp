@@ -1397,4 +1397,46 @@ describe("MessagesTimeline live runs", () => {
     await click(screen.button("26 earlier steps"));
     await vi.waitFor(() => expect(compactRows()).toHaveLength(30));
   });
+
+  it("swaps the planning row for the first step without moving the label", async () => {
+    setup();
+    const fixture = makeStreamingTimelineFixture();
+    const items = (ids: ReadonlyArray<string>) =>
+      deriveTimelineEntriesFromVisibleTurnItems({
+        visibleTurnItems: fixture.visibleTurnItems
+          .filter((row) => ids.includes(row.item.id))
+          .map((row) =>
+            row.item.id === "live-work"
+              ? { ...row, item: { ...row.item, status: "running", completedAt: null } }
+              : row,
+          ) as never,
+        optimisticMessages: [],
+      });
+    const props = {
+      ...baseProps(),
+      isWorking: true,
+      activeTurnStartedAt: fixture.time(5),
+      latestRun: {
+        runId: fixture.runId,
+        status: "running",
+        startedAt: fixture.time(5),
+        completedAt: null,
+      },
+    } as TimelineProps;
+    const labelLeft = (kind: string) =>
+      screen.container
+        .querySelector(`[data-timeline-row-kind="${kind}"] .text-secondary-label`)
+        ?.getBoundingClientRect().left;
+    await using screen = await renderElement(
+      <MessagesTimeline {...props} timelineEntries={items(["live-user-item"])} />,
+    );
+    await vi.waitFor(() => expect(labelLeft("thinking")).toBeDefined());
+    const planningLeft = labelLeft("thinking");
+
+    await screen.rerender(
+      <MessagesTimeline {...props} timelineEntries={items(["live-user-item", "live-work"])} />,
+    );
+    await vi.waitFor(() => expect(labelLeft("work-live")).toBeDefined());
+    expect(labelLeft("work-live")).toBe(planningLeft);
+  });
 });

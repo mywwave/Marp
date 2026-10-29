@@ -3,10 +3,11 @@ import {
   type ProviderApprovalOption,
   type RuntimeRequestId,
 } from "@marp/contracts";
-import { memo } from "react";
+import { memo, useState } from "react";
 import { EllipsisIcon, TriangleAlertIcon } from "lucide-react";
 import { Button, InlineButton } from "../ui/button";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
+import { Spinner } from "../ui/spinner";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { composerFloatingLayerProps } from "./composerEventScope";
 
@@ -45,22 +46,37 @@ export const ComposerPendingApprovalActions = memo(function ComposerPendingAppro
   const moreOptions = options.filter(
     (option) => option.decision !== "decline" && option.decision !== "accept",
   );
+  // The clicked answer stays pressed until the card resolves; a failed answer frees the buttons.
+  const [chosen, setChosen] = useState<ProviderApprovalDecision | null>(null);
+  const blocked = disabled || isResponding || !canRespond || chosen !== null;
+  const respond = (decision: ProviderApprovalDecision) => {
+    if (blocked) return;
+    setChosen(decision);
+    onRespondToApproval(requestId, decision).then(
+      (result) => {
+        if (!isSuccess(result)) setChosen(null);
+      },
+      () => setChosen(null),
+    );
+  };
 
   return (
     <>
       {primaryOptions.map((option) => {
+        const pending = chosen === option.decision;
         const buttonProps = {
-          disabled: disabled || isResponding || !canRespond,
+          disabled: blocked,
           "aria-description": option.warning,
-          onClick: () => {
-            if (!disabled && !isResponding && canRespond) {
-              void onRespondToApproval(requestId, option.decision);
-            }
-          },
+          "aria-busy": pending || undefined,
+          onClick: () => respond(option.decision),
         };
         const content = (
           <>
-            {option.warning ? <TriangleAlertIcon className="size-3 shrink-0" /> : null}
+            {pending ? (
+              <Spinner size="xs" />
+            ) : option.warning ? (
+              <TriangleAlertIcon className="size-3 shrink-0" />
+            ) : null}
             <span className={presentation === "inline" ? "whitespace-normal" : "max-w-40 truncate"}>
               {option.label}
             </span>
@@ -97,7 +113,10 @@ export const ComposerPendingApprovalActions = memo(function ComposerPendingAppro
       {moreOptions.length > 0 ? (
         <Menu>
           <MenuTrigger
-            disabled={disabled || isResponding || !canRespond}
+            disabled={blocked}
+            aria-busy={
+              (chosen !== null && !primaryOptions.some((o) => o.decision === chosen)) || undefined
+            }
             render={
               presentation === "inline" ? (
                 <InlineButton tone="muted" aria-label="More approval options" />
@@ -113,12 +132,9 @@ export const ComposerPendingApprovalActions = memo(function ComposerPendingAppro
               const item = (
                 <MenuItem
                   key={option.decision}
-                  disabled={disabled || isResponding || !canRespond}
+                  disabled={blocked}
                   aria-description={option.warning}
-                  onClick={() => {
-                    if (!disabled && !isResponding && canRespond)
-                      void onRespondToApproval(requestId, option.decision);
-                  }}
+                  onClick={() => respond(option.decision)}
                 >
                   {option.warning ? <TriangleAlertIcon className="size-3 text-warning" /> : null}
                   <span className="min-w-0 whitespace-normal wrap-break-word">{option.label}</span>
@@ -139,3 +155,9 @@ export const ComposerPendingApprovalActions = memo(function ComposerPendingAppro
     </>
   );
 });
+
+function isSuccess(result: unknown) {
+  return (
+    typeof result === "object" && result !== null && "_tag" in result && result._tag === "Success"
+  );
+}

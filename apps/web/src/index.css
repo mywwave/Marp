@@ -659,18 +659,44 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(marp-mob
   margin-left: var(--live-activity-focus-width);
 }
 
-/* A new live step fades in once; no slide or height motion. */
-@keyframes work-step-enter {
-  from {
-    opacity: 0;
+/* One-shot entry for something that appeared while the user watched. @starting-style
+   also fires on first render and on every virtualized remount, so it only applies
+   under data-live, which the timeline sets on rows and steps created this visit.
+   --live-enter-y adds a rise; --live-enter-duration shortens it. */
+@utility live-enter {
+  @media (prefers-reduced-motion: no-preference) {
+    &:is([data-live], [data-live] *) {
+      transition-property: opacity, translate;
+      transition-duration: var(--live-enter-duration, var(--transition-duration-enter));
+      transition-timing-function: var(--ease-out);
+
+      @starting-style {
+        opacity: 0;
+        translate: 0 var(--live-enter-y, 0);
+      }
+    }
   }
 }
 
-@utility work-step-enter {
-  animation: work-step-enter 150ms linear;
+/* A thread's rows hide for the frame or two the list takes to land, then fade in.
+   The delayed reveal is a fail-safe: the list never stays hidden if settling stalls. */
+@keyframes timeline-settle-reveal {
+  to {
+    opacity: 1;
+  }
+}
+
+@utility timeline-settle {
+  transition: opacity 120ms var(--ease-out);
+
+  &[data-settling] {
+    opacity: 0;
+    transition: none;
+    animation: timeline-settle-reveal 120ms var(--ease-out) 400ms forwards;
+  }
 
   @media (prefers-reduced-motion: reduce) {
-    animation: none;
+    transition: none;
   }
 }
 

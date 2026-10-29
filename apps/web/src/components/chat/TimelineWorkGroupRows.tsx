@@ -40,7 +40,11 @@ import {
   type TimelineWorkEntry,
   type TimelineRow,
 } from "./timelineRowContext";
-import { ActivityShimmerOverlay } from "./TimelineRowParts";
+import {
+  ActivityShimmerOverlay,
+  useApprovalResolved,
+  useSpinnerFinished,
+} from "./TimelineRowParts";
 import {
   failedToolIconClassName,
   toolIconAcceptsTint,
@@ -451,6 +455,7 @@ function LiveActivityRow({
   const animated = active && !failed;
   const showShimmer = animated && shimmer;
   const showSpinner = animated && spinner;
+  const finished = useSpinnerFinished(showSpinner);
   return (
     <div
       ref={animated ? observeVisibleAnimation : undefined}
@@ -463,6 +468,7 @@ function LiveActivityRow({
         failed={failed}
         announceFailure={failed}
         spinner={showSpinner}
+        iconEnters={finished}
       />
       {showShimmer ? (
         <ActivityShimmerOverlay>
@@ -489,6 +495,7 @@ function LiveActivityContent({
   highlighted = false,
   spinner = false,
   iconHidden = false,
+  iconEnters = false,
 }: {
   label: ReactNode;
   iconName: WorkEntryIconName | undefined;
@@ -498,6 +505,8 @@ function LiveActivityContent({
   highlighted?: boolean;
   spinner?: boolean;
   iconHidden?: boolean;
+  /** The step just finished: its icon fades in where the spinner was. */
+  iconEnters?: boolean;
 }) {
   const showTrailingFailureMark =
     failed && iconName !== undefined && !toolIconAcceptsTint(toolIcon);
@@ -508,13 +517,19 @@ function LiveActivityContent({
         iconHidden ? (
           <span className="size-4" />
         ) : spinner ? (
-          <span className="flex size-4 items-center justify-center text-info-foreground">
+          <span
+            key="spinner"
+            className="flex size-4 items-center justify-center text-info-foreground"
+          >
             <Spinner size="sm" />
           </span>
         ) : iconName ? (
           <span
+            key="icon"
+            data-live={iconEnters || undefined}
             className={cn(
               "flex size-4 items-center justify-center",
+              iconEnters && "live-enter [--live-enter-duration:150ms]",
               failed
                 ? failedToolIconClassName
                 : highlighted
@@ -531,7 +546,10 @@ function LiveActivityContent({
               muted={!highlighted}
             />
           </span>
-        ) : null
+        ) : (
+          // "Planning next moves" has no icon; the slot keeps its label where the first step's goes.
+          <span className="size-4" />
+        )
       }
       label={
         <span className={cn("block truncate", highlighted && "text-foreground")}>{label}</span>
@@ -576,6 +594,9 @@ export function LiveWorkEntryTimelineRow({
 }) {
   const ctx = use(TimelineRowCtx);
   const { awaitingUser } = use(TimelineRowActivityCtx);
+  // The step this row mounted with replaces "Planning" or a remount in place; later steps fade in.
+  const [mountedEntryId] = useState(row.entry.id);
+  const stepEnters = row.entry.id !== mountedEntryId;
   const threadTarget = useThreadReadTarget(row.entry, ctx.activeThreadEnvironmentId);
   const label = liveWorkEntryLabel(row.entry, ctx.workspaceRoot, row.active);
   const threadLabel = threadReadLabel(label, threadTarget);
@@ -583,6 +604,9 @@ export function LiveWorkEntryTimelineRow({
   const item = row.entry.projectedItem?.item;
   const pendingApproval =
     item?.type === "approval_request" ? ctx.pendingApprovals.get(item.requestId) : undefined;
+  const approvalResolved = useApprovalResolved(pendingApproval !== undefined, () =>
+    ctx.onToggleWorkEntry(row.id, true),
+  );
   if (pendingApproval) return <TimelinePendingApprovalRow approval={pendingApproval} />;
 
   const failed = workEntryDisplayIndicatesToolFailure(row.entry);
@@ -620,7 +644,13 @@ export function LiveWorkEntryTimelineRow({
     : (threadLabel?.text ?? (action ? workEventActionText(action) : label));
 
   return (
-    <div className="flex min-w-0 flex-col">
+    <div
+      data-live={approvalResolved || undefined}
+      className={cn(
+        "flex min-w-0 flex-col",
+        approvalResolved && "live-enter [--live-enter-duration:150ms]",
+      )}
+    >
       {header ? (
         <button
           type="button"
@@ -655,7 +685,11 @@ export function LiveWorkEntryTimelineRow({
         />
       ))}
       {grouped && row.expanded ? null : workEntryShowsAsCard(row.entry) ? (
-        <div key={row.entry.id} className="work-step-enter">
+        <div
+          key={row.entry.id}
+          data-live={stepEnters || undefined}
+          className={stepEnters ? "live-enter" : undefined}
+        >
           <SimpleWorkEntryRow
             workEntry={row.entry}
             workspaceRoot={ctx.workspaceRoot}
@@ -669,7 +703,11 @@ export function LiveWorkEntryTimelineRow({
         <button
           key={row.entry.id}
           type="button"
-          className="work-step-enter group/live-work flex min-h-7 w-full max-w-full cursor-pointer items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
+          data-live={stepEnters || undefined}
+          className={cn(
+            "group/live-work flex min-h-7 w-full max-w-full cursor-pointer items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
+            stepEnters && "live-enter",
+          )}
           aria-label={failed ? `${stepText}, tool call failed` : undefined}
           aria-expanded={row.expanded}
           onClick={toggleGroup}
@@ -699,7 +737,7 @@ function WorkGroupChevron({ expanded }: { expanded: boolean }) {
     <ChevronRightIcon
       aria-hidden
       className={cn(
-        "size-3 shrink-0 text-icon-muted opacity-0 transition-[opacity,rotate] duration-150 group-hover/live-work:opacity-100 group-hover/timeline-row:opacity-100 group-focus-visible/live-work:opacity-100 group-focus-visible/timeline-row:opacity-100",
+        "size-3 shrink-0 text-icon-muted opacity-0 transition-[opacity,rotate] duration-150 ease-out group-hover/live-work:opacity-100 group-hover/timeline-row:opacity-100 group-focus-visible/live-work:opacity-100 group-focus-visible/timeline-row:opacity-100",
         expanded && "rotate-90 opacity-100",
       )}
     />

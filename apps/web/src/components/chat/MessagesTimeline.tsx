@@ -64,6 +64,7 @@ import {
 import { ChevronDown, ChevronRight } from "lucide";
 import { MorphIcon } from "~/components/MorphIcon";
 import { Skeleton } from "../ui/skeleton";
+import { Spinner } from "../ui/spinner";
 import { ExpandedImagePreview } from "./ExpandedImagePreview";
 import {
   CHAT_TIMELINE_ANCHOR_OFFSET,
@@ -110,6 +111,7 @@ import {
   type TimelineRow,
   type TimelineWorkEntry,
 } from "./timelineRowContext";
+import { createTimelineRowEnterGate } from "./timelineRowEnter";
 import { ActivityShimmerOverlay } from "./TimelineRowParts";
 import {
   WorkGroupSection,
@@ -433,6 +435,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
   const restoringThreadPosition = positionedThreadKey !== listIdentityKey;
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [settlingListIdentity, setSettlingListIdentity] = useState<string | null>(listIdentityKey);
+  const [rowEnterGate] = useState(createTimelineRowEnterGate);
   const [playingAudioRows, setPlayingAudioRows] = useState<ReadonlyMap<HTMLAudioElement, string>>(
     () => new Map(),
   );
@@ -494,6 +497,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
         pinDisclosureToEnd();
         disclosurePinsEndRef.current = false;
         disclosureAnchorKeyRef.current = null;
+        rowEnterGate.setRevealing(false);
         setDisclosureToggleSettling(false);
         disclosureSettleFrameRef.current = null;
         disclosureSettleSecondFrameRef.current = null;
@@ -503,6 +507,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
 
   const suspendEndScrollMaintenanceForDisclosure = (anchorKey: string) => {
     disclosureAnchorKeyRef.current = anchorKey;
+    rowEnterGate.setRevealing(true);
     disclosurePinsEndRef.current = resolveTimelineIsAtEnd(listRef.current?.getState()) === true;
     setDisclosureToggleSettling(true);
     scheduleDisclosureSettle();
@@ -698,6 +703,13 @@ const ConversationTimeline = memo(function ConversationTimeline({
     worktreeSetup,
   });
   const rows = useStableRows(rawRows, listIdentityKey);
+  const listSettling = identityChanged || settlingListIdentity === listIdentityKey;
+  rowEnterGate.observe(listIdentityKey, rows, listSettling);
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- starts the mount window of rows appended in this commit, read by rows mounting later
+  useLayoutEffect(() => rowEnterGate.stamp(performance.now()));
+  // Only a newly arrived row scrolls smoothly; streamed growth follows instantly, so a
+  // restarted smooth scroll never chases the end.
+  const [followedRowCount, setFollowedRowCount] = useState(rows.length);
   const unmatchedPendingApprovals = new Map(pendingApprovalsByRequestId);
   const approvalEditEntries = new Map<RuntimeRequestId, TimelineWorkEntry>();
   if (unmatchedPendingApprovals.size > 0) {
@@ -1001,6 +1013,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
     // frame the previous thread scheduled laid out the previous thread's rows.
     if (laidOutData === rows) {
       setSettlingListIdentity((current) => (current === listIdentityKey ? null : current));
+      setFollowedRowCount(rows.length);
     }
     handleScroll();
   });
@@ -1076,6 +1089,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
     onWorktreeSetupWorkLocally: onWorktreeSetupWorkLocally ?? null,
     onOpenWorktreeSetupTerminal: onOpenWorktreeSetupTerminal ?? null,
     workGroupViewState,
+    rowEnter: rowEnterGate,
   };
   const compactionAwaitingRow =
     isCompacting &&
@@ -1357,7 +1371,10 @@ const ConversationTimeline = memo(function ConversationTimeline({
                 fullscreenAppRowId !== null ||
                 disclosureToggleSettling
                   ? false
-                  : isWorking && !prefersReducedMotion && settlingListIdentity === null
+                  : isWorking &&
+                      !prefersReducedMotion &&
+                      settlingListIdentity === null &&
+                      rows.length > followedRowCount
                     ? TIMELINE_MAINTAIN_SCROLL_AT_END_SMOOTH
                     : TIMELINE_MAINTAIN_SCROLL_AT_END
               }
@@ -1371,9 +1388,11 @@ const ConversationTimeline = memo(function ConversationTimeline({
               maintainScrollAtEndThreshold={1}
               onScroll={handleScroll}
               onItemSizeChanged={handleItemSizeChanged}
+              data-settling={listSettling || undefined}
               className={cn(
                 "messages-timeline-scroll scrollbar-gutter-both h-full min-h-0 overflow-x-hidden overscroll-y-contain [overflow-anchor:none]",
                 topFadeEnabled && "topbar-scroll-fade",
+                "timeline-settle",
               )}
               ListHeaderComponent={listHeader}
               ListFooterComponent={timelineListFooter}
@@ -1417,7 +1436,8 @@ function TimelineHistoryControl(props: MessagesTimelineHistoryControls) {
             className="flex w-full cursor-pointer items-center gap-3 py-1.5 text-muted-foreground text-xs hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default"
           >
             <span aria-hidden="true" className="h-px flex-1 bg-border/70" />
-            <span className="shrink-0">
+            <span className="flex shrink-0 items-center gap-1.5">
+              {props.loading ? <Spinner size="xs" /> : null}
               {props.loading ? "Loading earlier turns…" : "Load earlier turns"}
             </span>
             <span aria-hidden="true" className="h-px flex-1 bg-border/70" />
@@ -1449,6 +1469,12 @@ function getItemType(item: MessagesTimelineRow) {
 }
 
 const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: TimelineRow }) {
+  const { rowEnter } = use(TimelineRowCtx);
+  const [enter] = useState(() => rowEnter.claim(row.id, performance.now()));
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- marks the row's entry played in the gate shared across mounts, so a virtualized remount never replays it
+  useLayoutEffect(() => {
+    if (enter === "live") rowEnter.consume(row.id);
+  }, [enter, row.id, rowEnter]);
   const isExpandedToolGroup = row.kind === "work" && row.isExpandedToolGroup;
   const isSubagentGroup = row.kind === "event" && row.projectedItem.item.type === "subagent";
   const isWorkLogRow =
@@ -1469,7 +1495,8 @@ const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: Time
             ? "pb-1.5"
             : (row.kind === "message" &&
                   row.message.role === "assistant" &&
-                  !row.showAssistantMeta) ||
+                  !row.showAssistantMeta &&
+                  !row.reserveAssistantMeta) ||
                 row.kind === "worktree-setup" ||
                 row.kind === "event" ||
                 row.kind === "attempt-fold" ||
@@ -1483,7 +1510,9 @@ const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: Time
           row.kind === "assistant-meta"
           ? "group/assistant"
           : null,
+        enter === "reveal" && "live-enter [--live-enter-duration:150ms]",
       )}
+      data-live={enter ?? undefined}
       data-timeline-row-id={row.id}
       data-timeline-row-kind={row.kind}
       data-message-id={

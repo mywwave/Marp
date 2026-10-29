@@ -67,6 +67,9 @@ export function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind
             showCopyButton={row.showAssistantCopyButton}
             copyStreaming={row.assistantCopyStreaming}
           />
+        ) : row.reserveAssistantMeta ? (
+          // Same height as the meta row's xs button, so turn end swaps it in without a jump.
+          <div aria-hidden className="invisible mt-1.5 h-7 sm:h-6" />
         ) : null}
         {row.assistantTurnDiffSummary && row.assistantTurnDiffSummary.files.length > 0 ? (
           <CheckpointDivider
@@ -96,7 +99,7 @@ function CheckpointDivider({
     <div
       role="group"
       aria-label="Checkpoint"
-      className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"
+      className="live-enter mt-4 flex items-center gap-2 text-xs text-muted-foreground [--live-enter-y:4px]"
     >
       <span aria-hidden className="h-px flex-1 bg-border" />
       <span className="shrink-0">
@@ -245,10 +248,10 @@ function AssistantMessageMeta({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 text-xs tabular-nums transition-opacity duration-200",
+        "flex items-center gap-2 text-xs tabular-nums transition-opacity",
         alwaysVisible
           ? "opacity-100"
-          : "opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/assistant:opacity-100",
+          : "opacity-0 duration-100 pointer-coarse:opacity-100 focus-within:opacity-100 focus-within:duration-150 group-hover/assistant:opacity-100 group-hover/assistant:duration-150",
         className,
       )}
     >

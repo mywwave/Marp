@@ -165,7 +165,7 @@ function ToolOutput(props: ToolOutputState) {
   const text = props.output ? (
     <div className="max-h-80 overflow-auto text-muted-foreground">{props.output}</div>
   ) : props.pending ? (
-    <div className="text-muted-foreground italic">Loading output…</div>
+    <div className="min-h-16 text-muted-foreground italic">Loading output…</div>
   ) : props.error ? (
     <div className="text-destructive">Couldn&apos;t load output: {props.error}</div>
   ) : props.empty && images.length === 0 ? (

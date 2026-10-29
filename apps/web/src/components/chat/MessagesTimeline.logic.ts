@@ -613,6 +613,8 @@ type MessagesTimelineRowContent =
       message: ChatMessage;
       projectedItem?: OrchestrationV2ProjectedTurnItem;
       showAssistantMeta: boolean;
+      /** The turn's final message is still in progress; its meta row's space is held. */
+      reserveAssistantMeta?: true;
       showAssistantCopyButton: boolean;
       assistantCopyStreaming: boolean;
       assistantTurnDiffSummary?: TurnDiffSummary | undefined;
@@ -2153,10 +2155,10 @@ export function deriveMessagesTimelineRows(input: {
       timelineEntry.message.role === "assistant" &&
       runIdIsActiveResponse(timelineEntry.message.runId);
 
-    const showAssistantMeta =
+    const terminalAssistantMessage =
       timelineEntry.message.role === "assistant" &&
-      terminalAssistantMessageIds.has(timelineEntry.message.id) &&
-      !assistantResponseStillInProgress;
+      terminalAssistantMessageIds.has(timelineEntry.message.id);
+    const showAssistantMeta = terminalAssistantMessage && !assistantResponseStillInProgress;
 
     nextRows.push({
       kind: "message",
@@ -2167,6 +2169,9 @@ export function deriveMessagesTimelineRows(input: {
         ? {}
         : { projectedItem: timelineEntry.projectedItem }),
       showAssistantMeta,
+      ...(terminalAssistantMessage && assistantResponseStillInProgress
+        ? { reserveAssistantMeta: true as const }
+        : {}),
       showAssistantCopyButton: showAssistantMeta,
       assistantCopyStreaming: timelineEntry.message.streaming || assistantResponseStillInProgress,
       assistantTurnDiffSummary:
@@ -2660,6 +2665,7 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.message === bm.message &&
         a.projectedItem === bm.projectedItem &&
         a.showAssistantMeta === bm.showAssistantMeta &&
+        a.reserveAssistantMeta === bm.reserveAssistantMeta &&
         a.showAssistantCopyButton === bm.showAssistantCopyButton &&
         a.assistantCopyStreaming === bm.assistantCopyStreaming &&
         a.assistantTurnDiffSummary === bm.assistantTurnDiffSummary &&

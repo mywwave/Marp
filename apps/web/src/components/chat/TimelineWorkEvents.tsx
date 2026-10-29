@@ -45,7 +45,7 @@ import { toastManager } from "../ui/toast";
 import { DiffStatLabel } from "./DiffStatLabel";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { ShellCommandBlock } from "./ShellCommandBlock";
-import { ActivityShimmerOverlay } from "./TimelineRowParts";
+import { ActivityShimmerOverlay, useSpinnerFinished } from "./TimelineRowParts";
 import { failedToolIconClassName, ToolActivityIconView } from "./TimelineToolActivityIcon";
 import { workEntryIconName } from "./TimelineWorkEntryRow.logic";
 import { formatWorkingTimerNow } from "./TimelineWorkGroupRows.logic";
@@ -59,6 +59,17 @@ export function WorkingTimer({ createdAt }: { createdAt: string }) {
       ref={tickTextContent(() => formatWorkingTimerNow(createdAt), true)}
       className="tabular-nums"
     />
+  );
+}
+
+/** A finished step's icon, fading in once where its spinner was. */
+function FinishedIcon({ enters, children }: { enters: boolean; children: ReactNode }) {
+  return enters ? (
+    <span data-live className="live-enter flex [--live-enter-duration:150ms]">
+      {children}
+    </span>
+  ) : (
+    children
   );
 }
 
@@ -144,6 +155,7 @@ type CardProps = {
 
 /** Collapsed diffs show four 20px lines; an expanded one scrolls past 400px. */
 const EDIT_PREVIEW_LINES = 4;
+const EDIT_LINE_HEIGHT_PX = 20;
 const NEAR_VIEWPORT_MARGIN = "160px 0px";
 
 /** Latches true once the element comes within 160px of the viewport, so off-screen edits never fetch. */
@@ -262,7 +274,12 @@ export function FileEditCard({
       if (absolutePath) await copyPath(formatFilePathForClipboard(absolutePath));
     } else await contextMenu.activate(clicked, fileTarget);
   };
+  const finished = useSpinnerFinished(running);
   const failure = failed ? fileEditFailureReason(fileChange?.diffStr) : undefined;
+  // Holds the collapsed preview's height from the counts until the diff loads, so cards above
+  // the reader do not grow while they scroll up.
+  const placeholderHeight =
+    Math.min(counts.additions + counts.deletions, EDIT_PREVIEW_LINES) * EDIT_LINE_HEIGHT_PX;
   const icon = (
     <span
       className={cn(
@@ -273,12 +290,14 @@ export function FileEditCard({
       {running ? (
         <Spinner size="sm" />
       ) : (
-        <ToolActivityIconView
-          icon={workEntry.toolIcon ?? workEntry.toolSource?.icon}
-          fallbackName={workEntryIconName(workEntry)}
-          className="block size-4 shrink-0 stroke-2"
-          muted
-        />
+        <FinishedIcon enters={finished}>
+          <ToolActivityIconView
+            icon={workEntry.toolIcon ?? workEntry.toolSource?.icon}
+            fallbackName={workEntryIconName(workEntry)}
+            className="block size-4 shrink-0 stroke-2"
+            muted
+          />
+        </FinishedIcon>
       )}
     </span>
   );
@@ -372,10 +391,18 @@ export function FileEditCard({
         <EditFailure reason={failure} error={fileChange?.diffStr} />
       ) : preview ? (
         <EditTail text={preview.tail} />
-      ) : running || !near ? null : detail.pending ? (
-        <div className="flex h-20 flex-col gap-2 px-3 py-2" aria-busy>
-          <Skeleton className="h-3 w-3/4" />
-          <Skeleton className="h-3 w-1/2" />
+      ) : running ? null : !near || detail.pending ? (
+        <div
+          className="flex flex-col gap-2 overflow-hidden px-3 py-1"
+          style={{ height: placeholderHeight }}
+          aria-busy={near || undefined}
+        >
+          {near ? (
+            <>
+              <Skeleton className="h-3 w-3/4 shrink-0" />
+              <Skeleton className="h-3 w-1/2 shrink-0" />
+            </>
+          ) : null}
         </div>
       ) : detail.diff?.kind === "too-large" ? (
         <div className="flex items-center gap-2 px-3 pb-2 text-xs text-muted-foreground">
@@ -387,7 +414,7 @@ export function FileEditCard({
           ) : null}
         </div>
       ) : diff ? (
-        <InlineEditDiff diff={diff} full={showFull} />
+        <InlineEditDiff diff={diff} full={showFull} clipped={canExpand && !expanded} />
       ) : null}
       {footer}
     </div>
@@ -513,9 +540,12 @@ function codeCharWidth(code: HTMLElement): number {
 function InlineEditDiff({
   diff,
   full,
+  clipped,
 }: {
   diff: Extract<ToolCallFileDiff, { kind: "diff" }>;
   full: boolean;
+  /** More lines sit below the collapsed preview. */
+  clipped: boolean;
 }) {
   const theme = useRenderedAppearance();
   const wordWrap = useClientSettings((settings) => settings.wordWrap);
@@ -533,6 +563,7 @@ function InlineEditDiff({
       className={cn(
         "diff-render-surface overscroll-contain bg-muted [--code-background:var(--muted)]",
         full ? "max-h-100 overflow-y-auto" : "max-h-20 overflow-hidden",
+        clipped && "mask-b-from-60%",
       )}
     >
       <DiffWorkerPoolProvider>
@@ -576,12 +607,15 @@ export function CommandCard({
   const ctx = use(TimelineRowCtx);
   const [commandExpanded, setCommandExpanded] = useState(false);
   const [open, setOpen] = useState(false);
+  // Only what the user's click opens fades in; restored or remounted output just appears.
+  const [revealed, setRevealed] = useState(false);
   const projectedItem = workEntry.projectedItem;
   const item = projectedItem?.item ?? workEntry.structuredPayload;
   const commandItem = item?.type === "command_execution" ? item : undefined;
   const command = commandDisplayText(commandItem?.input ?? workEntry.command ?? "");
   const failed = workEntryDisplayIndicatesToolFailure(workEntry);
   const running = live && !failed;
+  const finished = useSpinnerFinished(running);
   const description = commandItem?.description?.trim();
   const header =
     description || (running ? "Running command" : failed ? "Run command" : "Ran command");
@@ -593,7 +627,13 @@ export function CommandCard({
         running ? "text-info-foreground" : failed ? "text-destructive" : "text-icon-muted",
       )}
     >
-      {running ? <Spinner size="sm" /> : <TerminalIcon className="size-4" />}
+      {running ? (
+        <Spinner size="sm" />
+      ) : (
+        <FinishedIcon enters={finished}>
+          <TerminalIcon className="size-4" />
+        </FinishedIcon>
+      )}
     </span>
   );
   const status = (
@@ -619,7 +659,10 @@ export function CommandCard({
       data-v2-item-type="command_execution"
       data-command-row="compact"
       aria-expanded={open}
-      onClick={() => setOpen((value) => !value)}
+      onClick={() => {
+        setRevealed(true);
+        setOpen((value) => !value);
+      }}
       icon={icon}
       label={
         <Shimmering active={shimmer && running}>
@@ -647,7 +690,12 @@ export function CommandCard({
   );
   const card = (
     <div
-      className={cn(cardClassName, compactRow && "mt-0.5 pt-2")}
+      className={cn(
+        cardClassName,
+        compactRow && "mt-0.5 pt-2",
+        revealed && "live-enter [--live-enter-duration:150ms]",
+      )}
+      data-live={revealed || undefined}
       data-v2-item-type={compactRow ? undefined : "command_execution"}
     >
       {compactRow ? null : (
@@ -680,7 +728,10 @@ export function CommandCard({
             variant="ghost-muted"
             size="micro"
             aria-expanded={expanded}
-            onClick={onToggleExpanded}
+            onClick={() => {
+              setRevealed(true);
+              onToggleExpanded();
+            }}
           >
             {expanded ? "Hide output" : "Show output"}
           </Button>
@@ -690,7 +741,10 @@ export function CommandCard({
         </div>
       ) : null}
       {expanded && projectedItem && commandItem ? (
-        <div className="px-3 pb-3" onClick={(event) => event.stopPropagation()}>
+        <div
+          className={cn("px-3 pb-3", revealed && "live-enter [--live-enter-duration:150ms]")}
+          onClick={(event) => event.stopPropagation()}
+        >
           <CommandItemOutput
             projectedItem={projectedItem}
             environmentId={ctx.activeThreadEnvironmentId}

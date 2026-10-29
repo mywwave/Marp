@@ -30,6 +30,7 @@ import { type MessagesTimelineRow, type WorkGroupScrollAnchor } from "./Messages
 import { type TimestampFormat } from "@marp/contracts/settings";
 import type { TurnItemDetailSource } from "../../state/queries";
 import { type HandoffTimelineRun } from "./V2LifecycleRow";
+import { type TimelineRowEnterGate } from "./timelineRowEnter";
 
 /**
  * Where an expanded row reads an item's detail and a command's output. The owner's rows read them
@@ -105,6 +106,7 @@ export interface TimelineRowSharedState {
   onWorktreeSetupWorkLocally: (() => void) | null;
   onOpenWorktreeSetupTerminal: ((terminalId: string) => void) | null;
   workGroupViewState: WorkGroupViewState;
+  rowEnter: TimelineRowEnterGate;
 }
 
 export interface TimelineRowActivityState {

@@ -202,7 +202,7 @@ function AutomationMessageRow({ row }: { row: Extract<TimelineRow, { kind: "mess
       </div>
       <UserMessageProjectedStatus row={row} />
       {expanded ? (
-        <div className="flex w-full max-w-[80%] items-center justify-end pe-1 text-xs tabular-nums opacity-0 transition-opacity duration-200 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover:opacity-100">
+        <div className="flex w-full max-w-[80%] items-center justify-end pe-1 text-xs tabular-nums opacity-0 transition-opacity duration-100 pointer-coarse:opacity-100 focus-within:opacity-100 focus-within:duration-150 group-hover:opacity-100 group-hover:duration-150">
           <div className="flex shrink-0 items-center gap-2">
             {scheduledTaskId ? (
               <Link
@@ -478,7 +478,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
 
   return (
     <div
-      className="group flex flex-col items-end gap-1"
+      className="live-enter group flex flex-col items-end gap-1 [--live-enter-y:8px]"
       data-user-message-attribution={folded ? "agent" : undefined}
     >
       {userMessage.attribution === "marp" ? (
@@ -674,12 +674,14 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
               </div>
             ) : null}
             {editing ? (
-              <InlineUserMessageEditor
-                initialText={recallableComposerPrompt(row.message.text)}
-                allowEmpty={(row.message.attachments?.length ?? 0) > 0}
-                onCancel={stopEditing}
-                onSave={inlineEdit.save}
-              />
+              <div data-live className="live-enter [--live-enter-duration:150ms]">
+                <InlineUserMessageEditor
+                  initialText={recallableComposerPrompt(row.message.text)}
+                  allowEmpty={(row.message.attachments?.length ?? 0) > 0}
+                  onCancel={stopEditing}
+                  onSave={inlineEdit.save}
+                />
+              </div>
             ) : (
               <div onCopyCapture={onBodyCopyCapture}>
                 <CollapsibleUserMessageBody
@@ -695,8 +697,15 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         ) : null}
       </div>
       <UserMessageProjectedStatus row={row} />
-      {!editing && (!folded || expanded) ? (
-        <div className="flex w-full max-w-[80%] items-center justify-end pe-1 text-xs tabular-nums opacity-0 transition-opacity duration-200 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover:opacity-100">
+      {!folded || expanded ? (
+        // Stays mounted while editing so the row keeps its height.
+        <div
+          inert={editing}
+          className={cn(
+            "flex w-full max-w-[80%] items-center justify-end pe-1 text-xs tabular-nums opacity-0 transition-opacity duration-100 pointer-coarse:opacity-100 focus-within:opacity-100 focus-within:duration-150 group-hover:opacity-100 group-hover:duration-150",
+            editing && "invisible",
+          )}
+        >
           <div className="flex shrink-0 items-center gap-2">
             {folded && senderThreadId ? (
               <InlineButton onClick={() => ctx.onOpenThread(senderThreadId)} tone="muted">

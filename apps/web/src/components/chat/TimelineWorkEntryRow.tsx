@@ -59,7 +59,11 @@ import {
   WorkGroupViewCtx,
   type TimelineWorkEntry,
 } from "./timelineRowContext";
-import { MESSAGE_HEADING_LEVEL, TimelineRowTimestamp } from "./TimelineRowParts";
+import {
+  MESSAGE_HEADING_LEVEL,
+  TimelineRowTimestamp,
+  useApprovalResolved,
+} from "./TimelineRowParts";
 import {
   failedToolIconClassName,
   toolIconAcceptsTint,
@@ -162,7 +166,23 @@ type WorkEntryRowProps = {
 
 export const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: WorkEntryRowProps) {
   const ctx = use(TimelineRowCtx);
+  const groupView = use(WorkGroupViewCtx);
   const item = props.workEntry.projectedItem?.item;
+  const pendingApproval =
+    item?.type === "approval_request" ? ctx.pendingApprovals.get(item.requestId) : undefined;
+  const onToggleEntry = groupView?.onToggleEntry ?? props.onToggleEntry;
+  const approvalResolved = useApprovalResolved(
+    pendingApproval !== undefined,
+    onToggleEntry && (() => onToggleEntry(true)),
+  );
+  if (pendingApproval) return <TimelinePendingApprovalRow approval={pendingApproval} />;
+  if (approvalResolved) {
+    return (
+      <div data-live className="live-enter [--live-enter-duration:150ms]">
+        <WorkEntryLogRow {...props} />
+      </div>
+    );
+  }
   if (item?.type === "todo_list") return <TimelinePlanCard workEntry={props.workEntry} />;
   const childThreadId =
     item?.type === "notification" ? notificationChildThreadId(item.source) : undefined;
@@ -212,11 +232,6 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
     setExpanded(next);
   };
   const failureItem = workEntry.projectedItem?.item;
-  const pendingApproval =
-    failureItem?.type === "approval_request"
-      ? ctx.pendingApprovals.get(failureItem.requestId)
-      : undefined;
-  if (pendingApproval) return <TimelinePendingApprovalRow approval={pendingApproval} />;
   if (failureItem?.type === "error" && failureItem.status === "failed") {
     const warning = failureItem.failure.class === "usage_limit";
     const resetAt = failureItem.failure.resetAt;
