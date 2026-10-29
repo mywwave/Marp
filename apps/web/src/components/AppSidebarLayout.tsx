@@ -452,6 +452,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
         <SidebarBrandWidthProbe onWidthChange={setBrandWidth} />
         <Sidebar
           side="left"
+          variant="inset"
           collapsible="offcanvas"
           data-app-sidebar=""
           {...sidebarArea}

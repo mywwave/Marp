@@ -96,7 +96,7 @@
   --shadow-pop: 0 0 0 1px var(--ring), 0 16px 40px -12px rgba(31, 28, 25, 0.22);
   --shadow-raised: 0 0 0 1px var(--ring), 0 1px 2px rgba(31, 28, 25, 0.06);
   --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--focus-color);
-  --focus-field: inset 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft);
+  --focus-field: inset 0 0 0 1px var(--accent), inset 0 0 0 4px var(--accent-soft);
 }
 
 /* ───────────── Токены: тёмная тема (не инверсия) ───────────── */

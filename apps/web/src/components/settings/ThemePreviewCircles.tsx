@@ -39,26 +39,33 @@ const STANDARD_THEME_PREVIEW_COLORS: Record<
   ThemeAppearance,
   Readonly<Record<ThemePreviewRole, string>>
 > = {
+  // Web paints the Marp palette (index.css); mobile still uses the shared preview.
   light: {
-    sidebar: "#fafafa",
-    surface: "#ffffff",
-    accentSurface: "#f4f4f5",
-    messageSurface: "#e4e4e7",
     ...SHARED_STANDARD_THEME_PREVIEW_COLORS.light,
+    sidebar: "#f6f4f0",
+    canvas: "#ffffff",
+    surface: "#ffffff",
+    accentSurface: "#f2efea",
+    accent: "#b4532f",
+    messageSurface: "#f2efea",
+    messageAction: "#b4532f",
   },
   dark: {
-    sidebar: "#0f0f10",
-    surface: "#121212",
-    accentSurface: "#27272a",
-    messageSurface: "#27272a",
     ...SHARED_STANDARD_THEME_PREVIEW_COLORS.dark,
+    sidebar: "#141210",
+    canvas: "#1c1a17",
+    surface: "#1c1a17",
+    accentSurface: "#25221f",
+    accent: "#ee8a64",
+    messageSurface: "#25221f",
+    messageAction: "#ee8a64",
   },
 };
 
 export const STANDARD_THEME_CARDS: ReadonlyArray<ThemeCardDefinition> = [
   {
     id: "default",
-    label: "T3 Code",
+    label: "Marp",
     previews: (["light", "dark"] as const).map((mode) => ({
       mode,
       colors: STANDARD_THEME_PREVIEW_COLORS[mode],
