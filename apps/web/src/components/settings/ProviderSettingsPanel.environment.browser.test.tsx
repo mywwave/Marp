@@ -266,6 +266,38 @@ describe("EnvironmentProviderSettings routing", () => {
     );
   });
 
+  it("switches a managed Codex instance back to the existing CLI from the instance menu", async () => {
+    await setup();
+    state.settings = {
+      ...DEFAULT_UNIFIED_SETTINGS,
+      providerInstances: {
+        [customId]: {
+          driver: ProviderDriverKind.make("codex"),
+          enabled: true,
+          displayName: "Work",
+          config: { setupMode: "managed" },
+        },
+      },
+    };
+    await using _screen = await render(panel({ targetInstanceId: customId }));
+    await userEvent.click(page.getByRole("button", { name: "Instance actions" }));
+    await userEvent.click(page.getByRole("menuitem", { name: "Switch to existing CLI" }));
+
+    expect(state.mutateProviderInstance).toHaveBeenCalledWith(
+      {
+        operation: "upsert",
+        instanceId: customId,
+        instance: {
+          driver: ProviderDriverKind.make("codex"),
+          enabled: true,
+          displayName: "Work",
+          config: { setupMode: "existing" },
+        },
+      },
+      {},
+    );
+  });
+
   it("routes explicit ACP browser authentication consent to the selected environment", async () => {
     await setup();
     const instanceId = ProviderInstanceId.make("acpRegistry_antigravity");

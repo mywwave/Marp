@@ -6,16 +6,20 @@ import {
   ArrowUpCircleIcon,
   CopyIcon,
   DownloadIcon,
+  EllipsisIcon,
   ExternalLinkIcon,
   LayersIcon,
+  PencilIcon,
   PlusIcon,
+  RotateCcwIcon,
+  TerminalIcon,
   Trash2Icon,
   XIcon,
 } from "lucide-react";
 import { Lock as LockGlyph, LockOpen } from "lucide";
 import * as Arr from "effect/Array";
 import * as Result from "effect/Result";
-import { useState, type ReactElement, type ReactNode } from "react";
+import { useRef, useState, type ReactElement, type ReactNode } from "react";
 import {
   isProviderDriverKind,
   resolveProviderInstanceEnabled,
@@ -44,8 +48,10 @@ import { Button } from "../ui/button";
 import { MorphIcon } from "~/components/MorphIcon";
 import { DraftInput } from "../ui/draft-input";
 import { SecretInput } from "./SecretInput";
+import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "../ui/menu";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { Switch } from "../ui/switch";
+import { Tabs, TabsCount, TabsList, TabsPanel, TabsTab } from "../ui/tabs";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import type {
@@ -62,9 +68,9 @@ import { ProviderModelsSection } from "./ProviderModelsSection";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
 import { ProviderAccentColorPicker } from "./ProviderAccentColorPicker";
 import { RedactedSensitiveText } from "./RedactedSensitiveText";
-import { SettingResetButton, SettingsRow, SettingsSection } from "./settingsLayout";
+import { SettingResetButton, SettingsRow } from "./settingsLayout";
+import { SettingsGroup } from "./SettingsGroup";
 import { AcpSessionManagementSection } from "./AcpSessionManagementSection";
-import { FoldedSettingsSection } from "./FoldedSettingsSection";
 import { readCodexSetupMode } from "./CodexSetupSection.logic";
 import {
   getProviderVersionAdvisoryPresentation,
@@ -566,7 +572,9 @@ interface ProviderInstanceCardProps {
   readonly canWriteSettings?: boolean;
   readonly onUpdate: (nextInstance: ProviderInstanceConfig) => void;
   readonly onDelete?: (() => void) | undefined;
-  readonly headerAction?: ReactNode | undefined;
+  readonly onReset?: (() => void) | undefined;
+  readonly onSwitchToExistingCli?: (() => void) | undefined;
+  readonly isDefault?: boolean | undefined;
   readonly setup?: ReactNode;
   readonly runtime?: ReactNode;
   readonly hiddenModels: ReadonlyArray<string>;
@@ -597,6 +605,8 @@ interface ProviderInstanceCardProps {
 const EMPTY_ACP_PROJECTS: NonNullable<ProviderInstanceCardProps["acpProjects"]> = [];
 const NO_CUSTOM_MODELS: ReadonlyArray<CustomModelDefinition> = [];
 
+type ProviderEditorTab = "account" | "runtime" | "models" | "variables" | "sessions";
+
 /** Unknown drivers stay read-only to preserve fork config. projectOverride switches affect only the
  * project, not instance.enabled. */
 export function ProviderInstanceCard({
@@ -611,7 +621,9 @@ export function ProviderInstanceCard({
   canWriteSettings = true,
   onUpdate,
   onDelete,
-  headerAction,
+  onReset,
+  onSwitchToExistingCli,
+  isDefault = false,
   setup,
   runtime,
   hiddenModels,
@@ -674,6 +686,8 @@ export function ProviderInstanceCard({
   const displayName =
     instance.displayName?.trim() || driverOption?.label || String(instance.driver);
   const accentColor = normalizeProviderAccentColor(instance.accentColor);
+  const [tab, setTab] = useState<ProviderEditorTab>("account");
+  const renameRequestedRef = useRef(false);
   const { copyToClipboard } = useCopyToClipboard<{ providerName: string }>({
     onCopy: ({ providerName }) => {
       toastManager.add({
@@ -807,14 +821,6 @@ export function ProviderInstanceCard({
     />
   );
 
-  const titleTailNode = headerAction ? (
-    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">{headerAction}</span>
-  ) : null;
-
-  const versionCodeNode = versionLabel ? (
-    <code className="text-xs text-muted-foreground">{versionLabel}</code>
-  ) : null;
-
   const statusDotNode =
     statusKey === "warning" || statusKey === "error" ? (
       <span className={cn("size-1.5 shrink-0 rounded-full", statusStyle.dot)} aria-hidden />
@@ -857,7 +863,7 @@ export function ProviderInstanceCard({
               render={
                 <Button
                   type="button"
-                  size={mode === "list" ? "icon-micro" : "icon-xs"}
+                  size={mode === "list" ? "icon-micro" : "xs"}
                   variant="ghost-muted"
                   className={mode === "list" ? "pointer-events-auto relative shrink-0" : undefined}
                   aria-label={`${updateProgress ? "Updating" : versionAdvisory.title}, view details`}
@@ -872,6 +878,7 @@ export function ProviderInstanceCard({
                       )}
                     />
                   )}
+                  {mode === "editor" ? (updateProgress ? "Updating" : versionAdvisory.title) : null}
                 </Button>
               }
             />
@@ -963,15 +970,15 @@ export function ProviderInstanceCard({
   if (mode === "list") {
     return (
       <div
-        data-slot="settings-row"
+        data-slot="provider-instance-item"
         className={cn(
-          "group flex min-h-18 items-center gap-3 px-3 py-3 transition-colors sm:px-4",
-          selected ? "bg-foreground/[0.06]" : "hover:bg-muted/25",
+          "group flex min-h-13 items-center gap-3 rounded-lg px-3 py-2 transition-colors",
+          selected ? "bg-muted ring-1 ring-border ring-inset" : "hover:bg-muted",
         )}
       >
         <div
           className={cn(
-            "pointer-events-none relative flex min-w-0 flex-1 items-start gap-3 rounded-md text-left transition-opacity",
+            "pointer-events-none relative flex min-w-0 flex-1 items-center gap-3 rounded-md text-left transition-opacity",
             !enabled && !selected && "opacity-60 group-hover:opacity-100",
           )}
         >
@@ -982,26 +989,26 @@ export function ProviderInstanceCard({
             aria-label={`Select ${displayName}`}
             aria-pressed={selected}
           />
-          {titleIconNode}
+          <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-card">
+            {titleIconNode}
+          </span>
           <span className="min-w-0 flex-1">
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-sm font-medium text-foreground">{displayName}</span>
-              {versionLabel ? (
-                <code className="max-w-24 shrink-0 truncate text-xs text-muted-foreground">
-                  {versionLabel}
-                </code>
-              ) : null}
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate font-medium text-foreground text-sm">{displayName}</span>
               {versionAdvisoryNode}
             </span>
-            <span className="mt-0.5 flex items-start gap-1.5 text-xs leading-normal text-muted-foreground/80">
-              {statusDotNode && !updateProgress ? (
-                <span className="flex h-[1.45em] shrink-0 items-center">{statusDotNode}</span>
-              ) : null}
+            <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground text-xs">
+              {updateProgress ? null : (
+                <span
+                  className={cn("size-1.5 shrink-0 rounded-full", statusStyle.dot)}
+                  aria-hidden
+                />
+              )}
               <ProviderStatusDiagnostic detail={statusDiagnostic}>
                 <span
                   tabIndex={statusDiagnostic ? 0 : undefined}
                   aria-live="polite"
-                  className="pointer-events-auto line-clamp-2 [overflow-wrap:anywhere]"
+                  className="pointer-events-auto min-w-0 truncate"
                 >
                   {updateProgress ? (
                     `Updating · ${updateProgress}`
@@ -1009,6 +1016,12 @@ export function ProviderInstanceCard({
                     <>
                       {summary.headline}
                       {needsAttention && inlineStatusDetail ? ` · ${inlineStatusDetail}` : null}
+                      {versionLabel ? (
+                        <>
+                          {" · "}
+                          <span className="font-mono">{versionLabel}</span>
+                        </>
+                      ) : null}
                     </>
                   )}
                 </span>
@@ -1042,39 +1055,6 @@ export function ProviderInstanceCard({
     );
   }
 
-  const editorHeaderAction = (
-    <div className="flex shrink-0 items-center gap-1.5">
-      {driverOption?.badgeLabel ? (
-        <Badge variant="warning" size="sm" className="shrink-0">
-          {driverOption.badgeLabel}
-        </Badge>
-      ) : null}
-      {versionCodeNode}
-      {versionAdvisoryNode}
-      <span
-        inert={readOnly}
-        aria-disabled={readOnly || undefined}
-        // Empty, it would still add a flex gap and pull the version off the column edge.
-        className={cn("inline-flex items-center gap-1 empty:hidden", readOnly && "opacity-50")}
-      >
-        {titleTailNode}
-        {onDelete ? (
-          <Button
-            type="button"
-            size="icon-xs"
-            variant="ghost-destructive"
-            disabled={readOnly}
-            onClick={onDelete}
-            aria-label={`Delete instance ${instanceId}`}
-          >
-            <Trash2Icon />
-          </Button>
-        ) : null}
-      </span>
-    </div>
-  );
-
-  // Provider status gets its own row instead of hanging under the name field.
   const statusContent = (
     <>
       <ProviderStatusDiagnostic detail={statusDiagnostic}>
@@ -1130,139 +1110,237 @@ export function ProviderInstanceCard({
       }
     />
   );
+  const isCodexManaged =
+    instance.driver === "codex" && readCodexSetupMode(instance.config) === "managed";
+  const runtimeContent = isCodexManaged
+    ? (runtime ?? runtimeFields)
+    : !driverOption || deriveProviderSettingsFields(driverOption).length > 0
+      ? runtimeFields
+      : null;
+  const showSessions = environmentId !== undefined && liveProvider?.driver === "acpRegistry";
+  const availableTabs: ReadonlyArray<ProviderEditorTab> = [
+    "account",
+    ...(runtimeContent ? (["runtime"] as const) : []),
+    ...(driverOption !== undefined ? (["models"] as const) : []),
+    "variables",
+    ...(showSessions ? (["sessions"] as const) : []),
+  ];
+  const activeTab = availableTabs.includes(tab) ? tab : "account";
+  const readOnlyProps = {
+    inert: readOnly,
+    "aria-disabled": readOnly || undefined,
+    className: readOnly ? "opacity-50 select-none" : undefined,
+  };
+  const displayNameInputId = `provider-instance-${instanceId}-display-name`;
+  const caption = [String(instanceId), versionLabel, isDefault ? "default instance" : null].filter(
+    Boolean,
+  );
 
   return (
-    <>
-      <SettingsSection title={displayName} icon={titleIconNode} headerAction={editorHeaderAction}>
-        <SettingsRow title="Status" status={statusContent} />
-        <SettingsRow
-          title="Display name"
-          control={
-            <div
-              inert={readOnly}
-              aria-disabled={readOnly || undefined}
-              className={cn(
-                "flex w-full min-w-0 items-center justify-end gap-2 @min-[32rem]/settings-row:w-auto",
-                readOnly && "opacity-50 select-none",
-              )}
-            >
-              <ProviderAccentColorPicker
-                layout="inline"
-                displayName={displayName}
-                value={accentColor}
-                onCommit={updateAccentColor}
-              />
-              <DraftInput
-                id={`provider-instance-${instanceId}-display-name`}
-                size="sm"
-                className="min-w-0 flex-1 @min-[32rem]/settings-row:w-56"
-                value={instance.displayName ?? ""}
-                onCommit={updateDisplayName}
-                placeholder={driverOption?.label ?? "Instance label"}
-                spellCheck={false}
-              />
-            </div>
-          }
-        />
-      </SettingsSection>
-
-      {setup || environmentFields.length > 0 ? (
-        <SettingsSection title="Setup">
-          {setup}
-          {environmentFields.length > 0 ? (
-            <div
-              inert={readOnly}
-              aria-disabled={readOnly || undefined}
-              className={readOnly ? "opacity-50 select-none" : undefined}
-            >
-              {environmentFields.map((field) => (
-                <ProviderEnvironmentFieldRow
-                  key={field.name}
-                  field={field}
-                  variable={readProviderEnvironmentVariable(instance.environment, field.name)}
-                  idPrefix={`provider-instance-${instanceId}`}
-                  onCommit={updateEnvironmentField}
-                  onRemove={removeEnvironmentField}
-                />
-              ))}
-            </div>
-          ) : null}
-        </SettingsSection>
-      ) : null}
-
-      {instance.driver === "codex" && readCodexSetupMode(instance.config) === "managed" ? (
-        <div
-          inert={readOnly}
-          aria-disabled={readOnly || undefined}
-          className={readOnly ? "opacity-50 select-none" : undefined}
-        >
-          <FoldedSettingsSection
-            key={instanceId}
-            id={`provider-instance-${instanceId}-runtime`}
-            title="Runtime"
-            headerPlacement="outside"
-          >
-            {runtime ?? runtimeFields}
-          </FoldedSettingsSection>
+    <div className="flex min-w-0 flex-col gap-4">
+      <header className="flex min-w-0 items-center gap-3">
+        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
+          {titleIconNode}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate font-semibold text-foreground text-lg">{displayName}</h2>
+          <p className="truncate font-mono text-muted-foreground text-xs">{caption.join(" · ")}</p>
         </div>
-      ) : !driverOption || deriveProviderSettingsFields(driverOption).length > 0 ? (
-        <SettingsSection
-          title="Runtime"
-          inert={readOnly}
-          aria-disabled={readOnly || undefined}
-          className={readOnly ? "opacity-50 select-none" : undefined}
-        >
-          {runtimeFields}
-        </SettingsSection>
-      ) : null}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {driverOption?.badgeLabel ? (
+            <Badge variant="warning" size="sm">
+              {driverOption.badgeLabel}
+            </Badge>
+          ) : null}
+          {versionAdvisoryNode}
+          <Menu>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <MenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost-muted"
+                        aria-label="Instance actions"
+                      />
+                    }
+                  />
+                }
+              >
+                <EllipsisIcon />
+              </TooltipTrigger>
+              <TooltipPopup side="top">Instance actions</TooltipPopup>
+            </Tooltip>
+            <MenuPopup
+              align="end"
+              finalFocus={() => {
+                if (!renameRequestedRef.current) return true;
+                renameRequestedRef.current = false;
+                return document.getElementById(displayNameInputId) ?? true;
+              }}
+            >
+              <MenuItem
+                disabled={readOnly}
+                onClick={() => {
+                  renameRequestedRef.current = true;
+                  setTab("account");
+                }}
+              >
+                <PencilIcon />
+                Rename
+              </MenuItem>
+              {isCodexManaged && onSwitchToExistingCli ? (
+                <MenuItem disabled={readOnly} onClick={onSwitchToExistingCli}>
+                  <TerminalIcon />
+                  Switch to existing CLI
+                </MenuItem>
+              ) : null}
+              {onReset ? (
+                <MenuItem disabled={readOnly} onClick={onReset}>
+                  <RotateCcwIcon />
+                  Reset to defaults
+                </MenuItem>
+              ) : null}
+              {onDelete ? (
+                <>
+                  <MenuSeparator />
+                  <MenuItem variant="destructive" disabled={readOnly} onClick={onDelete}>
+                    <Trash2Icon />
+                    Delete instance
+                  </MenuItem>
+                </>
+              ) : null}
+            </MenuPopup>
+          </Menu>
+        </div>
+      </header>
 
-      <SettingsSection
-        title="Environment"
-        inert={readOnly}
-        aria-disabled={readOnly || undefined}
-        className={readOnly ? "opacity-50 select-none" : undefined}
-      >
-        <ProviderEnvironmentSection
-          environment={genericEnvironment}
-          onChange={updateGenericEnvironment}
-        />
-      </SettingsSection>
-      {environmentId !== undefined && liveProvider?.driver === "acpRegistry" ? (
-        <AcpSessionManagementSection
-          environmentId={environmentId}
-          instanceId={instanceId}
-          provider={liveProvider}
-          projects={acpProjects}
-          readOnly={readOnly}
-        />
-      ) : null}
+      <Tabs value={activeTab} onValueChange={(value) => setTab(value as ProviderEditorTab)}>
+        <TabsList aria-label={`${displayName} settings`}>
+          <TabsTab value="account">Account</TabsTab>
+          {runtimeContent ? <TabsTab value="runtime">Runtime</TabsTab> : null}
+          {driverOption !== undefined ? (
+            <TabsTab value="models">
+              Models <TabsCount>{modelsForDisplay.length}</TabsCount>
+            </TabsTab>
+          ) : null}
+          <TabsTab value="variables">
+            Variables <TabsCount>{genericEnvironment.length}</TabsCount>
+          </TabsTab>
+          {showSessions ? <TabsTab value="sessions">Sessions</TabsTab> : null}
+        </TabsList>
 
-      {driverOption !== undefined ? (
-        <SettingsSection title="Models">
-          <div className="px-3 py-3 sm:px-4">
-            <p className="mb-3 text-xs text-muted-foreground">
-              Model preferences and custom models are saved on the selected environment and shared
-              across connected devices.
-            </p>
-            <ProviderModelsSection
-              canManageCustomModels={!readOnly}
-              canWritePreferences={canWriteSettings}
-              instanceId={instanceId}
-              driverKind={driverKind}
-              models={modelsForDisplay}
-              customModels={customModels}
-              hiddenModels={hiddenModels}
-              favoriteModels={favoriteModels}
-              modelOrder={modelOrder}
-              onChange={updateCustomModels}
-              onHiddenModelsChange={onHiddenModelsChange}
-              onFavoriteModelsChange={onFavoriteModelsChange}
-              onToggleFavorite={onToggleFavorite}
-              onModelOrderChange={onModelOrderChange}
+        <TabsPanel value="account" keepMounted>
+          <SettingsGroup>
+            <SettingsRow title="Status" status={statusContent} />
+            {setup}
+            {environmentFields.length > 0 ? (
+              <div {...readOnlyProps}>
+                {environmentFields.map((field) => (
+                  <ProviderEnvironmentFieldRow
+                    key={field.name}
+                    field={field}
+                    variable={readProviderEnvironmentVariable(instance.environment, field.name)}
+                    idPrefix={`provider-instance-${instanceId}`}
+                    onCommit={updateEnvironmentField}
+                    onRemove={removeEnvironmentField}
+                  />
+                ))}
+              </div>
+            ) : null}
+            <SettingsRow
+              title="Display name"
+              control={
+                <div
+                  inert={readOnly}
+                  aria-disabled={readOnly || undefined}
+                  className={cn(
+                    "flex w-full min-w-0 items-center justify-end gap-2 @min-[32rem]/settings-row:w-auto",
+                    readOnly && "opacity-50 select-none",
+                  )}
+                >
+                  <ProviderAccentColorPicker
+                    layout="inline"
+                    displayName={displayName}
+                    value={accentColor}
+                    onCommit={updateAccentColor}
+                  />
+                  <DraftInput
+                    id={displayNameInputId}
+                    size="sm"
+                    className="min-w-0 flex-1 @min-[32rem]/settings-row:w-56"
+                    value={instance.displayName ?? ""}
+                    onCommit={updateDisplayName}
+                    placeholder={driverOption?.label ?? "Instance label"}
+                    spellCheck={false}
+                  />
+                </div>
+              }
             />
-          </div>
-        </SettingsSection>
-      ) : null}
-    </>
+          </SettingsGroup>
+        </TabsPanel>
+
+        {runtimeContent ? (
+          <TabsPanel value="runtime" keepMounted>
+            <SettingsGroup {...readOnlyProps}>{runtimeContent}</SettingsGroup>
+          </TabsPanel>
+        ) : null}
+
+        {driverOption !== undefined ? (
+          <TabsPanel value="models" keepMounted>
+            <SettingsGroup>
+              <div className="px-3 py-3 sm:px-4">
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Model preferences and custom models are saved on the selected environment and
+                  shared across connected devices.
+                </p>
+                <ProviderModelsSection
+                  canManageCustomModels={!readOnly}
+                  canWritePreferences={canWriteSettings}
+                  instanceId={instanceId}
+                  driverKind={driverKind}
+                  models={modelsForDisplay}
+                  customModels={customModels}
+                  hiddenModels={hiddenModels}
+                  favoriteModels={favoriteModels}
+                  modelOrder={modelOrder}
+                  onChange={updateCustomModels}
+                  onHiddenModelsChange={onHiddenModelsChange}
+                  onFavoriteModelsChange={onFavoriteModelsChange}
+                  onToggleFavorite={onToggleFavorite}
+                  onModelOrderChange={onModelOrderChange}
+                />
+              </div>
+            </SettingsGroup>
+          </TabsPanel>
+        ) : null}
+
+        <TabsPanel value="variables" keepMounted>
+          <SettingsGroup {...readOnlyProps}>
+            <ProviderEnvironmentSection
+              environment={genericEnvironment}
+              onChange={updateGenericEnvironment}
+            />
+          </SettingsGroup>
+        </TabsPanel>
+
+        {showSessions ? (
+          <TabsPanel value="sessions" keepMounted>
+            <SettingsGroup>
+              <AcpSessionManagementSection
+                environmentId={environmentId}
+                instanceId={instanceId}
+                provider={liveProvider}
+                projects={acpProjects}
+                readOnly={readOnly}
+              />
+            </SettingsGroup>
+          </TabsPanel>
+        ) : null}
+      </Tabs>
+    </div>
   );
 }
+
