@@ -20,7 +20,7 @@ with it. Who an install belongs to is a separate fact, sent as
 a rule can change and apply to all history.
 
 [Owner sources](../../apps/server/src/telemetry/Identify.ts), strongest first:
-T3 Connect, then the OpenAI and Claude person ids, then the client device. The
+Marp Connect, then the OpenAI and Claude person ids, then the client device. The
 server reports what it can read itself: the linked Connect account and provider
 logins. A connecting client reports its signed-in Connect account and its device,
 which links every environment opened from one phone, browser, or desktop. Use the
@@ -48,7 +48,7 @@ runs; use `surface` for the connected client.
 ## Interpreting events
 
 Use `client.turn.requested` for active-use reports. There is no connection event,
-because T3 Connect sessions expire hourly and each reconnect would count again.
+because Marp Connect sessions expire hourly and each reconnect would count again.
 A command whose id was already accepted is a retry, so it records nothing again.
 One identity can appear in several client groups during a period; adding those
 groups double-counts users.
@@ -110,4 +110,4 @@ must not reject a connection. PostHog person profiles remain disabled.
 
 Dev-runner servers and the CI archive smoke test turn telemetry off, which also
 stops relay tracing, because each would count as a new install. Set
-`T3CODE_TELEMETRY_ENABLED=true` to test analytics or relay tracing from a dev server.
+`MARP_TELEMETRY_ENABLED=true` to test analytics or relay tracing from a dev server.

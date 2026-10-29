@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // @effect-diagnostics nodeBuiltinImport:off
 /**
- * Replays small fake threads on a Claude or Codex model to check T3's MCP tool use. A trimmed
+ * Replays small fake threads on a Claude or Codex model to check Marp's MCP tool use. A trimmed
  * harness capture supplies the prompt and native tools; a cheap model plays the shell. See
  * README.md for how to run it and add cases.
  */
@@ -17,7 +17,7 @@ import {
   DeviceSummary,
   OrchestratorMcpTaskRole,
   ProviderInstanceId,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -35,9 +35,9 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { taskPrompt } from "../../apps/server/src/mcp/delegatedTaskModes.ts";
 import * as McpInvocationContext from "../../apps/server/src/mcp/McpInvocationContext.ts";
 import { advertisedJsonSchema } from "../../apps/server/src/mcp/advertisedJsonSchema.ts";
-import { EnvironmentId, ORCHESTRATOR_MCP_RUNNING_TASK_NEXT, ThreadId } from "@t3tools/contracts";
-import { projectComposerContextForProvider } from "@t3tools/shared/composerContextReferences";
-import { formatThreadLink } from "@t3tools/shared/threadLinks";
+import { EnvironmentId, ORCHESTRATOR_MCP_RUNNING_TASK_NEXT, ThreadId } from "@marp/contracts";
+import { projectComposerContextForProvider } from "@marp/shared/composerContextReferences";
+import { formatThreadLink } from "@marp/shared/threadLinks";
 import { buildCodexAdditionalContext } from "../../apps/server/src/provider/CodexDeveloperInstructions.ts";
 import { AttachmentToolkit } from "../../apps/server/src/mcp/toolkits/attachment/tools.ts";
 import { DeviceToolkit } from "../../apps/server/src/mcp/toolkits/device/tools.ts";
@@ -87,7 +87,7 @@ const PRICES = {
   "claude-opus-5-5": { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.2 },
 };
 type PricedModel = keyof typeof PRICES;
-const T3_PREFIX = "mcp__t3-code__";
+const MARP_PREFIX = "mcp__marp__";
 const RUNTIME_MARKER = "<runtime_info>";
 const TOOL_LOADED = "Tool loaded.";
 const DEFERRED_LIST =
@@ -119,9 +119,9 @@ export type SampleRun = {
   stopReason: string;
   /** The agent's final answer: its last response's text, if it ended its turn. */
   readonly finalText?: string;
-  /** PRs linked to the thread when the sample ends, by the agent or by T3. */
+  /** PRs linked to the thread when the sample ends, by the agent or by Marp. */
   readonly linked?: ReadonlyArray<string>;
-  /** The `agent-device` commands T3's device_open returned, prior turns included. */
+  /** The `agent-device` commands Marp's device_open returned, prior turns included. */
   readonly launchers?: ReadonlyArray<string>;
 };
 
@@ -130,7 +130,7 @@ const Rest = [Schema.Record(Schema.String, Schema.Unknown)] as const;
 const PriorToolCall = Schema.Struct({
   tool: Schema.String,
   input: Schema.Unknown,
-  /** For a device tool, `"default"` runs the call on the world's devices for T3's result. */
+  /** For a device tool, `"default"` runs the call on the world's devices for Marp's result. */
   result: Schema.Unknown,
 });
 
@@ -185,7 +185,7 @@ const McpToolUseWorld = Schema.StructWithRest(
         Schema.StructWithRest(Schema.Struct({ sha: Schema.String, subject: Schema.String }), Rest),
       ),
     ),
-    /** Simulators and emulators. With them, T3's device tools answer from this world. */
+    /** Simulators and emulators. With them, Marp's device tools answer from this world. */
     devices: Schema.optional(Schema.Array(DeviceSummary)),
     /** Labels of the SSH device hosts in `devices`, by id. The local host always exists. */
     deviceHosts: Schema.optional(Schema.Record(Schema.String, Schema.String)),
@@ -199,12 +199,12 @@ const McpToolUseWorld = Schema.StructWithRest(
     /**
      * Hosts whose hub fails to list devices, by id, with the error, such as F1's
      * `{"_tag": "DeviceOperationError", "operation": "list", "reason": "request_failed", "cause": null}`.
-     * T3 marks each one failed on every call and lists none of its devices.
+     * Marp marks each one failed on every call and lists none of its devices.
      */
     deviceDiscoveryFailures: Schema.optional(Schema.Record(Schema.String, DeviceOperationError)),
-    /** false: agent device access is off. T3 denies every device call and drops its device text. */
+    /** false: agent device access is off. Marp denies every device call and drops its device text. */
     deviceAgentAccess: Schema.optional(Schema.Boolean),
-    /** Every capture reaches T3 with adb screencap's warning ahead of the PNG: T3 reports 0×0. */
+    /** Every capture reaches Marp with adb screencap's warning ahead of the PNG: Marp reports 0×0. */
     deviceInvalidCapture: Schema.optional(Schema.Boolean),
     /** Devices another thread's agent-device session holds, by device id: that thread's id. */
     deviceOwners: Schema.optional(Schema.Record(Schema.String, Schema.String)),
@@ -225,9 +225,9 @@ export const McpToolUseCase = Schema.Struct({
     role: Schema.Literals(["top", "delegated-child", "native-subagent"]),
     /** Runs only on this harness, for cases whose right answer depends on it. */
     harness: Schema.optional(Schema.Literals(["claude", "codex"])),
-    /** The Linked environments beta is on, so T3 lists its link tools. */
+    /** The Linked environments beta is on, so Marp lists its link tools. */
     linkedEnvironments: Schema.optional(Schema.Boolean),
-    /** delegate_task `role` for a delegated child. T3 builds the child's first message from it. */
+    /** delegate_task `role` for a delegated child. Marp builds the child's first message from it. */
     delegateRole: Schema.optional(OrchestratorMcpTaskRole),
     context: Schema.optional(Schema.String),
     priorTurns: Schema.optional(
@@ -241,8 +241,8 @@ export const McpToolUseCase = Schema.Struct({
     ),
     world: Schema.optional(McpToolUseWorld),
     /**
-     * Canned tool results by bare name, T3 or native. `"default"` uses the runner's result. For a
-     * device tool, a T3 `DeviceError` (`{"_tag": ..., "cause": null}`) fails it inside T3.
+     * Canned tool results by bare name, Marp or native. `"default"` uses the runner's result. For a
+     * device tool, a Marp `DeviceError` (`{"_tag": ..., "cause": null}`) fails it inside Marp.
      */
     mocks: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
     /** Regexes on one part of a shell command. A match wins over the shell simulator. */
@@ -251,7 +251,7 @@ export const McpToolUseCase = Schema.Struct({
     ),
   }),
   prompt: Schema.String,
-  /** Records for the context chips `prompt` links, projected as T3 sends them. */
+  /** Records for the context chips `prompt` links, projected as Marp sends them. */
   promptContext: Schema.optional(Schema.Struct({ records: Schema.Array(ComposerContextRecord) })),
   expect: McpToolUseExpect,
   /** Model calls this case may need. Overrides `--max-steps`. */
@@ -323,11 +323,11 @@ const toolResult = (id: string, content: unknown): Block => ({
 });
 const texts = (content: typeof Content.Type) =>
   typeof content === "string" ? [content] : content.flatMap((block) => block.text ?? []);
-const isT3Name = (name: string) => name.startsWith(T3_PREFIX) || name.startsWith("mcp__t3_code__");
+const isMarpName = (name: string) => name.startsWith(MARP_PREFIX) || name.startsWith("mcp__marp__");
 const hasTool = (tools: ReadonlyArray<ApiTool>, name: string) =>
   tools.some((tool) => tool.name === name);
 
-/** Grading name: T3 tools lose their MCP prefix, native tools keep the part after the last `_`. */
+/** Grading name: Marp tools lose their MCP prefix, native tools keep the part after the last `_`. */
 const CODEX_NAMES: Readonly<Record<string, string>> = {
   exec_command: "Bash",
   shell_command: "Bash",
@@ -339,8 +339,8 @@ const CODEX_NAMES: Readonly<Record<string, string>> = {
 };
 export const normalizeToolName = (name: string) => {
   const bare = name.slice(name.lastIndexOf(".") + 1);
-  return isT3Name(bare)
-    ? bare.slice(T3_PREFIX.length)
+  return isMarpName(bare)
+    ? bare.slice(MARP_PREFIX.length)
     : (CODEX_NAMES[bare] ?? bare.slice(bare.lastIndexOf("_") + 1));
 };
 export const normalizeToolInput = (name: string, input: unknown) =>
@@ -352,7 +352,7 @@ export const normalizeToolInput = (name: string, input: unknown) =>
 
 // McpHttpServer advertises each tool's JSON schema, and Claude Code passes the MCP name,
 // description, and schema through unchanged.
-const t3SourceTools: ReadonlyArray<Tool.Any> = [
+const marpSourceTools: ReadonlyArray<Tool.Any> = [
   OrchestratorToolkit,
   ThreadToolkit,
   AttachmentToolkit,
@@ -365,32 +365,32 @@ const t3SourceTools: ReadonlyArray<Tool.Any> = [
   DeviceToolkit,
   HtmlToolkit,
 ].flatMap((toolkit): ReadonlyArray<Tool.Any> => Object.values(toolkit.tools));
-const t3Tools: ReadonlyArray<ApiTool> = t3SourceTools.map((tool) => ({
-  name: `${T3_PREFIX}${tool.name}`,
+const marp: ReadonlyArray<ApiTool> = marpSourceTools.map((tool) => ({
+  name: `${MARP_PREFIX}${tool.name}`,
   description: Tool.getDescription(tool) ?? "",
   input_schema: advertisedJsonSchema(tool),
 }));
 const enabledWhen = (predicate: () => boolean) =>
   new Set(
-    t3SourceTools
+    marpSourceTools
       .filter(
         (tool) => Context.getOrUndefined(tool.annotations, McpSchema.EnabledWhen) === predicate,
       )
-      .map((tool) => `${T3_PREFIX}${tool.name}`),
+      .map((tool) => `${MARP_PREFIX}${tool.name}`),
   );
-// T3 does not offer these to a delegated child, so its harness never lists them.
+// Marp does not offer these to a delegated child, so its harness never lists them.
 const hiddenFromSubagents = enabledWhen(McpInvocationContext.hiddenFromSubagents);
-// The Linked environments beta starts off, and T3 lists its tools only while it is on.
+// The Linked environments beta starts off, and Marp lists its tools only while it is on.
 const hiddenWhileLinksOff = enabledWhen(McpInvocationContext.hiddenWhileLinksOff);
-const visibleT3Tools = (options: { readonly subagent?: boolean; readonly links?: boolean }) =>
-  t3Tools.filter(
+const visibleMarp = (options: { readonly subagent?: boolean; readonly links?: boolean }) =>
+  marp.filter(
     (tool) =>
       (options.links === true || !hiddenWhileLinksOff.has(tool.name)) &&
       !(options.subagent === true && hiddenFromSubagents.has(tool.name)),
   );
 
 /**
- * T3's Claude Code options for an eval thread: its system prompt append and its hooks. `device` says
+ * Marp's Claude Code options for an eval thread: its system prompt append and its hooks. `device` says
  * whether the thread holds the `device` capability, as agent device access decides.
  */
 const claudeQueryOptions = (model: Model, device = true) => {
@@ -402,26 +402,26 @@ const claudeQueryOptions = (model: Model, device = true) => {
     nativeThreadId: "mcp-tool-use-eval",
     resume: false,
     cwd: null,
-    mcpServers: { "t3-code": { type: "http", url: "http://127.0.0.1/mcp" } },
+    mcpServers: { marp: { type: "http", url: "http://127.0.0.1/mcp" } },
     deviceToolsAvailable: device,
   };
   return makeClaudeQueryOptions(input);
 };
 
-/** Text T3 appends to Claude Code's system prompt. Delegated children get the same text. */
-export const t3SystemAppend = (model: Model, device = true) => {
+/** Text Marp appends to Claude Code's system prompt. Delegated children get the same text. */
+export const marpSystemAppend = (model: Model, device = true) => {
   const { systemPrompt } = claudeQueryOptions(model, device);
   if (isRecord(systemPrompt) && systemPrompt.type === "preset" && systemPrompt.append) {
     return systemPrompt.append;
   }
-  throw new Error("makeClaudeQueryOptions no longer appends T3 text to a preset prompt.");
+  throw new Error("makeClaudeQueryOptions no longer appends Marp text to a preset prompt.");
 };
 
 /**
- * The context T3's SubagentStart hooks give a native subagent, which gets none of the append.
- * Empty when T3 registers no such hook.
+ * The context Marp's SubagentStart hooks give a native subagent, which gets none of the append.
+ * Empty when Marp registers no such hook.
  */
-export const t3SubagentContext = async (model: Model, device = true) => {
+export const marpSubagentContext = async (model: Model, device = true) => {
   const hooks = (claudeQueryOptions(model, device).hooks?.SubagentStart ?? []).flatMap(
     (m) => m.hooks,
   );
@@ -447,18 +447,18 @@ export const t3SubagentContext = async (model: Model, device = true) => {
 };
 
 /**
- * Size of the context T3 adds: the system text every Claude thread gets, and the tool
+ * Size of the context Marp adds: the system text every Claude thread gets, and the tool
  * descriptions and schemas (loaded on demand here, sent up front by harnesses without
  * deferred tools). Tokens are estimated at 4 characters each.
  */
-const t3ContextReport = (model: Model) => {
+const marpContextReport = (model: Model) => {
   const size = (chars: number) => `${chars} chars (~${Math.round(chars / 4)} tokens)`;
-  const descriptions = t3Tools.reduce((sum, tool) => sum + valueText(tool.description).length, 0);
-  const schemas = JSON.stringify(t3Tools).length;
+  const descriptions = marp.reduce((sum, tool) => sum + valueText(tool.description).length, 0);
+  const schemas = JSON.stringify(marp).length;
   return [
-    `- T3 context: system text ${size((isCodex(model) ? JSON.stringify(buildCodexAdditionalContext({ model }, { browser: true, device: true })) : t3SystemAppend(model)).length)}`,
+    `- Marp context: system text ${size((isCodex(model) ? JSON.stringify(buildCodexAdditionalContext({ model }, { browser: true, device: true })) : marpSystemAppend(model)).length)}`,
     `tool descriptions ${size(descriptions)}`,
-    `full tool schemas ${size(schemas)} across ${t3Tools.length} tools.`,
+    `full tool schemas ${size(schemas)} across ${marp.length} tools.`,
   ].join(", ");
 };
 
@@ -493,13 +493,13 @@ export const buildBase = (
     readonly keepUserInstructions: boolean;
     readonly subagent?: boolean;
     readonly links?: boolean;
-    /** A native subagent starts from its task: T3 appends nothing to its system prompt. */
+    /** A native subagent starts from its task: Marp appends nothing to its system prompt. */
     readonly nativeSubagent?: boolean;
-    /** false: the thread has no agent device access, so T3's text leaves devices out. */
+    /** false: the thread has no agent device access, so Marp's text leaves devices out. */
     readonly deviceAccess?: boolean;
   },
 ) => {
-  const t3 = visibleT3Tools(options);
+  const marp = visibleMarp(options);
   const firstAssistant = template.messages.findIndex((message) => message.role === "assistant");
   const head = template.messages.slice(0, firstAssistant === -1 ? undefined : firstAssistant);
   const systemTexts = [
@@ -512,10 +512,10 @@ export const buildBase = (
   if (systemTexts.filter((value) => value.includes(RUNTIME_MARKER)).length !== 1 || !deferredList) {
     throw new Error(`The template needs one ${RUNTIME_MARKER} block and a deferred tool list.`);
   }
-  const nativeDeferred = deferredList.split("\n").filter((name) => name && !isT3Name(name));
-  const names = [...nativeDeferred, ...t3.map((tool) => tool.name)].toSorted().join("\n");
+  const nativeDeferred = deferredList.split("\n").filter((name) => name && !isMarpName(name));
+  const names = [...nativeDeferred, ...marp.map((tool) => tool.name)].toSorted().join("\n");
   const { model } = options;
-  const append = options.nativeSubagent ? "" : t3SystemAppend(model, options.deviceAccess);
+  const append = options.nativeSubagent ? "" : marpSystemAppend(model, options.deviceAccess);
   const modelLine = `You are powered by the model named ${MODELS[model]}. The exact model ID is ${model}.`;
   const joined = systemTexts.join("\n");
   // The capture's home directory names its user. Cases use `/home/user` paths instead.
@@ -524,7 +524,7 @@ export const buildBase = (
   const anonymize = (value: string) =>
     home === undefined ? value : value.replaceAll(home, home.replace(/[^/]+$/, "user"));
   const system = systemTexts.map((value) => {
-    // T3's append is the tail of its block: runtime info, PR linking, then orchestration.
+    // Marp's append is the tail of its block: runtime info, PR linking, then orchestration.
     const at = value.indexOf(RUNTIME_MARKER);
     return anonymize(at === -1 ? value : value.slice(0, at) + append)
       .replace(DEFERRED_LIST, (_, header: string) => `${header}${names}\n`)
@@ -555,16 +555,16 @@ export const buildBase = (
       platform: /Platform: (\w+)/.exec(joined)?.[1] ?? "linux",
       date: /Today's date is ([\d-]+)/.exec(reminders.join("\n"))?.[1],
     },
-    nativeTools: template.tools.filter((tool) => !isT3Name(tool.name)),
-    /** Tools ToolSearch loads: T3 tools from source, and native tools the template only names. */
-    t3,
-    deferred: [...t3, ...nativeDeferred.map((name) => ({ name, ...nativeSchema(name) }))],
+    nativeTools: template.tools.filter((tool) => !isMarpName(tool.name)),
+    /** Tools ToolSearch loads: Marp tools from source, and native tools the template only names. */
+    marp,
+    deferred: [...marp, ...nativeDeferred.map((name) => ({ name, ...nativeSchema(name) }))],
   };
 };
 
 type Base = ReturnType<typeof buildBase> & {
   readonly codex?: typeof ResponsesRequest.Type;
-  /** What T3's SubagentStart hooks give a native subagent. */
+  /** What Marp's SubagentStart hooks give a native subagent. */
   readonly subagentContext?: string;
 };
 
@@ -577,18 +577,18 @@ const buildCodexBase = (
     readonly effort?: string | undefined;
     readonly subagent?: boolean;
     readonly links?: boolean;
-    /** false: the thread has no agent device access, so T3's text leaves devices out. */
+    /** false: the thread has no agent device access, so Marp's text leaves devices out. */
     readonly deviceAccess?: boolean;
   },
 ): Base => {
-  const t3 = visibleT3Tools(options);
+  const marp = visibleMarp(options);
   const contentText = (item: Block) =>
     Array.isArray(item.content)
       ? item.content.map((block: Block) => valueText(block.text)).join("\n")
       : valueText(item.content);
   const joined = template.input.map(contentText).join("\n");
-  if (!joined.includes("<t3_code_runtime>"))
-    throw new Error("Codex template needs full T3 context.");
+  if (!joined.includes("<marp_runtime>"))
+    throw new Error("Codex template needs full Marp context.");
   const cwd = /<cwd>(.*?)<\/cwd>/.exec(joined)?.[1] ?? "/home/user/app";
   const home = /^\/(?:home|Users)\/[^/]+/.exec(cwd)?.[0];
   const clean = (s: string) => (home ? s.replaceAll(home, home.replace(/[^/]+$/, "user")) : s);
@@ -601,7 +601,7 @@ const buildCodexBase = (
   // The captured <collaboration_mode> message stays: Codex supplies its own mode text natively.
   const input = template.input.flatMap((item) => {
     const content = contentText(item);
-    if (content.includes("<t3_code_")) return [];
+    if (content.includes("<marp_")) return [];
     if (item.role === "user") {
       const env = /<environment_context>[\s\S]*?<\/environment_context>/.exec(content)?.[0];
       return env ? [message(clean(options.keepUserInstructions ? content : env), "user")] : [];
@@ -641,8 +641,8 @@ const buildCodexBase = (
       date: /<current_date>(.*?)<\/current_date>/.exec(joined)?.[1],
     },
     nativeTools,
-    t3,
-    deferred: [...t3],
+    marp,
+    deferred: [...marp],
     codex: { ...template, input, reasoning: { ...template.reasoning, effort } },
   };
 };
@@ -662,7 +662,7 @@ const codexCall = (name: string, input: unknown) => {
           : `python3 -c ${JSON.stringify(`from pathlib import Path; p=Path(${JSON.stringify(file)}); p.write_text(p.read_text().replace(${JSON.stringify(args.old_string)}, ${JSON.stringify(args.new_string)}))`)}`;
     return `text(await tools.exec_command(${JSON.stringify({ cmd: command })}));`;
   }
-  return `text(await tools.${name.replace("mcp__t3-code__", "mcp__t3_code__")}(${JSON.stringify(input)}));`;
+  return `text(await tools.${name}(${JSON.stringify(input)}));`;
 };
 const codexMessages = (messages: ReadonlyArray<ApiMessage>): Array<Block> =>
   messages.flatMap((message) =>
@@ -694,14 +694,14 @@ const codexMessages = (messages: ReadonlyArray<ApiMessage>): Array<Block> =>
   );
 /** One tool call the shell simulator has answered, or one from the case's prior turns. */
 type ShellEntry = { readonly tool: string; readonly input: unknown; readonly output: string };
-/** PRs T3 links by itself because a shell command created them, as `gh pr create` does. */
+/** PRs Marp links by itself because a shell command created them, as `gh pr create` does. */
 const createdPullRequests = ({ tool, input, output }: ShellEntry) =>
   tool === "Bash" && isRecord(input) && typeof input.command === "string"
     ? changeRequestsCreatedBy(input.command, output).map(({ url }) => url)
     : [];
 /**
  * One sample's state. ToolSearch adds loaded schemas to `tools`, like Claude Code. `shell` is the
- * history the simulator keeps consistent with; `linked` and `nextTask` do the same for T3 results.
+ * history the simulator keeps consistent with; `linked` and `nextTask` do the same for Marp results.
  */
 type Sample = {
   readonly testCase: McpToolUseCase;
@@ -713,9 +713,9 @@ type Sample = {
   readonly linked: Set<string>;
   readonly codeStore: Record<string, unknown>;
   nextTask: number;
-  /** T3's device tools, once `withDevices` builds them for a world with devices. */
+  /** Marp's device tools, once `withDevices` builds them for a world with devices. */
   devices?: DeviceTools;
-  /** T3's results for prior device calls whose case result is "default". */
+  /** Marp's results for prior device calls whose case result is "default". */
   readonly priorResults: Map<unknown, string>;
 };
 
@@ -751,8 +751,8 @@ export const makeSample = (testCase: McpToolUseCase, base: Base): Sample => {
 };
 
 /**
- * Builds T3's device tools for a world with devices. Prior device calls whose result is "default"
- * run first, in order and without the case's mocks, so their results and sessions are T3's. As in
+ * Builds Marp's device tools for a world with devices. Prior device calls whose result is "default"
+ * run first, in order and without the case's mocks, so their results and sessions are Marp's. As in
  * the real flow, device_open starts no agent-device session: one starts at a launcher `open` in the
  * sample's shell history, prior turns included, or where `world.agentDeviceSessions` declares it.
  */
@@ -844,11 +844,11 @@ export const buildMessages = (sample: Sample) => {
       const tool = findTool(base, call.tool);
       if (tool === undefined) throw new Error(`${testCase.id}: unknown prior tool ${call.tool}.`);
       if (call.result === "default" && isDeviceTool(call.tool) && !sample.priorResults.has(call)) {
-        throw new Error(`${testCase.id}: prior ${call.tool} needs T3's result; run withDevices.`);
+        throw new Error(`${testCase.id}: prior ${call.tool} needs Marp's result; run withDevices.`);
       }
       return { ...call, id: `toolu_prior_${nextId++}`, name: tool.name, tool, prior: call };
     });
-    // Prior T3 calls load their schemas first, as in a real deferred session.
+    // Prior Marp calls load their schemas first, as in a real deferred session.
     const unloaded = [...new Set(calls.map((call) => call.tool))].filter(
       (tool) => !hasTool(tools, tool.name),
     );
@@ -883,7 +883,7 @@ export const buildMessages = (sample: Sample) => {
   return messages;
 };
 
-// Results for T3 tools a case does not mock. The model ids are public in this repo's catalog.
+// Results for Marp tools a case does not mock. The model ids are public in this repo's catalog.
 const claudeModel = (id: string) => ({ id, options: [{ id: "effort", values: EFFORTS }] });
 const codexModel = (id: string) => ({ id, options: [{ id: "reasoningEffort", values: EFFORTS }] });
 // Mirrors the real catalog's main models, so a case's named model is not missing by accident.
@@ -921,7 +921,7 @@ const DEFAULT_THREAD = {
 const HTML_RENDERED =
   "Shown to the reader above your reply. Don't mention or describe the page; reply with only what it doesn't already say.";
 
-/** Pull request identity from a `url` or `repository` plus `number` input, like T3's results. */
+/** Pull request identity from a `url` or `repository` plus `number` input, like Marp's results. */
 const pullRequest = (repo: string, input: Readonly<Record<string, unknown>>) => {
   const url = typeof input.url === "string" ? input.url : "";
   const repository =
@@ -935,8 +935,8 @@ const pullRequest = (repo: string, input: Readonly<Record<string, unknown>>) => 
   };
 };
 
-/** A believable T3 result for a tool the case does not mock. */
-const t3Default = (sample: Sample, name: string, input: Readonly<Record<string, unknown>>) => {
+/** A believable Marp result for a tool the case does not mock. */
+const marpDefault = (sample: Sample, name: string, input: Readonly<Record<string, unknown>>) => {
   const pr = () => pullRequest(sample.repo, input);
   switch (name) {
     case "orchestrator_capabilities":
@@ -979,12 +979,12 @@ const t3Default = (sample: Sample, name: string, input: Readonly<Record<string, 
       return { ...pr(), alreadyLinked };
     }
     case "request_secret": {
-      // T3 names both a ref and a file with 32 hex characters, and keeps files in its secrets dir.
+      // Marp names both a ref and a file with 32 hex characters, and keeps files in its secrets dir.
       const id = "5f0c9e2a7b4d4183a6e1c8d2b9f07a64";
       const home =
         /^\/(?:home|Users)\/[^/]+/.exec(sample.base.environment.cwd)?.[0] ?? "/home/user";
       return input.delivery === "file"
-        ? { status: "saved", file: `${home}/.t3/userdata/secrets/files/${id}` }
+        ? { status: "saved", file: `${home}/.marp/userdata/secrets/files/${id}` }
         : { status: "saved", secretRef: `secret-ref:${id}` };
     }
     case "unlink_pull_request":
@@ -1004,7 +1004,7 @@ const t3Default = (sample: Sample, name: string, input: Readonly<Record<string, 
         })),
         chains: [],
       };
-    case "t3_thread_read": {
+    case "marp_thread_read": {
       const threadId = valueText(input.threadId);
       const { title, status, items } = DEFAULT_THREAD;
       return { thread: { threadId, title, status }, items, nextPosition: 3, hasMore: false };
@@ -1033,7 +1033,7 @@ const t3Default = (sample: Sample, name: string, input: Readonly<Record<string, 
 /** The machine the fake threads live on. */
 const EVAL_ENVIRONMENT_ID = EnvironmentId.make("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee");
 
-/** Fields T3 adds to real thread and task results, applied to mocks and defaults alike. */
+/** Fields Marp adds to real thread and task results, applied to mocks and defaults alike. */
 const withProductFields = (name: string, value: unknown, child: boolean): unknown => {
   if (!isRecord(value)) return value;
   const linked = (thread: unknown, idKey = "threadId") => {
@@ -1058,16 +1058,16 @@ const withProductFields = (name: string, value: unknown, child: boolean): unknow
       const running = task.status === "running" && task.next === undefined;
       return running ? { ...task, next: ORCHESTRATOR_MCP_RUNNING_TASK_NEXT } : task;
     }
-    case "t3_thread_read":
+    case "marp_thread_read":
       return { ...value, thread: linked(value.thread) };
-    case "t3_thread_launch":
-    case "t3_thread_send":
+    case "marp_thread_launch":
+    case "marp_thread_send":
     case "run_scheduled_task_now":
       return linked(value);
-    case "t3_thread_list":
+    case "marp_thread_list":
     case "create_threads":
       return listed("threads");
-    case "t3_thread_search":
+    case "marp_thread_search":
       return listed("matches");
     case "link_pull_request":
       return child ? { ...value, next: CHILD_PULL_REQUEST_REPORT_NEXT } : value;
@@ -1157,7 +1157,7 @@ export const shellRequest = (sample: Sample, call: Omit<ShellEntry, "output">, m
     ...(devices?.describe(shell, typeof command === "string" ? command : undefined) ?? []),
     ...(world?.deviceInvalidCapture
       ? [
-          "T3's device_screenshot gets each capture with adb screencap's multi-display warning ahead of the PNG, so it reports 0×0. agent-device's own screenshot finds the PNG and is unaffected.",
+          "Marp's device_screenshot gets each capture with adb screencap's multi-display warning ahead of the PNG, so it reports 0×0. agent-device's own screenshot finds the PNG and is unaffected.",
         ]
       : []),
     ...(context ? [`The agent was told: ${context}`] : []),
@@ -1169,7 +1169,7 @@ export const shellRequest = (sample: Sample, call: Omit<ShellEntry, "output">, m
     max_tokens: 8_000,
     // The "facts" field keeps the simulator's reasoning out of the output the agent sees.
     output_config: { effort: "low", format: { type: "json_schema", schema: SHELL_REPLY_SCHEMA } },
-    // A case with devices also gets agent-device's own CLI, so T3's launchers answer as it does.
+    // A case with devices also gets agent-device's own CLI, so Marp's launchers answer as it does.
     system: devices ? `${SHELL_PROMPT}\n\n${AGENT_DEVICE_SHELL}` : SHELL_PROMPT,
     messages: [
       {
@@ -1209,7 +1209,7 @@ type Config = {
 
 /**
  * Output for a command that needs no simulator: a matching shell mock, else, for a plain command
- * on a launcher T3 returned, agent-device's help or its error for a session not yet started.
+ * on a launcher Marp returned, agent-device's help or its error for a session not yet started.
  */
 export const cannedOutput = (sample: Sample, command: string) =>
   mockOutput(sample, command) ??
@@ -1272,10 +1272,10 @@ const answerToolCall = Effect.fn("evaluateMcpToolUse.answerToolCall")(function* 
     return loadTools(tools, call.id, found);
   }
   const mock = testCase.setup.mocks?.[name];
-  // T3 answers device calls from the world. A mock that is a T3 device error fails inside T3.
+  // Marp answers device calls from the world. A mock that is a Marp device error fails inside Marp.
   const failure = deviceFailure(mock);
   const fromWorld = mock === undefined || mock === "default" || failure !== undefined;
-  if (sample.devices && isT3Name(call.name) && isDeviceTool(name) && fromWorld) {
+  if (sample.devices && isMarpName(call.name) && isDeviceTool(name) && fromWorld) {
     const result = yield* sample.devices.call(name, input, failure);
     return result.isError ? failed(result.text) : toolResult(call.id, result.text);
   }
@@ -1286,12 +1286,12 @@ const answerToolCall = Effect.fn("evaluateMcpToolUse.answerToolCall")(function* 
         ? capabilities(sample, mock)
         : withProductFields(name, mock, testCase.setup.role === "delegated-child"),
     );
-  if (isT3Name(call.name)) {
-    // T3 refuses a watch from a delegated child.
+  if (isMarpName(call.name)) {
+    // Marp refuses a watch from a delegated child.
     if (name === "watch_pull_request" && testCase.setup.role === "delegated-child") {
       return failed(SUBAGENT_WATCH_ERROR);
     }
-    const value = t3Default(sample, name, input);
+    const value = marpDefault(sample, name, input);
     return toolResult(
       call.id,
       name === "orchestrator_capabilities"
@@ -1466,8 +1466,8 @@ export const executeCodex = async (
 };
 
 const codexCatalog = (base: Base) => [
-  ...base.t3.map((tool) => ({
-    name: tool.name.replace("mcp__t3-code__", "mcp__t3_code__"),
+  ...base.marp.map((tool) => ({
+    name: tool.name,
     description: `${valueText(tool.description)}\nInput JSON schema: ${JSON.stringify(tool.input_schema)}`,
   })),
   ...[
@@ -1679,7 +1679,7 @@ const runSample = Effect.fn("evaluateMcpToolUse.runSample")(function* (
             Effect.map((result) => settle(recorded, result)),
             Effect.map((result) => {
               const output = valueText(result.content);
-              if (isT3Name(name))
+              if (isMarpName(name))
                 return {
                   content: [text(output)],
                   ...(!result.is_error
@@ -1808,7 +1808,7 @@ export const summarize = (
   );
   const errorNote = `- Errored: ${errors.map(([id, failed]) => `${id} ×${failed.length}`).join(", ")}. These samples did not finish, even after retries, so pass rates leave them out; tokens they spent are counted.`;
   const nativeNote =
-    "- native-subagent cases are approximate: the harness gives subagents their own system prompt, which this runner does not rebuild. T3's append is left out and its SubagentStart hook context added after the task.";
+    "- native-subagent cases are approximate: the harness gives subagents their own system prompt, which this runner does not rebuild. Marp's append is left out and its SubagentStart hook context added after the task.";
   const identityNote = `- The captured Claude Code identity line is replaced with "${NEUTRAL_IDENTITY}"`;
   const finished = rows.filter((row) => row.error === undefined).length;
   return [
@@ -1890,18 +1890,18 @@ const main = Effect.gen(function* () {
       "max-steps": string,
       effort: string,
       "shell-model": { ...string, default: "claude-haiku-5-5" },
-      // T3's text must work for every user, so the captured CLAUDE.md is dropped by default.
+      // Marp's text must work for every user, so the captured CLAUDE.md is dropped by default.
       "user-instructions": { ...string, default: "drop" },
       "dry-run": { type: "boolean", default: false },
       "stop-on-regression": { type: "boolean", default: false },
       "regression-budget": string,
-      // Prints the size of T3's text and tool schemas, then exits. Needs no template or key.
+      // Prints the size of Marp's text and tool schemas, then exits. Needs no template or key.
       context: { type: "boolean", default: false },
     },
   });
   const flags = yield* decodeFlags({ template: "", ...values });
   if (flags.context) {
-    process.stdout.write(`${t3ContextReport(flags.model)}\n`);
+    process.stdout.write(`${marpContextReport(flags.model)}\n`);
     return;
   }
   if (flags["stop-on-regression"] && flags.baseline === undefined) {
@@ -1970,7 +1970,7 @@ const main = Effect.gen(function* () {
               deviceAccess,
             });
             return role === "native-subagent"
-              ? Effect.promise(() => t3SubagentContext(flags.model, deviceAccess)).pipe(
+              ? Effect.promise(() => marpSubagentContext(flags.model, deviceAccess)).pipe(
                   Effect.map((subagentContext): Base => ({ ...built, subagentContext })),
                 )
               : Effect.succeed(built);
@@ -2112,7 +2112,7 @@ const main = Effect.gen(function* () {
   const summary = summarize(
     rows,
     {
-      header: [header, t3ContextReport(flags.model), ...stopped].join("\n"),
+      header: [header, marpContextReport(flags.model), ...stopped].join("\n"),
       shellModel: config.shellModel,
       model: config.model,
     },

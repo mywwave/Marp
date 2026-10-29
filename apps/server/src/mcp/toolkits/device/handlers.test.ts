@@ -17,17 +17,17 @@ describe("device tool helpers", () => {
     const text = agentDeviceQuickStart(
       device,
       ["--session", "thread-1", "--config", "/tmp/host.json"],
-      "/tmp/t3 tools/agent-device",
+      "/tmp/marp tools/agent-device",
     );
     expect(text).toContain(
-      "'/tmp/t3 tools/agent-device' snapshot -i --session thread-1 --config /tmp/host.json",
+      "'/tmp/marp tools/agent-device' snapshot -i --session thread-1 --config /tmp/host.json",
     );
     expect(text).not.toContain("  agent-device ");
     expect(text).not.toContain("is on PATH");
   });
 
   it("shows a bound launcher's commands without flags and keeps device actions off simctl and ssh", () => {
-    const command = "/state/device/targets/t3-a/agent-device";
+    const command = "/state/device/targets/marp-a/agent-device";
     const text = agentDeviceQuickStart(device, [], command);
     const examples = text.split("\n").filter((line) => line.trimStart().startsWith(command));
     expect(examples).toContain(`  ${command} snapshot -i  # accessibility tree with @eN refs`);
@@ -42,7 +42,7 @@ describe("device tool helpers", () => {
   });
 
   it("opens the app before snapshots, CLI screenshots or input, looks with device_screenshot, and records the device screen", () => {
-    const command = "/state/device/targets/t3-a/agent-device";
+    const command = "/state/device/targets/marp-a/agent-device";
     const text = agentDeviceQuickStart(device, [], command);
     // device_open starts no agent-device session, and an iOS snapshot needs one with an app.
     expect(text).toContain(

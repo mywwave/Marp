@@ -13,7 +13,7 @@ import {
   ProviderInstanceId,
   RunId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { McpSchema, McpServer } from "effect/ai";
@@ -22,9 +22,9 @@ import * as ServerConfig from "../config.ts";
 import { CodexProviderCapabilitiesV2 } from "../orchestration-v2/Adapters/CodexAdapterV2.ts";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ProjectionStore from "../orchestration-v2/ProjectionStore.ts";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import type * as ProviderAdapter from "@marp/provider-core/server/ProviderAdapter";
 import * as ProviderAdapterRegistry from "../orchestration-v2/ProviderAdapterRegistry.ts";
-import { makeSubagentChildThread } from "@t3tools/provider-core/server/subagentProjection";
+import { makeSubagentChildThread } from "@marp/provider-core/server/subagentProjection";
 import * as ThreadForkService from "../orchestration-v2/ThreadForkService.ts";
 import * as ThreadLaunch from "../orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadManagement from "../orchestration-v2/ThreadManagementService.ts";
@@ -48,7 +48,7 @@ import * as PeerLinkRequests from "../peer/PeerLinkRequests.ts";
 import * as PeerLinks from "../peer/PeerLinks.ts";
 
 // A linked environment's session drives this one's real orchestrator through
-// its real T3 tools. What the link starts carries its origin, and the link
+// its real Marp tools. What the link starts carries its origin, and the link
 // changes only that.
 
 const instanceId = ProviderInstanceId.make("codex");
@@ -148,7 +148,7 @@ const layerTools = Layer.mergeAll(
         Effect.succeed({
           id: input.projectId,
           title: input.title ?? "Untitled",
-          workspaceRoot: "/p/t3code",
+          workspaceRoot: "/p/marp",
           defaultModelSelection: null,
           scripts: [],
           createdAt: "2026-10-18T00:00:00.000Z",
@@ -172,13 +172,13 @@ const layerTools = Layer.mergeAll(
       cloneRepository: (input) =>
         Effect.succeed({
           cwd: input.destinationPath,
-          remoteUrl: "https://github.com/pingdotgg/t3code.git",
+          remoteUrl: "https://github.com/pingdotgg/marp.git",
           repository: null,
         }),
     }),
   ),
   Layer.provide(
-    ServerConfig.layerTest(process.cwd(), { prefix: "t3-link-origin-" }).pipe(
+    ServerConfig.layerTest(process.cwd(), { prefix: "marp-link-origin-" }).pipe(
       Layer.provide(NodeServices.layer),
     ),
   ),
@@ -206,7 +206,7 @@ const clientScope = (
   environmentId: EnvironmentId.make("environment:box"),
   requestNamespace: `client:${sessionId}`,
   thread: undefined,
-  client: { sessionId, label: `T3 Code · ${sessionId}`, access, linked },
+  client: { sessionId, label: `Marp · ${sessionId}`, access, linked },
   capabilities: new Set(["orchestration", "worktree", "pull-requests"]),
   issuedAt: 0,
 });
@@ -238,7 +238,7 @@ const launch = (
   title: string,
   extra: Record<string, unknown> = {},
 ) =>
-  call(scope, "t3_thread_launch", {
+  call(scope, "marp_thread_launch", {
     projectId,
     title,
     modelSelection: { instanceId, model: "gpt-5" },
@@ -279,7 +279,7 @@ it.layer(Layer.provideMerge(layerTools, layerOrchestration))("work a link starts
       const shell = yield* projections.getThreadShell(launched);
       assert.deepEqual(shell?.linkOrigin, {
         sessionId: "laptop",
-        label: "T3 Code · laptop",
+        label: "Marp · laptop",
         access: "auto",
       });
 
@@ -341,7 +341,7 @@ it.layer(Layer.provideMerge(layerTools, layerOrchestration))("work a link starts
       const users = yield* usersOwnThread;
       const ownLaunch = yield* launch(laptop, "The laptop's");
       const rename = (scope: McpInvocationContext.McpInvocationScope, threadId: ThreadId) =>
-        call(scope, "t3_thread_update", {
+        call(scope, "marp_thread_update", {
           threadId,
           action: "rename",
           title: `Renamed by ${scope.client!.sessionId}`,
@@ -358,8 +358,8 @@ it.layer(Layer.provideMerge(layerTools, layerOrchestration))("work a link starts
       assert.equal((yield* rename(claudeCode, users)).isError, false);
       // Naming this environment's own id is still this environment's thread.
       for (const [name, args] of [
-        ["t3_thread_send", { message: "From the laptop." }],
-        ["t3_thread_interrupt", {}],
+        ["marp_thread_send", { message: "From the laptop." }],
+        ["marp_thread_interrupt", {}],
       ] as const) {
         const result = yield* call(laptop, name, {
           ...args,
@@ -376,7 +376,7 @@ it.layer(Layer.provideMerge(layerTools, layerOrchestration))("work a link starts
       );
 
       // Reads are not fenced.
-      const read = yield* call(laptop, "t3_thread_read", { threadId: users });
+      const read = yield* call(laptop, "marp_thread_read", { threadId: users });
       assert.equal(read.isError, false);
     }),
   );
@@ -388,19 +388,19 @@ it.layer(Layer.provideMerge(layerTools, layerOrchestration))("work a link starts
       const launched = yield* launch(trusted, "Started from the desk");
       assert.deepEqual((yield* projections.getThreadShell(launched))?.linkOrigin, {
         sessionId: "trusted",
-        label: "T3 Code · trusted",
+        label: "Marp · trusted",
         access: "full-access",
       });
 
-      const renamed = yield* call(trusted, "t3_thread_update", {
+      const renamed = yield* call(trusted, "marp_thread_update", {
         threadId: users,
         action: "rename",
         title: "Renamed from the desk",
       });
       assert.equal(renamed.isError, false, JSON.stringify(renamed.content));
       for (const [name, args] of [
-        ["t3_project_update", { projectId, title: "The desk's now" }],
-        ["t3_project_create", { title: "t3code", workspaceRoot: "/p/t3code" }],
+        ["marp_project_update", { projectId, title: "The desk's now" }],
+        ["marp_project_create", { title: "marp", workspaceRoot: "/p/marp" }],
       ] as const) {
         const changed = yield* call(trusted, name, args);
         assert.equal(changed.isError, false, `${name}: ${JSON.stringify(changed.content)}`);

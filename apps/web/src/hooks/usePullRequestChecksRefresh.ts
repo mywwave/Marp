@@ -1,5 +1,5 @@
-import { pullRequestChecksRefreshIntervalMs } from "@t3tools/client-runtime/pull-request-checks";
-import type { PullRequestCheck } from "@t3tools/contracts";
+import { pullRequestChecksRefreshIntervalMs } from "@marp/client-runtime/pull-request-checks";
+import type { PullRequestCheck } from "@marp/contracts";
 
 import { useLiveRefresh } from "./useLiveRefresh";
 

@@ -1,10 +1,5 @@
-import type {
-  EnvironmentId,
-  ProjectId,
-  PullRequestRef,
-  RepositoryIdentity,
-} from "@t3tools/contracts";
-import type { ChangeRequestLink } from "@t3tools/source-control-core/shared/definition";
+import type { EnvironmentId, ProjectId, PullRequestRef, RepositoryIdentity } from "@marp/contracts";
+import type { ChangeRequestLink } from "@marp/source-control-core/shared/definition";
 
 import { sourceControlClients } from "./sourceControlClients.ts";
 

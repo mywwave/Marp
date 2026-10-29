@@ -7,9 +7,9 @@ import {
   agentScopeCommand,
   type AgentScopeShape,
   type AgentSystemdScope,
-} from "@t3tools/shared/AgentScope";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveCommandPath } from "@t3tools/shared/shell";
+} from "@marp/shared/AgentScope";
+import * as HostProcess from "@marp/shared/HostProcess";
+import { resolveCommandPath } from "@marp/shared/shell";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -18,11 +18,11 @@ import * as Path from "effect/Path";
 import * as ServerConfig from "../config.ts";
 import * as ProcessRunner from "../processRunner.ts";
 
-const AGENT_SLICE = "app-t3code-agents.slice";
+const AGENT_SLICE = "app-marp-agents.slice";
 
 export function ownedAgentSlice(stateDir: string): string {
   const hash = NodeCrypto.createHash("sha256").update(stateDir).digest("hex").slice(0, 12);
-  return `app-t3code-agents-${hash}.slice`;
+  return `app-marp-agents-${hash}.slice`;
 }
 
 const GiB = 1024 ** 3;
@@ -301,7 +301,7 @@ export const make = Effect.gen(function* () {
   );
 
   const stop = Effect.fn("AgentScope.stop")(function* (unit: string) {
-    if (!unit.startsWith("t3code-") || !unit.endsWith(".scope")) return;
+    if (!unit.startsWith("marp-") || !unit.endsWith(".scope")) return;
     const scope = yield* systemd;
     if (scope === undefined) return;
     const state = yield* readScope(scope.systemctl, unit);
@@ -346,7 +346,7 @@ export const make = Effect.gen(function* () {
       if (resolved === null) return { command, args };
       const scope = yield* systemd;
       if (scope === undefined) return agentScopeCommand({ command: resolved, args });
-      const unit = `t3code-${name}-${NodeCrypto.randomUUID().slice(0, 8)}.scope`;
+      const unit = `marp-${name}-${NodeCrypto.randomUUID().slice(0, 8)}.scope`;
       // A continuing shared scope cannot attribute a tool's OOM to one thread.
       // Clear the launch thread's previous scope instead.
       const continuing = shared === true && scope.supportsOomPolicy;

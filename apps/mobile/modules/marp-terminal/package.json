@@ -1,0 +1,17 @@
+{
+  "name": "@marp/mobile-terminal-native",
+  "version": "0.0.0",
+  "private": true,
+  "expo-module": {
+    "ios": {
+      "modules": [
+        "MarpTerminalModule"
+      ]
+    },
+    "android": {
+      "modules": [
+        "expo.modules.marpterminal.MarpTerminalModule"
+      ]
+    }
+  }
+}

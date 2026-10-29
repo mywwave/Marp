@@ -1,9 +1,6 @@
-import {
-  ConnectionTransientError,
-  PrimaryConnectionTarget,
-} from "@t3tools/client-runtime/connection";
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import { ConnectionCatalogDocument, Persistence } from "@t3tools/client-runtime/platform";
+import { ConnectionTransientError, PrimaryConnectionTarget } from "@marp/client-runtime/connection";
+import { EnvironmentId, ThreadId } from "@marp/contracts";
+import { ConnectionCatalogDocument, Persistence } from "@marp/client-runtime/platform";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Deferred from "effect/Deferred";

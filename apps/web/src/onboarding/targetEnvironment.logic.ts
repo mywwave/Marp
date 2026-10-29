@@ -1,5 +1,5 @@
-import { type ConnectionCatalogEntry, hasRelayRoute } from "@t3tools/client-runtime/connection";
-import type { EnvironmentId } from "@t3tools/contracts";
+import { type ConnectionCatalogEntry, hasRelayRoute } from "@marp/client-runtime/connection";
+import type { EnvironmentId } from "@marp/contracts";
 
 interface OnboardingEnvironment {
   readonly environmentId: EnvironmentId;

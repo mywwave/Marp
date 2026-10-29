@@ -1,0 +1,18 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["MarpNativeControlsModule", "MarpKeyboardCommandsModule"],
+    "appDelegateSubscribers": [
+      "MarpWorkspaceOrientationSubscriber",
+      "MarpMenuDismissTouchGateSubscriber"
+    ]
+  },
+  "android": {
+    "modules": [
+      "expo.modules.marpnativecontrols.MarpNativeControlsModule",
+      "expo.modules.marpnativecontrols.MarpWorkspaceNavigationModule",
+      "expo.modules.marpnativecontrols.MarpKeyboardCommandsModule",
+      "expo.modules.marpnativecontrols.MarpFoldPostureModule"
+    ]
+  }
+}

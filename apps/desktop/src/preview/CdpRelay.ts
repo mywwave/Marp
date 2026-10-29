@@ -36,9 +36,9 @@ const isCommand = (value: unknown): value is CdpCommand =>
   typeof (value as { id?: unknown }).id === "number" &&
   typeof (value as { method?: unknown }).method === "string";
 
-const BROWSER_CONTEXT_ID = "t3-preview";
+const BROWSER_CONTEXT_ID = "marp-preview";
 const ANNOUNCE = Symbol("announce");
-const PAGE_SESSION_ID = "t3-preview-page";
+const PAGE_SESSION_ID = "marp-preview-page";
 
 const ACKNOWLEDGED = new Set([
   "Target.setDiscoverTargets",
@@ -57,7 +57,7 @@ export function createCdpRelayConnection(
   const sessions = new Map<string, "browser" | "page">([[PAGE_SESSION_ID, "page"]]);
   let sessionSequence = 0;
   const newSession = (kind: "browser" | "page") => {
-    const sessionId = `t3-preview-${kind}-${++sessionSequence}`;
+    const sessionId = `marp-preview-${kind}-${++sessionSequence}`;
     sessions.set(sessionId, kind);
     return sessionId;
   };

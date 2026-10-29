@@ -10,7 +10,7 @@ import type {
   SourceControlProviderKind,
   SourceControlRepositoryCloneUrls,
   SourceControlRepositoryVisibility,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 
 export interface SourceControlLinkSubject {
   readonly title: string;
@@ -160,7 +160,7 @@ export class SourceControlProvider extends Context.Service<
       readonly repository: string | null;
     }) => Effect.Effect<boolean>;
     /**
-     * Told when T3 records `baseBranch`, a branch name on the host, as the base `branch` was cut
+     * Told when Marp records `baseBranch`, a branch name on the host, as the base `branch` was cut
      * from, for a host whose own tools keep that in git config of their own.
      */
     readonly recordBranchBase?: (input: {
@@ -212,4 +212,4 @@ export class SourceControlProvider extends Context.Service<
       readonly force?: boolean;
     }) => Effect.Effect<void, SourceControlProviderError>;
   }
->()("@t3tools/source-control-core/server/SourceControlProvider") {}
+>()("@marp/source-control-core/server/SourceControlProvider") {}

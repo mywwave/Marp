@@ -8,7 +8,7 @@ import {
   type ServerProvider,
   type ServerProviderResetCredits,
   type ServerProviderUsageWindow,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import {
   formatDuration,
   formatResetsIn,
@@ -16,7 +16,7 @@ import {
   paceOf,
   paceRemainingPercent,
   remainingPercent,
-} from "@t3tools/shared/usageLimits";
+} from "@marp/shared/usageLimits";
 import { type ReactNode, useContext, useRef, useState } from "react";
 import { Atom } from "effect/reactivity";
 import { Linking, Pressable, View } from "react-native";
@@ -86,7 +86,7 @@ function WindowRow(props: {
     <View className="gap-1">
       <View className="flex-row items-baseline justify-between gap-3">
         <Text className="text-sm text-foreground">{window.label}</Text>
-        <Text className="text-sm font-t3-medium tabular-nums text-foreground">
+        <Text className="text-sm font-marp-medium tabular-nums text-foreground">
           {remaining}% left
         </Text>
       </View>
@@ -182,7 +182,7 @@ export function AccountLimits(props: {
       <View className="flex-row items-center gap-2">
         <ProviderIcon provider={props.driver} size={16} />
         <View className="min-w-0 flex-1 flex-row items-baseline gap-2">
-          <Text className="text-base font-t3-medium text-foreground">{props.label}</Text>
+          <Text className="text-base font-marp-medium text-foreground">{props.label}</Text>
           {props.instanceLabel !== props.label ? (
             <AccountInstanceLabel key={props.instanceLabel} value={props.instanceLabel} />
           ) : null}
@@ -209,7 +209,7 @@ export function AccountLimits(props: {
           className="min-h-11 justify-center"
           onPress={() => void Linking.openURL(externalUsage.url).catch(() => undefined)}
         >
-          <Text className="text-sm font-t3-medium text-primary">Manage usage</Text>
+          <Text className="text-sm font-marp-medium text-primary">Manage usage</Text>
         </Pressable>
       ) : null}
       {props.footer}
@@ -297,8 +297,8 @@ export function ResetCredits(props: {
           <Text
             className={
               dense
-                ? "text-xs font-t3-medium text-foreground"
-                : "text-sm font-t3-medium text-foreground"
+                ? "text-xs font-marp-medium text-foreground"
+                : "text-sm font-marp-medium text-foreground"
             }
           >
             {busy ? "Using…" : "Use reset"}

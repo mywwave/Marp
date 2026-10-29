@@ -1,5 +1,5 @@
 {
-  "name": "@t3tools/shared",
+  "name": "@marp/shared",
   "private": true,
   "type": "module",
   "exports": {
@@ -159,9 +159,9 @@
       "types": "./src/projectSettings.ts",
       "import": "./src/projectSettings.ts"
     },
-    "./t3ProjectFile": {
-      "types": "./src/t3ProjectFile.ts",
-      "import": "./src/t3ProjectFile.ts"
+    "./marpProjectFile": {
+      "types": "./src/marpProjectFile.ts",
+      "import": "./src/marpProjectFile.ts"
     },
     "./orchestrationTiming": {
       "types": "./src/orchestrationTiming.ts",
@@ -395,9 +395,9 @@
       "types": "./src/orchestrationV2Timeline.ts",
       "import": "./src/orchestrationV2Timeline.ts"
     },
-    "./t3McpToolPresentation": {
-      "types": "./src/t3McpToolPresentation.ts",
-      "import": "./src/t3McpToolPresentation.ts"
+    "./marpMcpToolPresentation": {
+      "types": "./src/marpMcpToolPresentation.ts",
+      "import": "./src/marpMcpToolPresentation.ts"
     },
     "./Array": {
       "types": "./src/Array.ts",
@@ -517,9 +517,9 @@
     "test": "vp test run --config ../../vite.config.ts --dir ."
   },
   "dependencies": {
+    "@marp/contracts": "workspace:*",
     "@noble/curves": "catalog:",
     "@noble/hashes": "catalog:",
-    "@t3tools/contracts": "workspace:*",
     "effect": "catalog:",
     "jose": "catalog:",
     "mdast-util-directive": "catalog:",

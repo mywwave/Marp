@@ -1,8 +1,5 @@
-import {
-  nodeProcessRuntimeAttributes,
-  processServiceInstanceId,
-} from "@t3tools/shared/observability";
-import * as RelayTracing from "@t3tools/shared/relayTracing";
+import { nodeProcessRuntimeAttributes, processServiceInstanceId } from "@marp/shared/observability";
+import * as RelayTracing from "@marp/shared/relayTracing";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -22,14 +19,14 @@ const relayLayer = (resource: Omit<RelayTracing.RelayClientTracingResource, "ser
   );
 
 export const layerHeadlessRelayClient = relayLayer({
-  serviceName: "t3code-server",
+  serviceName: "marp-server",
   runtime: "node",
   attributes: nodeProcessRuntimeAttributes(),
   client: "headless-cli",
 });
 
 export const layerServerRelayBroker = relayLayer({
-  serviceName: "t3code-server",
+  serviceName: "marp-server",
   runtime: "node",
   attributes: nodeProcessRuntimeAttributes(),
   client: "environment-server",

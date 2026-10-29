@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { resolveEnvironmentMachineKind } from "@t3tools/contracts";
+import { resolveEnvironmentMachineKind } from "@marp/contracts";
 import {
   ChevronRightIcon,
   CircleCheckIcon,

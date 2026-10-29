@@ -1,5 +1,5 @@
-import type { EnvironmentId, ServerProvider } from "@t3tools/contracts";
-import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
+import type { EnvironmentId, ServerProvider } from "@marp/contracts";
+import type { EnvironmentConnectionPhase } from "@marp/client-runtime/connection";
 
 export interface OverviewEnvironmentInput {
   readonly environmentId: EnvironmentId;

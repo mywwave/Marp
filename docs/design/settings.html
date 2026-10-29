@@ -1239,7 +1239,7 @@
     <button class="side-btn back">${I("arrow-left")}Back to app<span class="meta">${kbd("Esc")}</span></button>
     <div class="input-wrap" style="margin-top:var(--space-4)">${I("search")}<input class="input" placeholder="Search settings" aria-label="Search settings" style="height:32px;background:var(--surface-3)"><span class="kbd">/</span></div>
     <div class="groups">${NAV.map(([h, items]) => `${h ? `<div class="opt-group">${h}</div>` : ""}${items.map(([id, ic, label, a]) => `<button class="side-btn${id === cur ? " on" : ""}" data-go="${id}">${I(ic)}${label}${a ? `<span class="attn${a === "bad" ? " bad" : ""}"></span>` : ""}</button>`).join("")}`).join("")}</div>
-    <div class="acct"><span class="avatar">SM</span><div class="grow"><b>Stas</b><small>T3 Connect · signed in</small></div><button class="btn ghost icon sm" aria-label="Account menu">${I("more")}</button></div>
+    <div class="acct"><span class="avatar">SM</span><div class="grow"><b>Stas</b><small>Marp Connect · signed in</small></div><button class="btn ghost icon sm" aria-label="Account menu">${I("more")}</button></div>
   </aside>`;
         const store = (kind) =>
           kind === "device"
@@ -1865,7 +1865,7 @@
       <div class="md-detail">
         <div class="md-head">${I("laptop", "i-20 ink-3")}<div><div class="t">DESKTOP-UC7VC6O</div><div class="t-caption ink-3">This device · Marp 0.1.4 · Windows 11</div></div><div class="r2"><span class="badge success dot mc-on">Online</span><span class="badge attention dot mc-off">Reconnecting</span></div></div>
         <div class="tabs-u" role="tablist"><button aria-selected="false">Overview</button><button aria-selected="true">Access</button><button aria-selected="false">Clients <span class="t-caption ink-3">4</span></button><button aria-selected="false">Permissions</button></div>
-        <div class="rows">${row("Network access", "Let phones and other computers on your network connect. Restarts the local server.", sw(true))}${row("Tailscale", "desktop-uc7vc6o.tail1234.ts.net", `<span class="badge success dot">Serving</span>${btn("Manage", "ghost")}`)}${row("T3 Connect", "Reach this machine from anywhere, no network setup.", btn("Turn on"))}${row("WSL backend", "Run the server inside WSL. Restarts the local server.", sw(false))}</div>
+        <div class="rows">${row("Network access", "Let phones and other computers on your network connect. Restarts the local server.", sw(true))}${row("Tailscale", "desktop-uc7vc6o.tail1234.ts.net", `<span class="badge success dot">Serving</span>${btn("Manage", "ghost")}`)}${row("Marp Connect", "Reach this machine from anywhere, no network setup.", btn("Turn on"))}${row("WSL backend", "Run the server inside WSL. Restarts the local server.", sw(false))}</div>
         <section class="sec"><div class="sec-h"><span class="t-title">Pair a device</span></div><div class="rows">${row("Pairing link", "One-time link with standard permissions. Expires in 5 minutes.", `${btn("Show QR", "ghost")}${btn("Copy link", "", "copy")}`)}</div></section>
         <section class="sec"><div class="sec-h"><span class="t-title">Paired clients</span><div class="r"><button class="btn sm danger" data-modal="m-revoke">Revoke others…</button></div></div><div class="rows"><div class="lrow">${I("laptop", "ink-3")}<div class="tx"><b>This browser</b><span>Chrome · Windows · now</span></div><span class="badge">You</span></div><div class="lrow">${I("user", "ink-3")}<div class="tx"><b>iPhone 16</b><span>Marp mobile · 3 h ago</span></div><button class="btn ghost sm">Revoke…</button></div></div></section>
       </div>
@@ -2002,7 +2002,7 @@
             sec("Collaboration", [
               row(
                 `Guest links <span class="badge new">Beta</span>`,
-                "Share a thread with a guest who watches live and sends messages you approve. Needs T3 Connect.",
+                "Share a thread with a guest who watches live and sends messages you approve. Needs Marp Connect.",
                 sw(false),
               ),
               row(
@@ -2030,8 +2030,8 @@
               row("Version", "0.1.4 · stable · up to date", btn("Check for updates", "ghost")),
               row("Update track", "", seg(["Stable", "Nightly"], 0)),
               row(
-                "t3 command",
-                "Run Marp's CLI as t3 from any terminal.",
+                "marp command",
+                "Run Marp's CLI as marp from any terminal.",
                 `<span class="badge success dot">Installed</span>`,
               ),
               row(

@@ -2,7 +2,7 @@ import * as NodeV8 from "node:v8";
 import * as NodeVM from "node:vm";
 import { assert, it } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { PullRequestOperationError } from "@t3tools/contracts";
+import { PullRequestOperationError } from "@marp/contracts";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
@@ -20,7 +20,7 @@ it.layer(NodeServices.layer)("PR filesystem cache", (it) => {
   it.effect("clears in-flight reads before a new service can reuse them", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pr-cache-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "marp-pr-cache-" });
       const started = yield* Deferred.make<void>();
       const release = yield* Deferred.make<void>();
       const cache = yield* cacheLayer(directory);
@@ -49,7 +49,7 @@ it.layer(NodeServices.layer)("PR filesystem cache", (it) => {
   it.effect("invalidates only the changed scope across restarts and coalesces its next reads", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pr-cache-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "marp-pr-cache-" });
       let reads = 0;
       const lookup = Effect.sync(() => String(++reads));
       const cache = yield* cacheLayer(directory);
@@ -114,7 +114,7 @@ it.layer(NodeServices.layer)("PR filesystem cache", (it) => {
   it.effect("does not persist failed GitHub reads", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pr-cache-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "marp-pr-cache-" });
       const cache = yield* cacheLayer(directory);
       const error = new PullRequestOperationError({ operation: "summary", detail: "unavailable" });
       yield* cache.get("summary", Effect.fail(error)).pipe(Effect.flip);

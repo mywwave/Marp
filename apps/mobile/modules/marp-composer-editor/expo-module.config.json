@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["MarpComposerEditorModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.marpcomposereditor.MarpComposerEditorModule"]
+  }
+}

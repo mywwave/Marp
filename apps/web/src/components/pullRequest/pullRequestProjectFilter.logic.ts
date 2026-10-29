@@ -1,4 +1,4 @@
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId } from "@marp/contracts";
 
 import type { AssignableProject } from "./pullRequestProjectAssignment.logic";
 

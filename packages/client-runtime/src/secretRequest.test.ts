@@ -1,4 +1,4 @@
-import { SecretRequestError } from "@t3tools/contracts";
+import { SecretRequestError } from "@marp/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import {

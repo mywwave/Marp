@@ -1,6 +1,6 @@
-import { resolveChangeRequestLinkTarget } from "@t3tools/client-runtime/change-request-links";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import { EnvironmentId, ProjectId } from "@t3tools/contracts";
+import { resolveChangeRequestLinkTarget } from "@marp/client-runtime/change-request-links";
+import type { EnvironmentProject } from "@marp/client-runtime/state/shell";
+import { EnvironmentId, ProjectId } from "@marp/contracts";
 
 /** The PullRequest route for a change request link from a project, or null for the browser. */
 export function nativePullRequestDestination(

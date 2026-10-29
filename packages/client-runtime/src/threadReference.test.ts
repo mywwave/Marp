@@ -1,9 +1,9 @@
-import { EnvironmentId, ThreadId, type ThreadPullRequestLink } from "@t3tools/contracts";
+import { EnvironmentId, ThreadId, type ThreadPullRequestLink } from "@marp/contracts";
 import {
   decodeComposerContextFragment,
   encodeComposerContextFragment,
-} from "@t3tools/shared/composerContextClipboard";
-import { collectComposerContextReferences } from "@t3tools/shared/composerContextReferences";
+} from "@marp/shared/composerContextClipboard";
+import { collectComposerContextReferences } from "@marp/shared/composerContextReferences";
 import { describe, expect, it } from "vite-plus/test";
 
 import { resolveThreadReferenceCopyTarget } from "./threadReference.ts";
@@ -31,7 +31,7 @@ describe("resolveThreadReferenceCopyTarget", () => {
         ...thread,
         openPanelPullRequestUrl: null,
         pullRequests: [crossRepositoryPullRequest],
-        linkedPullRequestUrl: "https://github.com/t3/pr/12",
+        linkedPullRequestUrl: "https://github.com/marp/pr/12",
       }),
     ).toBeNull();
   });
@@ -40,18 +40,18 @@ describe("resolveThreadReferenceCopyTarget", () => {
     expect(
       resolveThreadReferenceCopyTarget({
         ...thread,
-        openPanelPullRequestUrl: "https://github.com/t3/pr/14",
+        openPanelPullRequestUrl: "https://github.com/marp/pr/14",
         pullRequests: [crossRepositoryPullRequest],
-        linkedPullRequestUrl: "https://github.com/t3/pr/12",
+        linkedPullRequestUrl: "https://github.com/marp/pr/12",
       }),
     ).toMatchObject({
       kind: "pull-request",
-      value: "https://github.com/t3/pr/14",
+      value: "https://github.com/marp/pr/14",
       successTitle: "PR link copied",
     });
   });
 
-  it.each([null, "https://github.com/t3/pr/12"])(
+  it.each([null, "https://github.com/marp/pr/12"])(
     "copies a native cross-repository link before the fallback URL %s",
     (linkedPullRequestUrl) => {
       expect(
@@ -72,9 +72,9 @@ describe("resolveThreadReferenceCopyTarget", () => {
       resolveThreadReferenceCopyTarget({
         ...thread,
         pullRequests: [{ ...crossRepositoryPullRequest, source: "stack-dismissed" }],
-        linkedPullRequestUrl: "https://github.com/t3/pr/12",
+        linkedPullRequestUrl: "https://github.com/marp/pr/12",
       }),
-    ).toMatchObject({ kind: "pull-request", value: "https://github.com/t3/pr/12" });
+    ).toMatchObject({ kind: "pull-request", value: "https://github.com/marp/pr/12" });
   });
 
   it("copies a thread chip that pastes back as the same thread on its machine", () => {

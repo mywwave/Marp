@@ -1,12 +1,8 @@
-import {
-  AuthOrchestrationOperateScope,
-  type EnvironmentId,
-  type ThreadId,
-} from "@t3tools/contracts";
+import { AuthOrchestrationOperateScope, type EnvironmentId, type ThreadId } from "@marp/contracts";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@marp/client-runtime/state/runtime";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useRef, useState } from "react";
 
@@ -16,7 +12,7 @@ import {
   usePullRequestResolutionState,
 } from "~/state/sourceControlActions";
 import { cn } from "~/lib/utils";
-import { parsePullRequestReference } from "@t3tools/client-runtime/pull-request-link-input";
+import { parsePullRequestReference } from "@marp/client-runtime/pull-request-link-input";
 import { getSourceControlPresentation } from "~/sourceControlPresentation";
 import { useEnvironmentQuery } from "~/state/query";
 import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";

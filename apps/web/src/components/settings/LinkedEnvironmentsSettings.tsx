@@ -1,16 +1,16 @@
 import { useAtomValue } from "@effect/atom-react";
-import { linkRequestFailureMessage } from "@t3tools/client-runtime/link-request";
+import { linkRequestFailureMessage } from "@marp/client-runtime/link-request";
 import {
   AuthAccessWriteScope,
   type AuthMcpClientAccess,
   type EnvironmentId,
   type PeerLinkSummary,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import { peerLinkHealth } from "@t3tools/client-runtime/state/peerLinks";
+} from "@marp/client-runtime/state/runtime";
+import { peerLinkHealth } from "@marp/client-runtime/state/peerLinks";
 import * as DateTime from "effect/DateTime";
 import * as Option from "effect/Option";
 import * as Result from "effect/Result";
@@ -74,7 +74,7 @@ export function LinkedEnvironmentsSettings({
       ) : links.data.links.length === 0 ? (
         <SettingsRow
           title="No linked environments"
-          description="Link another machine running T3 Code, such as a VPS, so agents here can launch and drive threads there."
+          description="Link another machine running Marp, such as a VPS, so agents here can launch and drive threads there."
         />
       ) : (
         links.data.links.map((link) => (
@@ -104,7 +104,7 @@ function LinkedEnvironmentRow({
   const forget = async () => {
     const confirmed = await confirmDestructiveAction({
       title: `Forget “${link.label}”?`,
-      description: `Agents here stop working there. Revoke "T3 Code · …" in ${link.label}'s Connections to end the session there too.`,
+      description: `Agents here stop working there. Revoke "Marp · …" in ${link.label}'s Connections to end the session there too.`,
       confirmLabel: "Forget link",
     });
     if (!confirmed) return;
@@ -326,7 +326,7 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
                   onChange={(event) => setPairingCode(event.target.value)}
                   placeholder={
                     machine === null
-                      ? "From that environment's Connections, or t3 pair there"
+                      ? "From that environment's Connections, or marp pair there"
                       : "Paste the code"
                   }
                   disabled={busy}

@@ -1,22 +1,22 @@
 # Building the mobile Screens dependency
 
 The mobile v5 stack uses a committed tarball from the
-[T3 Screens fork](https://github.com/pingdotgg/react-native-screens/tree/t3-v5.0.0-t3.45).
+[Marp Screens fork](https://github.com/pingdotgg/react-native-screens/tree/marp-v5.0.0-t3.45).
 The fork owns the integration changes; the app does not patch this package.
 Each archive includes compiled JavaScript, declarations, native source and
-`t3-fork.json` recording its version, source commit and upstream base.
+`marp-fork.json` recording its version, source commit and upstream base.
 
 To reproduce an archive, use Node 24 and the repository's pinned Yarn from a
-clean fork checkout at the source commit recorded in its `t3-fork.json`:
+clean fork checkout at the source commit recorded in its `marp-fork.json`:
 
 ```sh
-yarn --cwd /tmp/t3-screens-fork pack:t3 /absolute/path/to/t3code/apps/mobile/deps
+yarn --cwd /tmp/marp-screens-fork pack:marp /absolute/path/to/marp/apps/mobile/deps
 ```
 
 For an update, sync the fork's `main` with upstream, merge it and the required
-proposal branches into `t3/main`, increment the `5.0.0-t3.N` version, pin `t3Fork.upstreamCommit` to the
+proposal branches into `marp/main`, increment the `5.0.0-marp.N` version, pin `marpFork.upstreamCommit` to the
 integrated upstream SHA and commit.
-Run `pack:t3` from that clean checkout and tag the source as `t3-v<version>`.
+Run `pack:marp` from that clean checkout and tag the source as `marp-v<version>`.
 Publish the source commit and tag to the fork before submitting the app change.
 Replace the old archive, update `apps/mobile/package.json` and run `vp i` to
 regenerate the lockfile. Verify mobile types and affected navigation tests.

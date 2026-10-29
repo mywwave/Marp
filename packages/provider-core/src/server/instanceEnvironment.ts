@@ -1,5 +1,5 @@
-import type { ProviderInstanceEnvironment } from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import type { ProviderInstanceEnvironment } from "@marp/contracts";
+import * as HostProcess from "@marp/shared/HostProcess";
 import * as Effect from "effect/Effect";
 
 import { expandHomePath } from "./pathExpansion.ts";

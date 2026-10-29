@@ -27,7 +27,7 @@ const relaySettings = (
   apns: null,
   clerkSecretKey: Redacted.make("clerk-secret-key"),
   clerkPublishableKey: "pk_test_test",
-  clerkJwtAudience: "t3-code-relay",
+  clerkJwtAudience: "marp-relay",
   apnsDeliveryJobSigningSecret: Redacted.make("apns-delivery-secret"),
   cloudMintPrivateKey: Redacted.make("cloud-mint-private-key"),
   cloudMintPublicKey: "cloud-mint-public-key",
@@ -79,7 +79,7 @@ describe("T3ChatAccounts", () => {
     Effect.gen(function* () {
       const accounts = yield* T3ChatAccounts.T3ChatAccounts;
       const url = new URL(yield* accounts.createLinkUrl({ userId: "user_1" }));
-      expect(`${url.origin}${url.pathname}`).toBe("https://chat.example.test/link/t3code");
+      expect(`${url.origin}${url.pathname}`).toBe("https://chat.example.test/link/marp");
 
       const [payload = "", signature = ""] = (url.searchParams.get("token") ?? "").split(".");
       // Verify with Web Crypto, as T3 Chat does, rather than the signing library.
@@ -110,14 +110,14 @@ describe("T3ChatAccounts", () => {
   );
 
   it.effect("asks T3 Chat for the link with the shared secret", () => {
-    const t3Chat = fakeT3Chat({ link: { email: "theo@t3.chat", plan: "premier", linkedAt: 1 } });
+    const t3Chat = fakeT3Chat({ link: { email: "theo@marp.chat", plan: "premier", linkedAt: 1 } });
     return Effect.gen(function* () {
       const accounts = yield* T3ChatAccounts.T3ChatAccounts;
       const link = yield* accounts.getLink({ userId: "user_1" });
-      expect(link).toEqual({ email: "theo@t3.chat", plan: "premier" });
+      expect(link).toEqual({ email: "theo@marp.chat", plan: "premier" });
       expect(t3Chat.requests).toEqual([
         {
-          url: "https://chat.example.test/api/t3code/link",
+          url: "https://chat.example.test/api/marp/link",
           authorization: `Bearer ${SECRET}`,
           body: { clerkUserId: "user_1" },
         },

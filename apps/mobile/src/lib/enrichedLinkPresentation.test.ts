@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ComposerContextId, EnvironmentId, ThreadId } from "@t3tools/contracts";
+import type { ComposerContextId, EnvironmentId, ThreadId } from "@marp/contracts";
 import {
   enrichedLinkVariantPattern,
   enrichedSkillLinkRegex,
@@ -51,7 +51,7 @@ describe("Enriched link presentation", () => {
   });
 
   it("presents thread links as thread chips and leaves other links alone", () => {
-    for (const href of ["t3-thread://v1/thread%3Aproject%3A1", "t3-thread://v2/env/thread_1"]) {
+    for (const href of ["marp-thread://v1/thread%3Aproject%3A1", "marp-thread://v2/env/thread_1"]) {
       expect(enrichedThreadLinkPresentation(href), href).toEqual({
         accent: "#009c96",
         icon: { kind: "chip", name: "messages-square" },
@@ -60,7 +60,7 @@ describe("Enriched link presentation", () => {
     for (const href of [
       "https://github.com/example/repo/pull/7",
       "https://example.com",
-      "t3-context://v1/thread/thread_1",
+      "marp-context://v1/thread/thread_1",
     ]) {
       expect(enrichedThreadLinkPresentation(href), href).toBeUndefined();
     }
@@ -72,7 +72,7 @@ describe("Enriched link presentation", () => {
     expect(
       threadChipTargets(
         here,
-        "See [A](t3-thread://v1/thread_a), [A again](t3-thread://v1/thread_a), [B](t3-thread://v1/thread_b) and [D](t3-thread://v2/env-there/thread_d).",
+        "See [A](marp-thread://v1/thread_a), [A again](marp-thread://v1/thread_a), [B](marp-thread://v1/thread_b) and [D](marp-thread://v2/env-there/thread_d).",
         [
           {
             version: 1,
@@ -86,16 +86,16 @@ describe("Enriched link presentation", () => {
         ],
       ),
     ).toEqual([
-      { href: "t3-thread://v1/thread_a", environmentId: here, threadId: "thread_a", link: true },
-      { href: "t3-thread://v1/thread_b", environmentId: here, threadId: "thread_b", link: true },
+      { href: "marp-thread://v1/thread_a", environmentId: here, threadId: "thread_a", link: true },
+      { href: "marp-thread://v1/thread_b", environmentId: here, threadId: "thread_b", link: true },
       {
-        href: "t3-thread://v2/env-there/thread_d",
+        href: "marp-thread://v2/env-there/thread_d",
         environmentId: there,
         threadId: "thread_d",
         link: true,
       },
       {
-        href: "t3-context://v1/thread/thr1",
+        href: "marp-context://v1/thread/thr1",
         environmentId: there,
         threadId: "thread_c",
         link: false,

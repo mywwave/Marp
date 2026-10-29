@@ -1,8 +1,5 @@
 import { pipe } from "effect/Function";
-import {
-  IMAGE_DIMENSIONS_HEADER_BYTES,
-  readImageDimensions,
-} from "@t3tools/shared/imageDimensions";
+import { IMAGE_DIMENSIONS_HEADER_BYTES, readImageDimensions } from "@marp/shared/imageDimensions";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { decodeHTMLAttribute, decodeHTMLStrict as decodeEntities } from "entities";
 import type JSZip from "jszip";
@@ -657,7 +654,7 @@ export function openRtf(bytes: ArrayBuffer): OfficeWorkerResult {
       else if (!state.skip && (word === "par" || word === "line" || word === "row")) html += "<br>";
       else if (word === "tab" || word === "cell") emit("\t");
       else if (word === "endash") emit("–");
-      // oxlint-disable-next-line t3code/no-em-dash-copy -- Preserve the RTF document's punctuation.
+      // oxlint-disable-next-line marp/no-em-dash-copy -- Preserve the RTF document's punctuation.
       else if (word === "emdash") emit("—");
       else if (word === "bullet") emit("•");
       else if (word === "lquote") emit("‘");

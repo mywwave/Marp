@@ -1,14 +1,10 @@
-import {
-  isNetworkPath,
-  isWindowsAbsolutePath,
-  workspaceRelativeFilePath,
-} from "@t3tools/shared/path";
+import { isNetworkPath, isWindowsAbsolutePath, workspaceRelativeFilePath } from "@marp/shared/path";
 
 import {
   markdownDestinationHostPath,
   normalizeMarkdownLinkDestination,
   splitMarkdownLinkSearchAndHash,
-} from "@t3tools/shared/markdownLinks";
+} from "@marp/shared/markdownLinks";
 
 const DIRECT_IMAGE_SOURCE_PATTERN = /^(?:https?:|data:|blob:|\/\/)/i;
 const URI_SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]*:/;

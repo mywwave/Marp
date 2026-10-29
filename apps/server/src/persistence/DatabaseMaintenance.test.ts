@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+import * as NodeSqliteClient from "@marp/shared/nodeSqliteClient";
 import * as Clock from "effect/Clock";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -24,7 +24,7 @@ it.layer(DatabaseMaintenance.layer.pipe(Layer.provideMerge(NodeServices.layer)))
         const path = yield* Path.Path;
         const maintenance = yield* DatabaseMaintenance.DatabaseMaintenance;
         const dbPath = path.join(
-          yield* fs.makeTempDirectoryScoped({ prefix: "t3-inspect-" }),
+          yield* fs.makeTempDirectoryScoped({ prefix: "marp-inspect-" }),
           "statev2.sqlite",
         );
         yield* fs.writeFileString(dbPath, "not a database");
@@ -38,7 +38,7 @@ it.layer(DatabaseMaintenance.layer.pipe(Layer.provideMerge(NodeServices.layer)))
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const maintenance = yield* DatabaseMaintenance.DatabaseMaintenance;
-        const userdata = yield* fs.makeTempDirectoryScoped({ prefix: "t3-legacy-" });
+        const userdata = yield* fs.makeTempDirectoryScoped({ prefix: "marp-legacy-" });
         const dbPath = path.join(userdata, "statev2.sqlite");
         const legacy = path.join(userdata, "state.sqlite");
         yield* Effect.gen(function* () {
@@ -76,7 +76,7 @@ it.layer(DatabaseMaintenance.layer.pipe(Layer.provideMerge(NodeServices.layer)))
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const maintenance = yield* DatabaseMaintenance.DatabaseMaintenance;
-        const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-compact-" });
+        const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "marp-compact-" });
         const dbPath = path.join(baseDir, "userdata", "statev2.sqlite");
         yield* Effect.flatMap(
           ProjectionMaintenance.ProjectionMaintenanceV2,

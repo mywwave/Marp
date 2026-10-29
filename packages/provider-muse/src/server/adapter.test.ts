@@ -17,9 +17,9 @@ import {
   ThreadId,
   type OrchestrationV2AppThread,
   type OrchestrationV2ProviderThread,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { AgentScope } from "@t3tools/shared/AgentScope";
+} from "@marp/contracts";
+import * as HostProcess from "@marp/shared/HostProcess";
+import { AgentScope } from "@marp/shared/AgentScope";
 import { MuseSettings } from "../settings.ts";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
@@ -33,13 +33,13 @@ import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
+import * as TestProviderHost from "@marp/provider-testing/TestProviderHost";
+import * as McpProviderSessions from "@marp/provider-core/server/McpProviderSessions";
 import type { MuseItem, MuseSubscriptionUsage } from "./protocol.ts";
 import type { MuseSdkHost, MuseSdkHostOptions } from "./sdk.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import type * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+import * as IdAllocator from "@marp/provider-core/server/IdAllocator";
+import * as ProviderAdapter from "@marp/provider-core/server/ProviderAdapter";
+import type * as ProviderContinuationRequests from "@marp/provider-core/server/ProviderContinuationRequests";
 import { makeMuseAdapterV2, type MuseAdapterV2Options } from "./adapter.ts";
 
 const testLayer = Layer.mergeAll(
@@ -398,7 +398,7 @@ describe("MuseAdapterV2", () => {
         const call = yield* fake.takeCall(nativeId ? "session/resume" : "session/start");
         assert.deepStrictEqual(call.params.config, {
           mcpServers: {
-            "t3-code": {
+            marp: {
               transport: "streamableHttp",
               mode: "optional",
               url: "http://127.0.0.1:43210/mcp",
@@ -773,7 +773,7 @@ describe("MuseAdapterV2", () => {
           Effect.provideService(AgentScope, {
             ...AgentScope.defaultValue(),
             wrap: ({ command, args }) =>
-              Effect.succeed({ command, args, unit: "t3code-muse-test.scope" }),
+              Effect.succeed({ command, args, unit: "marp-muse-test.scope" }),
             stop: (unit) =>
               Effect.sync(() => {
                 stopped.push({ unit, hostExited });
@@ -791,7 +791,7 @@ describe("MuseAdapterV2", () => {
             yield* TestClock.adjust("1 millis");
             assert.deepStrictEqual(
               [...stopped],
-              [{ unit: "t3code-muse-test.scope", hostExited: false }],
+              [{ unit: "marp-muse-test.scope", hostExited: false }],
             );
             yield* Fiber.join(releasing);
           }).pipe(Effect.ensuring(Effect.sync(() => pipeClosed.resolve())));
@@ -800,7 +800,7 @@ describe("MuseAdapterV2", () => {
         }
         assert.strictEqual(fake.closeCount(), 1);
         assert.deepStrictEqual(stopped, [
-          { unit: "t3code-muse-test.scope", hostExited: shutdown === "normal" },
+          { unit: "marp-muse-test.scope", hostExited: shutdown === "normal" },
         ]);
         yield* Effect.promise(() => fake.host.exited);
         assert.isTrue(hostExited);
@@ -851,7 +851,7 @@ describe("MuseAdapterV2", () => {
           );
           yield* fake.exitProcess();
           yield* Deferred.await(stopped);
-          assert.deepStrictEqual(units, ["t3code-muse-exit.scope"]);
+          assert.deepStrictEqual(units, ["marp-muse-exit.scope"]);
           const terminal = yield* harness.takeEvent("turn.terminal");
           assert.strictEqual(terminal.status, "failed");
           assert.strictEqual(terminal.threadDisposition, "broken");
@@ -882,7 +882,7 @@ describe("MuseAdapterV2", () => {
           Effect.provideService(AgentScope, {
             ...AgentScope.defaultValue(),
             wrap: ({ command, args }) =>
-              Effect.succeed({ command, args, unit: "t3code-muse-exit.scope" }),
+              Effect.succeed({ command, args, unit: "marp-muse-exit.scope" }),
             stop: (unit) =>
               Effect.gen(function* () {
                 units.push(unit);
@@ -890,7 +890,7 @@ describe("MuseAdapterV2", () => {
               }),
           }),
         );
-        assert.deepStrictEqual(units, ["t3code-muse-exit.scope"]);
+        assert.deepStrictEqual(units, ["marp-muse-exit.scope"]);
       }).pipe(Effect.provide(testLayer)),
   );
 

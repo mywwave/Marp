@@ -1,7 +1,4 @@
-import type {
-  EnvironmentProject,
-  EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentProject, EnvironmentThreadShell } from "@marp/client-runtime/state/shell";
 
 import type {
   AgentActivityPhase,
@@ -67,7 +64,7 @@ export function buildShowcaseAgentActivity(
     });
   }
   return {
-    title: "T3 Code",
+    title: "Marp",
     subtitle: "Agent work in progress",
     activeCount: rows.filter((row) => ACTIVE_PHASES.has(row.phase)).length,
     updatedAt: new Date(now).toISOString(),
@@ -98,7 +95,7 @@ export function showcaseAndroidActivityData(
   const hero = activity.activities[0];
   const alert = showcaseAgentAlert(activity);
   return {
-    t3_kind: "agent_activity",
+    marp_kind: "agent_activity",
     updated_at: String(now),
     active: String(activity.activeCount > 0),
     activity_chip: attentionCount > 0 ? "Review" : "Active",

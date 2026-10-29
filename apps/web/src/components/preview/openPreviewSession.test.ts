@@ -2,7 +2,7 @@ import {
   DEFAULT_CLIENT_SETTINGS,
   type PreviewSessionSnapshot,
   type ScopedThreadRef,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
@@ -30,7 +30,7 @@ const snapshot: PreviewSessionSnapshot = {
   tabId: "tab-1",
   navStatus: {
     _tag: "Loading",
-    url: "https://t3.chat/",
+    url: "https://marp.chat/",
     title: "",
   },
   canGoBack: false,
@@ -62,7 +62,7 @@ describe("openPreviewSession", () => {
         browserProfiles: [{ id: "work", name: "Work", kind: "persistent" }],
       });
       const openPreview = vi.fn(async () => AsyncResult.success(snapshot));
-      const input = { openPreview, threadRef, url: "https://t3.chat/" };
+      const input = { openPreview, threadRef, url: "https://marp.chat/" };
       const open = entryPoint === "session" ? openPreviewSession : openUrlInPreview;
 
       const result = await open(input);
@@ -98,7 +98,7 @@ describe("openUrlInPreview from a link", () => {
     await openUrlInPreview({
       openPreview: async () => AsyncResult.success(snapshot),
       threadRef,
-      url: "https://t3.chat/",
+      url: "https://marp.chat/",
       background: true,
     });
 
@@ -119,7 +119,7 @@ describe("openUrlInPreview from a link", () => {
         return AsyncResult.success(snapshot);
       },
       threadRef,
-      url: "https://t3.chat/",
+      url: "https://marp.chat/",
       background: true,
     });
 

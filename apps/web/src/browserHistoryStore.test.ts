@@ -1,12 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
-import {
-  EnvironmentId,
-  type PreviewSessionSnapshot,
-  ProjectId,
-  ThreadId,
-} from "@t3tools/contracts";
+import { scopeProjectRef } from "@marp/client-runtime/environment";
+import { EnvironmentId, type PreviewSessionSnapshot, ProjectId, ThreadId } from "@marp/contracts";
 
 const { readPreparedConnection, entities, settingsHydration } = vi.hoisted(() => ({
   readPreparedConnection: vi.fn<() => { httpBaseUrl: string } | null>(() => null),
@@ -33,7 +28,7 @@ vi.mock("~/state/entities", () => ({
   useQuietThreadShell: () => null,
 }));
 vi.mock("./hooks/useSettings", async () => {
-  const { DEFAULT_CLIENT_SETTINGS } = await import("@t3tools/contracts/settings");
+  const { DEFAULT_CLIENT_SETTINGS } = await import("@marp/contracts/settings");
   return {
     getClientSettings: () => DEFAULT_CLIENT_SETTINGS,
     useClientSettings: () => DEFAULT_CLIENT_SETTINGS,

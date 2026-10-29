@@ -1,7 +1,7 @@
 // @effect-diagnostics nodeBuiltinImport:off -- The synchronous shell probe runs real commands with isolated config files.
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it as effectIt } from "@effect/vitest";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@marp/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
@@ -60,11 +60,11 @@ const withWindowsEnvironmentMocks = <A, E, R>(
 
 describe("readEnvironmentFromLoginShell", () => {
   // Opt in with an explicit binary, like the provider live probes; CI need not install Nu.
-  it.runIf(process.env.T3_TEST_NU_PATH !== undefined)(
+  it.runIf(process.env.MARP_TEST_NU_PATH !== undefined)(
     "captures Nushell PATH and multiline values without external tools",
     () => {
-      const shell = process.env.T3_TEST_NU_PATH!;
-      const home = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-nu-env-"));
+      const shell = process.env.MARP_TEST_NU_PATH!;
+      const home = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "marp-nu-env-"));
       try {
         const toolPath = NodePath.join(home, "nu tools", "bin");
         const extraToolPath = NodePath.join(home, "extra-tools", "bin");
@@ -116,12 +116,12 @@ describe("readEnvironmentFromLoginShell", () => {
       ) => string
     >(() =>
       [
-        "__T3CODE_ENV_PATH_START__",
+        "__MARP_ENV_PATH_START__",
         "/a:/b",
-        "__T3CODE_ENV_PATH_END__",
-        "__T3CODE_ENV_SSH_AUTH_SOCK_START__",
+        "__MARP_ENV_PATH_END__",
+        "__MARP_ENV_SSH_AUTH_SOCK_START__",
         "/tmp/secretive.sock",
-        "__T3CODE_ENV_SSH_AUTH_SOCK_END__",
+        "__MARP_ENV_SSH_AUTH_SOCK_END__",
       ].join("\n"),
     );
 
@@ -141,11 +141,11 @@ describe("readEnvironmentFromLoginShell", () => {
       ) => string
     >(() =>
       [
-        "__T3CODE_ENV_PATH_START__",
+        "__MARP_ENV_PATH_START__",
         "/a:/b",
-        "__T3CODE_ENV_PATH_END__",
-        "__T3CODE_ENV_SSH_AUTH_SOCK_START__",
-        "__T3CODE_ENV_SSH_AUTH_SOCK_END__",
+        "__MARP_ENV_PATH_END__",
+        "__MARP_ENV_SSH_AUTH_SOCK_START__",
+        "__MARP_ENV_SSH_AUTH_SOCK_END__",
       ].join("\n"),
     );
 
@@ -162,11 +162,9 @@ describe("readEnvironmentFromLoginShell", () => {
         options: { encoding: "utf8"; timeout: number },
       ) => string
     >(() =>
-      [
-        "__T3CODE_ENV_CUSTOM_VAR_START__",
-        "  first\nsecond  ",
-        "__T3CODE_ENV_CUSTOM_VAR_END__",
-      ].join("\n"),
+      ["__MARP_ENV_CUSTOM_VAR_START__", "  first\nsecond  ", "__MARP_ENV_CUSTOM_VAR_END__"].join(
+        "\n",
+      ),
     );
 
     expect(readEnvironmentFromLoginShell("/bin/zsh", ["CUSTOM_VAR"], execFile)).toEqual({
@@ -295,7 +293,7 @@ describe("readEnvironmentFromWindowsShell", () => {
         ) => string
       >(
         () =>
-          "__T3CODE_ENV_PATH_START__\nC:\\Users\\testuser\\AppData\\Roaming\\npm\n__T3CODE_ENV_PATH_END__\n",
+          "__MARP_ENV_PATH_START__\nC:\\Users\\testuser\\AppData\\Roaming\\npm\n__MARP_ENV_PATH_END__\n",
       );
 
       expect(
@@ -323,7 +321,7 @@ describe("readEnvironmentFromWindowsShell", () => {
         ) => string
       >(
         () =>
-          "__T3CODE_ENV_FNM_DIR_START__\r\nC:\\Users\\testuser\\AppData\\Roaming\\fnm\r\n__T3CODE_ENV_FNM_DIR_END__\r\n",
+          "__MARP_ENV_FNM_DIR_START__\r\nC:\\Users\\testuser\\AppData\\Roaming\\fnm\r\n__MARP_ENV_FNM_DIR_END__\r\n",
       );
 
       expect(
@@ -344,7 +342,7 @@ describe("readEnvironmentFromWindowsShell", () => {
           args: ReadonlyArray<string>,
           options: { encoding: "utf8"; timeout: number },
         ) => string
-      >(() => "__T3CODE_ENV_PATH_START__\nC:\\Tools\n__T3CODE_ENV_PATH_END__\n");
+      >(() => "__MARP_ENV_PATH_START__\nC:\\Tools\n__MARP_ENV_PATH_END__\n");
 
       expect(
         yield* readEnvironmentFromWindowsShell(["PATH"], { loadProfile: true }, (...args) =>
@@ -374,7 +372,7 @@ describe("readEnvironmentFromWindowsShell", () => {
         if (file === "pwsh.exe") {
           throw new Error("spawn pwsh.exe ENOENT");
         }
-        return "__T3CODE_ENV_PATH_START__\nC:\\Tools\n__T3CODE_ENV_PATH_END__\n";
+        return "__MARP_ENV_PATH_START__\nC:\\Tools\n__MARP_ENV_PATH_END__\n";
       });
 
       expect(
@@ -466,7 +464,7 @@ effectIt.layer(NodeServices.layer)("resolveCommandPath", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-case-sensitive-path-" });
+        const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "marp-case-sensitive-path-" });
         const executable = path.join(cwd, "audit-command.cmd");
         yield* fs.writeFileString(executable, "@echo off\n");
 
@@ -704,7 +702,7 @@ effectIt.layer(NodeServices.layer)("resolveSpawnCommand", (it) => {
         Effect.gen(function* () {
           const fs = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const prefix = yield* fs.makeTempDirectoryScoped({ prefix: "t3-npm-shim-" });
+          const prefix = yield* fs.makeTempDirectoryScoped({ prefix: "marp-npm-shim-" });
           const shim = path.join(prefix, "opencode.cmd");
           const executable = path.join(
             prefix,

@@ -1,4 +1,4 @@
-// @effect-diagnostics nodeBuiltinImport:off globalTimers:off globalDate:off - This host-side fixture creates an isolated local T3 environment.
+// @effect-diagnostics nodeBuiltinImport:off globalTimers:off globalDate:off - This host-side fixture creates an isolated local Marp environment.
 import * as NodeChildProcess from "node:child_process";
 import * as NodeFSP from "node:fs/promises";
 import * as NodePath from "node:path";
@@ -7,7 +7,7 @@ import * as NodeUtil from "node:util";
 
 const execFile = NodeUtil.promisify(NodeChildProcess.execFile);
 
-const SHOWCASE_PROJECT_ID = "t3code";
+const SHOWCASE_PROJECT_ID = "marp";
 const SHOWCASE_THREAD_ID = "remote-command-center";
 
 export const SHOWCASE_SCENES = [
@@ -48,7 +48,7 @@ const SHOWCASE_TERMINAL_BUFFER = [
   "",
   "  \u001b[32m→\u001b[0m  \u001b[2mLocal:\u001b[0m    \u001b[4;36mhttp://127.0.0.1:5173/\u001b[0m",
   "  \u001b[32m→\u001b[0m  \u001b[2mNetwork:\u001b[0m  \u001b[4;36mhttp://192.168.1.24:5173/\u001b[0m",
-  "  \u001b[32m→\u001b[0m  \u001b[2mProject:\u001b[0m  \u001b[1mt3code\u001b[0m \u001b[2m(~/Code/t3code)\u001b[0m",
+  "  \u001b[32m→\u001b[0m  \u001b[2mProject:\u001b[0m  \u001b[1mt3code\u001b[0m \u001b[2m(~/Code/marp)\u001b[0m",
   "",
   "  \u001b[32m✓ 612 passed\u001b[0m   \u001b[33m△ 2 warnings\u001b[0m   \u001b[31m✗ 0 failed\u001b[0m",
   "",
@@ -83,9 +83,9 @@ export function RemoteHandoffCard(props: { machine: string; latencyMs: number })
 `;
 
 const PROJECT_FAVICONS = {
-  t3code: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="10" fill="#000"/>
-  <path d="M33.4509 93V47.56H15.5309V37H64.3309V47.56H46.4109V93H33.4509ZM86.7253 93.96C82.832 93.96 78.9653 93.4533 75.1253 92.44C71.2853 91.3733 68.032 89.88 65.3653 87.96L70.4053 78.04C72.5386 79.5867 75.0186 80.8133 77.8453 81.72C80.672 82.6267 83.5253 83.08 86.4053 83.08C89.6586 83.08 92.2186 82.44 94.0853 81.16C95.952 79.88 96.8853 78.12 96.8853 75.88C96.8853 73.7467 96.0586 72.0667 94.4053 70.84C92.752 69.6133 90.0853 69 86.4053 69H80.4853V60.44L96.0853 42.76L97.5253 47.4H68.1653V37H107.365V45.4L91.8453 63.08L85.2853 59.32H89.0453C95.9253 59.32 101.125 60.8667 104.645 63.96C108.165 67.0533 109.925 71.0267 109.925 75.88C109.925 79.0267 109.099 81.9867 107.445 84.76C105.792 87.48 103.259 89.6933 99.8453 91.4C96.432 93.1067 92.0586 93.96 86.7253 93.96Z" fill="#fff"/>
+  marp: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="224" fill="#171717"/>
+  <g transform="translate(219 164) scale(1.6)"><path fill="#b5b4b4" d="M499.418 328.113c2.091-.219 8.477-.319 10.241.364 14.563 5.635 33.273 17.641 46.806 25.318l58.394 32.753c14.129 7.923 28.565 15.449 42.529 23.641 10.179 5.972 12.124 12.946 12.577 24.01.487 11.918.437 23.88.383 35.859l-.261 56.752.2 49.044c.199 40.04 4.108 36.617-30.466 56.792a3433 3433 0 0 0-33.102 19.423c-1.295.718-1.288.872-2.726.866-1.262-2.05-.575-40.584-.575-45.55l-.08-94.623c-.024-14.719.014-29.343-.676-44.05-.784-16.697-16.546-22.381-29.268-29.356l-32.983-18.175-104.603-58.185c2.743-1.946 5.578-3.643 8.524-5.269 16.704-9.22 32.973-19.341 49.937-28.069 1.466-.754 3.541-1.218 5.149-1.545"/><path fill="#f3f3f3" d="M358.837 418.441c11.868 2.654 26.027 13.451 37.204 18.721 4.407 2.078 16.894 9.14 18.231 13.772 4.218 14.613 6.254 30.944 8.791 46.096l14.413 84.703c2.09-10.716 23.359-98.279 26.628-102.899.627-.887.831-.944 1.923-1.031 5.062-.404 38.904 20.133 44.578 24.048 2.151 1.484 4.013 3.042 5.817 4.934 1.81 25.185.956 49.825 1.005 75.076l.101 113.379c-13.409-7.231-25.177-14.583-39.111-21.455l.218-101.142q.391-18.22.305-36.444a1383 1383 0 0 1-30.462 118.375c-9.085-4.5-18.025-9.933-26.779-15.098-1.979-11.776-4.838-24.793-7.16-36.592a8247 8247 0 0 1-17.601-90.745c-2.014-10.757-4.426-21.821-6.168-32.571-.843 13.155.466 35.289.588 49.3q.227 46.858-.249 93.714c-12.005-6.547-23.51-13.352-35.688-19.788l-.007-119.322c-.025-18.196-.57-36.51-.285-54.689.086-5.49-.019-6.909 3.708-10.342"/><path fill="#f3f3f3" d="M583.408 473.953q.86.138 1.709.33c1.293.303 3.319 1.188 3.59 2.387.8 3.542 1.055 10.511 1.043 14.18-.089 27.75-.271 55.53-.169 83.27l.24 44.805c.074 9.56.058 19.17.025 28.713-.059 17.038-12.58 20.698-25.31 27.94l-29.235 16.876-5.421 3.088.109-100.964c-.014-14.696-2.002-79.117 1.546-87.872 3.014-7.44 43.32-29.313 51.873-32.753"/><path fill="#f3f3f3" d="M421.285 371.445c2.894.872 10.721 5.125 13.591 6.649a1910 1910 0 0 1 31.55 17.302l114.528 63.863c-11.133 7.48-44.506 28.319-56.218 30.751-10.904-.753-20.268-7.279-29.579-12.569l-29.647-16.775a8204 8204 0 0 1-100.828-56.054c17.461-10.956 38.645-22.706 56.603-33.167"/></g>
 </svg>`,
   react: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="15" fill="#20232a"/>
@@ -104,11 +104,11 @@ const PROJECT_FAVICONS = {
 
 export const SHOWCASE_PROJECTS = [
   {
-    id: "t3code",
-    title: "T3 Code",
-    directory: "t3code",
-    repositoryUrl: "https://github.com/pingdotgg/t3code.git",
-    favicon: PROJECT_FAVICONS.t3code,
+    id: "marp",
+    title: "Marp",
+    directory: "marp",
+    repositoryUrl: "https://github.com/mywwave/Marp.git",
+    favicon: PROJECT_FAVICONS.marp,
   },
   {
     id: "react",
@@ -130,7 +130,7 @@ export const SHOWCASE_ENVIRONMENTS = [
   {
     id: "moonbase-terminal",
     label: "Moonbase Terminal",
-    projectIds: ["t3code"],
+    projectIds: ["marp"],
   },
   {
     id: "suspense-station",
@@ -147,18 +147,18 @@ export const SHOWCASE_ENVIRONMENTS = [
 export const SHOWCASE_THREADS = [
   {
     id: SHOWCASE_THREAD_ID,
-    projectId: "t3code",
+    projectId: "marp",
     title: "Make remote coding feel local ✦",
     branch: "feat/remote-command-center",
     minutesAgo: 3,
     request:
-      "Give T3 Code a remote-first command center. Make three machines feel one tap away, keep agent work in sync, and make every handoff feel instant.",
+      "Give Marp a remote-first command center. Make three machines feel one tap away, keep agent work in sync, and make every handoff feel instant.",
     response:
-      "T3 Code now treats every machine like it is right here in the room. ✦\n\n- Moonbase, Suspense Station, and Kernel Cabin stay live together\n- Terminal state follows you without losing a single line\n- Agent work remains perfectly in sync across devices\n- Handoffs land before your train of thought can wander\n\nI also ran the changed workspace: **612 tests passed**.",
+      "Marp now treats every machine like it is right here in the room. ✦\n\n- Moonbase, Suspense Station, and Kernel Cabin stay live together\n- Terminal state follows you without losing a single line\n- Agent work remains perfectly in sync across devices\n- Handoffs land before your train of thought can wander\n\nI also ran the changed workspace: **612 tests passed**.",
   },
   {
     id: "pocket-command-center",
-    projectId: "t3code",
+    projectId: "marp",
     title: "Put the command center in your pocket",
     branch: "feat/pocket-command-center",
     minutesAgo: 21,
@@ -215,7 +215,7 @@ export const SHOWCASE_THREADS = [
   },
   {
     id: "handoff-haptics",
-    projectId: "t3code",
+    projectId: "marp",
     title: "Tune the handoff haptics",
     branch: "feat/handoff-haptics",
     minutesAgo: 5 * 60,
@@ -276,22 +276,22 @@ async function initializeRepository(input: {
   await runGit(input.workspaceRoot, ["commit", "-m", input.commitMessage]);
 }
 
-async function seedT3CodeWorkspace(workspaceRoot: string): Promise<void> {
+async function seedMarpWorkspace(workspaceRoot: string): Promise<void> {
   await NodeFSP.mkdir(NodePath.join(workspaceRoot, "apps/mobile/src/features/home"), {
     recursive: true,
   });
   await NodeFSP.writeFile(
     NodePath.join(workspaceRoot, "package.json"),
-    `${JSON.stringify({ name: "t3code", private: true, scripts: { test: "vp test" } }, null, 2)}\n`,
+    `${JSON.stringify({ name: "marp", private: true, scripts: { test: "vp test" } }, null, 2)}\n`,
   );
-  await NodeFSP.writeFile(NodePath.join(workspaceRoot, "favicon.svg"), PROJECT_FAVICONS.t3code);
+  await NodeFSP.writeFile(NodePath.join(workspaceRoot, "favicon.svg"), PROJECT_FAVICONS.marp);
   await NodeFSP.writeFile(
     NodePath.join(workspaceRoot, "apps/mobile/src/features/home/environmentPresence.ts"),
     BASE_ENVIRONMENT_PRESENCE,
   );
   await initializeRepository({
     workspaceRoot,
-    repositoryUrl: "https://github.com/pingdotgg/t3code.git",
+    repositoryUrl: "https://github.com/mywwave/Marp.git",
     commitMessage: "Show connected environments",
   });
   await runGit(workspaceRoot, ["checkout", "-b", "feat/remote-command-center"]);
@@ -315,7 +315,7 @@ async function seedCompanionWorkspace(input: {
   await NodeFSP.writeFile(NodePath.join(input.workspaceRoot, "favicon.svg"), input.favicon);
   await NodeFSP.writeFile(
     NodePath.join(input.workspaceRoot, "README.md"),
-    `# ${input.title}\n\nSeeded by the T3 Code mobile screenshot harness.\n`,
+    `# ${input.title}\n\nSeeded by the Marp mobile screenshot harness.\n`,
   );
   await initializeRepository({
     workspaceRoot: input.workspaceRoot,
@@ -554,7 +554,7 @@ export async function seedShowcaseEnvironment(input: {
   if (!workspaceRoot) throw new Error("The primary showcase workspace is not configured.");
   const dbPath = NodePath.join(input.baseDir, "userdata", "statev2.sqlite");
   if (primaryProject.id === SHOWCASE_PROJECT_ID) {
-    await seedT3CodeWorkspace(workspaceRoot);
+    await seedMarpWorkspace(workspaceRoot);
   }
   await Promise.all(
     projects

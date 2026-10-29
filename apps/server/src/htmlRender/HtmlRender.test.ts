@@ -1,9 +1,9 @@
 // @effect-diagnostics nodeBuiltinImport:off - plain local servers stand in for LAN services.
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, expect, it } from "@effect/vitest";
-import { EnvironmentId, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import { EnvironmentId, ProviderInstanceId, ThreadId } from "@marp/contracts";
+import * as McpProviderSessions from "@marp/provider-core/server/McpProviderSessions";
+import * as HostProcess from "@marp/shared/HostProcess";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
@@ -23,7 +23,7 @@ import * as HtmlRender from "./HtmlRender.ts";
 import { HtmlRenderBrowserError } from "./headlessChrome.ts";
 import * as PreviewBrowser from "../preview/PreviewBrowser.ts";
 
-const TEST_BROWSER_ENV = "T3CODE_TEST_HEADLESS_SHELL";
+const TEST_BROWSER_ENV = "MARP_TEST_HEADLESS_SHELL";
 
 const layerHtmlRender = (
   executable?: string,
@@ -45,7 +45,7 @@ const layerHtmlRender = (
       ),
     ),
     Layer.provideMerge(McpProviderSessions.layer),
-    Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-html-render-" })),
+    Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "marp-html-render-" })),
     Layer.provideMerge(NodeServices.layer),
   );
 const layerTest = layerHtmlRender();
@@ -58,7 +58,7 @@ describe("HtmlRender", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const htmlRender = yield* HtmlRender.HtmlRender;
-      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-html-images-" });
+      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-html-images-" });
       const png = path.join(directory, "shot.png");
       const svg = path.join(directory, "logo.svg");
       yield* fileSystem.writeFile(png, PNG_BYTES);
@@ -87,8 +87,8 @@ describe("HtmlRender", () => {
       expect(prepared).toContain(`['${pngUri}', \`${svgUri}\`]`);
       expect(prepared).not.toContain(directory);
       for (const src of kept) expect(prepared).toContain(`<img src="${src}">`);
-      expect(prepared.indexOf("<head>")).toBeLessThan(prepared.indexOf('<style id="t3-theme">'));
-      expect(prepared.indexOf('<style id="t3-theme">')).toBeLessThan(prepared.indexOf("<title>"));
+      expect(prepared.indexOf("<head>")).toBeLessThan(prepared.indexOf('<style id="marp-theme">'));
+      expect(prepared.indexOf('<style id="marp-theme">')).toBeLessThan(prepared.indexOf("<title>"));
     }).pipe(Effect.provide(layerTest)),
   );
 
@@ -119,7 +119,7 @@ describe("HtmlRender", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const htmlRender = yield* HtmlRender.HtmlRender;
-      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-html-images-" });
+      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-html-images-" });
       const svg = path.join(directory, "styled.svg");
       const source = [
         '<?xml version="1.0"?>',
@@ -140,7 +140,7 @@ describe("HtmlRender", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const htmlRender = yield* HtmlRender.HtmlRender;
-      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-html-images-" });
+      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-html-images-" });
       const folder = path.join(directory, "folder.png");
       yield* fileSystem.makeDirectory(folder);
       const missing = path.join(directory, "missing.jpg");
@@ -220,7 +220,7 @@ describe("HtmlRender", () => {
       });
       expect(stored?.endsWith(".html")).toBe(true);
       const html = yield* fileSystem.readFileString(stored ?? "");
-      expect(html).toContain('<style id="t3-theme">');
+      expect(html).toContain('<style id="marp-theme">');
       expect(html).toContain("<p>Quarterly revenue</p>");
       // Antigravity reports the call without its result, so the thread's
       // provider session keeps the page for one call with these arguments.
@@ -297,7 +297,7 @@ describe("HtmlRender", () => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const file = yield* fileSystem.makeTempFileScoped({ prefix: "t3-browser-spawn-" });
+          const file = yield* fileSystem.makeTempFileScoped({ prefix: "marp-browser-spawn-" });
           const outcome = yield* HtmlRender.HtmlRender.use((htmlRender) =>
             htmlRender.preview({ html: "<p>x</p>" }).pipe(Effect.flip),
           ).pipe(
@@ -349,7 +349,7 @@ describe("HtmlRender", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const htmlRender = yield* HtmlRender.HtmlRender;
-        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-html-files-" });
+        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-html-files-" });
         const secret = path.join(directory, "secret.js");
         yield* fileSystem.writeFileString(secret, 'window.secret = "abc123";');
         const secretUrl = NodeURL.pathToFileURL(secret).href;

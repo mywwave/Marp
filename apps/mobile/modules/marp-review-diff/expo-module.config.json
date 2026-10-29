@@ -1,0 +1,10 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["MarpReviewDiffModule"],
+    "podspecPath": "MarpReviewDiffNative.podspec"
+  },
+  "android": {
+    "modules": ["expo.modules.marpreviewdiff.MarpReviewDiffModule"]
+  }
+}

@@ -1,5 +1,5 @@
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import { parsePullRequestQuery } from "@t3tools/client-runtime/pull-request-query";
+import { sourceControlClients } from "@marp/client-runtime/source-control-clients";
+import { parsePullRequestQuery } from "@marp/client-runtime/pull-request-query";
 import {
   type EnvironmentId,
   type ProjectId,
@@ -7,7 +7,7 @@ import {
   type PullRequestListFilters,
   type PullRequestListResult,
   type PullRequestListState,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import { useEffect, useState } from "react";
 
 import { useAllEnvironmentShellsBootstrapped, useProjects } from "~/state/entities";
@@ -183,7 +183,7 @@ export function usePullRequestScope(search: PullRequestsSearch) {
 
 export function usePullRequestQueryFilters(search: PullRequestsSearch, typedQuery: string) {
   const [sentQuery, setSentQuery] = useState(typedQuery);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- debounce timer that sends the typed query after SEARCH_DEBOUNCE_MS
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- debounce timer that sends the typed query after SEARCH_DEBOUNCE_MS
   useEffect(() => {
     const timer = window.setTimeout(() => setSentQuery(typedQuery), SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);

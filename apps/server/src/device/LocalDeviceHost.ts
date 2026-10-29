@@ -1,21 +1,18 @@
 import { pruneLocalDeviceTools } from "./deviceToolMaintenance.ts";
-import { deviceToolInstallMessage } from "@t3tools/contracts";
-// The hub runs at origin root; T3 strips its prefix and the Device panel derives stream URLs from it.
+import { deviceToolInstallMessage } from "@marp/contracts";
+// The hub runs at origin root; Marp strips its prefix and the Device panel derives stream URLs from it.
 import {
   type DeviceHostSummary,
   type DevicePlatform,
   type DevicePlatformAvailability,
   LOCAL_DEVICE_HOST_ID,
   LOCAL_DEVICE_HOST_LABEL,
-} from "@t3tools/contracts";
-import { waitForHttpReady } from "@t3tools/shared/httpReadiness";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import {
-  resolveNodeExecutable,
-  type NodeRuntimeUnavailableError,
-} from "@t3tools/shared/nodeRuntime";
-import * as NetService from "@t3tools/shared/Net";
-import { isCommandAvailable } from "@t3tools/shared/shell";
+} from "@marp/contracts";
+import { waitForHttpReady } from "@marp/shared/httpReadiness";
+import * as HostProcess from "@marp/shared/HostProcess";
+import { resolveNodeExecutable, type NodeRuntimeUnavailableError } from "@marp/shared/nodeRuntime";
+import * as NetService from "@marp/shared/Net";
+import { isCommandAvailable } from "@marp/shared/shell";
 import * as Clock from "effect/Clock";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -33,7 +30,7 @@ import { HttpClient } from "effect/http";
 import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
-import { writeFileStringAtomically } from "@t3tools/shared/atomicWrite";
+import { writeFileStringAtomically } from "@marp/shared/atomicWrite";
 import * as ServerConfig from "../config.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as DeviceHost from "./DeviceHost.ts";

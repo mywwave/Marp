@@ -1,4 +1,4 @@
-import { ProjectId, SourceControlProviderKind } from "@t3tools/contracts";
+import { ProjectId, SourceControlProviderKind } from "@marp/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { appSignInTargetForRemote, sourceControlClients } from "./sourceControlClients.ts";
@@ -14,19 +14,19 @@ const kindOf = (url: string) => sourceControlClients.parseChangeRequestUrl(url)?
 
 describe("sourceControlClients.parseChangeRequestUrl", () => {
   it("reads a GitHub pull request, lower-casing the repository", () => {
-    expect(parse("https://github.com/T3Tools/T3Code/pull/123")).toEqual({
+    expect(parse("https://github.com/Marp/Marp/pull/123")).toEqual({
       host: "github.com",
-      repository: "t3tools/t3code",
+      repository: "marp/marp",
       number: 123,
     });
   });
 
   it("reads a GitCafe pull request at its canonical /pull/ path and the older /pulls/ path", () => {
     for (const path of ["pull", "pulls"]) {
-      const url = `https://git.cafe/PingDotGG/T3Code/${path}/23897`;
+      const url = `https://git.cafe/PingDotGG/Marp/${path}/23897`;
       expect(parse(url), path).toEqual({
         host: "git.cafe",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/marp",
         number: 23897,
       });
       expect(kindOf(url), path).toBe("gitcafe");
@@ -62,9 +62,9 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
   });
 
   it("reads a GitLab merge request on any host, nested groups and all", () => {
-    expect(parse("https://gitlab.com/t3tools/platform/t3code/-/merge_requests/42")).toEqual({
+    expect(parse("https://gitlab.com/marp/platform/marp/-/merge_requests/42")).toEqual({
       host: "gitlab.com",
-      repository: "t3tools/platform/t3code",
+      repository: "marp/platform/marp",
       number: 42,
     });
     expect(parse("https://code.acme.test/team/project/-/merge_requests/9")).toEqual({
@@ -80,14 +80,14 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
       repository: "workspace/repo",
       number: 5,
     });
-    expect(parse("https://dev.azure.com/acme/platform/_git/t3code/pullrequest/17")).toEqual({
+    expect(parse("https://dev.azure.com/acme/platform/_git/marp/pullrequest/17")).toEqual({
       host: "dev.azure.com",
-      repository: "acme/platform/_git/t3code",
+      repository: "acme/platform/_git/marp",
       number: 17,
     });
-    expect(parse("https://acme.visualstudio.com/platform/_git/t3code/pullrequest/17")).toEqual({
+    expect(parse("https://acme.visualstudio.com/platform/_git/marp/pullrequest/17")).toEqual({
       host: "acme.visualstudio.com",
-      repository: "platform/_git/t3code",
+      repository: "platform/_git/marp",
       number: 17,
     });
   });
@@ -126,28 +126,28 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
   });
 
   it("survives trailing segments, a trailing slash and a query string", () => {
-    expect(parse("https://github.com/t3tools/t3code/pull/123/files?w=1")).toEqual({
+    expect(parse("https://github.com/marp/marp/pull/123/files?w=1")).toEqual({
       host: "github.com",
-      repository: "t3tools/t3code",
+      repository: "marp/marp",
       number: 123,
     });
-    expect(parse("https://github.com/t3tools/t3code/pull/123/")).toEqual({
+    expect(parse("https://github.com/marp/marp/pull/123/")).toEqual({
       host: "github.com",
-      repository: "t3tools/t3code",
+      repository: "marp/marp",
       number: 123,
     });
   });
 
   it("claims nothing it cannot be sure of", () => {
     for (const link of [
-      "https://github.com/t3tools/t3code/issues/123",
-      "https://git.cafe/pingdotgg/t3code/issues/23897",
-      "https://git.cafe/pingdotgg/t3code/pull/abc",
-      "https://git.cafe/pingdotgg/t3code",
-      "https://github.com/t3tools/t3code/commit/0a1b2c3",
-      "https://github.com/t3tools/t3code",
-      "https://github.com/t3tools/t3code/pull/abc",
-      "https://gitlab.com/t3tools/t3code/-/issues/12",
+      "https://github.com/marp/marp/issues/123",
+      "https://git.cafe/pingdotgg/marp/issues/23897",
+      "https://git.cafe/pingdotgg/marp/pull/abc",
+      "https://git.cafe/pingdotgg/marp",
+      "https://github.com/marp/marp/commit/0a1b2c3",
+      "https://github.com/marp/marp",
+      "https://github.com/marp/marp/pull/abc",
+      "https://gitlab.com/marp/marp/-/issues/12",
       "https://blog.example.test/2026/updates/archive/pull/3",
       "https://scm.example.test/tfs/Collection/Project/_git/Repo",
       "https://scm.example.test/tfs/Collection/Project/pullrequest/123",
@@ -155,7 +155,7 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
       "https://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/0",
       "https://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/9007199254740992",
       "ftp://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/123",
-      "javascript:alert(1)//github.com/t3tools/t3code/pull/1",
+      "javascript:alert(1)//github.com/marp/marp/pull/1",
       "not a url",
     ]) {
       expect(parse(link), link).toBeNull();
@@ -164,13 +164,13 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
 });
 
 describe("sourceControlClients.isSameChangeRequest", () => {
-  const linked = "https://github.com/pingdotgg/t3code/pull/42";
+  const linked = "https://github.com/pingdotgg/marp/pull/42";
 
   it("matches the same pull request whatever its case or trailing path", () => {
     expect(
       sourceControlClients.isSameChangeRequest(
         linked,
-        "https://github.com/PingDotGG/T3Code/pull/42/files",
+        "https://github.com/PingDotGG/Marp/pull/42/files",
       ),
     ).toBe(true);
   });
@@ -248,7 +248,7 @@ describe("sourceControlClients.recognizeRemote", () => {
     expect(kindOfRemote("https://gitlab.github.example/o/r")).toBe("github");
     expect(kindOfRemote("https://bitbucket.gitlab.example/o/r")).toBe("gitlab");
     expect(kindOfRemote("https://bitbucket.visualstudio.com/p/_git/r")).toBe("azure-devops");
-    expect(kindOfRemote("git@git.cafe:pingdotgg/t3code.git")).toBe("gitcafe");
+    expect(kindOfRemote("git@git.cafe:pingdotgg/marp.git")).toBe("gitcafe");
   });
 
   it("reads a remote no host claims as an unknown host, and a local path as no host", () => {
@@ -273,19 +273,16 @@ describe("sourceControlClients.recognizeRemote", () => {
 describe("sourceControlClients repository keys", () => {
   // Persisted as `repositoryIdentity.canonicalKey` and in thread pull request keys.
   it.each([
-    ["git@github.com:T3Tools/T3Code.git", "github.com/t3tools/t3code"],
+    ["git@github.com:Marp/Marp.git", "github.com/marp/marp"],
     ["ssh://git@gitlab.company.com:2222/team/project.git", "gitlab.company.com/team/project"],
+    ["git@ssh.dev.azure.com:v3/Marp/Platform/Marp", "dev.azure.com/marp/platform/_git/marp"],
     [
-      "git@ssh.dev.azure.com:v3/T3Tools/Platform/T3Code",
-      "dev.azure.com/t3tools/platform/_git/t3code",
+      "Marp@vs-ssh.visualstudio.com:v3/Marp/Platform/Marp",
+      "marp.visualstudio.com/platform/_git/marp",
     ],
     [
-      "T3Tools@vs-ssh.visualstudio.com:v3/T3Tools/Platform/T3Code",
-      "t3tools.visualstudio.com/platform/_git/t3code",
-    ],
-    [
-      "https://T3Tools.visualstudio.com/DefaultCollection/Platform/_git/T3Code",
-      "t3tools.visualstudio.com/defaultcollection/platform/_git/t3code",
+      "https://Marp.visualstudio.com/DefaultCollection/Platform/_git/Marp",
+      "marp.visualstudio.com/defaultcollection/platform/_git/marp",
     ],
     ["git@ssh.dev.azure.com:v3/o/p", "ssh.dev.azure.com/v3/o/p"],
     ["ssh.dev.azure.com/v3/o/p/r", "ssh.dev.azure.com/v3/o/p/r"],

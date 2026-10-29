@@ -154,11 +154,11 @@ const CHAT_MARKDOWN_SANITIZE_SCHEMA = {
     href: [
       ...(defaultSchema.protocols?.href ?? []),
       "file",
-      "t3-citation",
-      "t3-context",
+      "marp-citation",
+      "marp-context",
       THREAD_LINK_PROTOCOL,
     ],
-    src: [...(defaultSchema.protocols?.src ?? []), "file", "t3-context"],
+    src: [...(defaultSchema.protocols?.src ?? []), "file", "marp-context"],
   },
 } satisfies Parameters<typeof rehypeSanitize>[0];
 

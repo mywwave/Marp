@@ -1,7 +1,7 @@
-import { isProviderSkillUserInvocable } from "@t3tools/client-runtime/providerSkills";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import { filePreviewKind } from "@t3tools/shared/filePreview";
-import { videoMimeType } from "@t3tools/shared/video";
+import { isProviderSkillUserInvocable } from "@marp/client-runtime/providerSkills";
+import { sourceControlClients } from "@marp/client-runtime/source-control-clients";
+import { filePreviewKind } from "@marp/shared/filePreview";
+import { videoMimeType } from "@marp/shared/video";
 import {
   COMPOSER_CONTEXT_MAX_RECORDS,
   COMPOSER_CONTEXT_REVIEW_TEXT_MAX_CHARS,
@@ -13,7 +13,7 @@ import {
   type ServerProviderSkill,
   type EnvironmentContextRecord,
   type EnvironmentId,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import * as Schema from "effect/Schema";
 import {
   ATTACHMENT_ONLY_BOOTSTRAP_PROMPT,
@@ -22,11 +22,11 @@ import {
   isImageReferencesOnly,
   replaceComposerContextReferences,
   sanitizeComposerContextLabel,
-} from "@t3tools/shared/composerContextReferences";
+} from "@marp/shared/composerContextReferences";
 import {
   collectComposerInlineTokens,
   type ComposerInlineToken,
-} from "@t3tools/shared/composerInlineTokens";
+} from "@marp/shared/composerInlineTokens";
 
 const isMessageContext = Schema.is(OrchestrationMessageContext);
 const decodeMessageContext = Schema.decodeUnknownOption(OrchestrationMessageContext);

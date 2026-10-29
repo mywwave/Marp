@@ -1,0 +1,4 @@
+interface:
+  display_name: "Marp App Testing"
+  short_description: "Test web and desktop in Marp's Browser panel"
+  default_prompt: "Use $test-marp-app to verify the affected web or desktop flow through Marp's Browser panel."

@@ -1,4 +1,4 @@
-import { SourceControlProviderError, SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderError, SourceControlProviderKind } from "@marp/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as ServerConfig from "../config.ts";
 import * as GitManager from "../git/GitManager.ts";
@@ -57,6 +57,6 @@ export const layerRealGit = GitWorkflow.layer.pipe(
   Layer.provide(VcsDriverRegistry.layer.pipe(Layer.provide(VcsProjectConfig.layer))),
   Layer.provideMerge(GitVcsDriver.layer),
   Layer.provideMerge(VcsProcess.layer),
-  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-recreate-" })),
+  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "marp-recreate-" })),
   Layer.provideMerge(NodeServices.layer),
 );

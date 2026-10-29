@@ -3,13 +3,13 @@ import { Spinner } from "~/components/ui/spinner";
 import { ArchiveIcon, ArchiveRestoreIcon, EyeIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { type ScopedThreadRef } from "@t3tools/contracts";
-import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { presentThreadShell } from "@t3tools/client-runtime/state/shell";
+import { type ScopedThreadRef } from "@marp/contracts";
+import { scopedThreadKey, scopeThreadRef } from "@marp/client-runtime/environment";
+import { presentThreadShell } from "@marp/client-runtime/state/shell";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@marp/client-runtime/state/runtime";
 import { useSettingsScope } from "./SettingsScopeContext";
 import { confirmDestructiveAction } from "../../confirmDialog";
 import { useThreadActions } from "../../hooks/useThreadActions";

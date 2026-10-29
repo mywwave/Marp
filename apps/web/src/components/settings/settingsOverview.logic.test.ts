@@ -4,7 +4,7 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   type ServerProvider,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 
 import { buildSettingsOverview, type OverviewEnvironmentInput } from "./settingsOverview.logic";
 

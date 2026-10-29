@@ -3,7 +3,7 @@ import { assert, describe, it } from "vite-plus/test";
 import {
   hasSpecificPierreIconForFileName,
   resolvePierreIconForEntry,
-  T3_PIERRE_ICONS,
+  MARP_PIERRE_ICONS,
 } from "./pierre-icons";
 
 describe("Pierre file icons", () => {
@@ -48,7 +48,7 @@ describe("Pierre file icons", () => {
     ["epub", "epub"],
   ])("uses the document family icon for %s", (extension, family) => {
     for (const path of [`report.${extension}`, `folder/REPORT.${extension.toUpperCase()}`]) {
-      assert.equal(resolvePierreIconForEntry(path, "file")?.name, `t3-file-icon-${family}`);
+      assert.equal(resolvePierreIconForEntry(path, "file")?.name, `marp-file-icon-${family}`);
       assert.isTrue(hasSpecificPierreIconForFileName(path));
     }
   });
@@ -56,12 +56,12 @@ describe("Pierre file icons", () => {
   it("ships every custom icon referenced by the extended resolver", () => {
     const customIconNames = new Set(
       [
-        ...Object.values(T3_PIERRE_ICONS.byFileName),
-        ...Object.values(T3_PIERRE_ICONS.byFileExtension),
-      ].filter((name) => name.startsWith("t3-")),
+        ...Object.values(MARP_PIERRE_ICONS.byFileName),
+        ...Object.values(MARP_PIERRE_ICONS.byFileExtension),
+      ].filter((name) => name.startsWith("marp-")),
     );
     for (const iconName of customIconNames) {
-      assert.include(T3_PIERRE_ICONS.spriteSheet, `id="${iconName}"`);
+      assert.include(MARP_PIERRE_ICONS.spriteSheet, `id="${iconName}"`);
     }
   });
 });

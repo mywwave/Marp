@@ -1,10 +1,10 @@
 import * as Dialog from "../components/ui/Dialog";
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigation } from "@react-navigation/native";
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId } from "@marp/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult, Atom } from "effect/reactivity";
-import { runAtomCommand } from "@t3tools/client-runtime/state/runtime";
+import { runAtomCommand } from "@marp/client-runtime/state/runtime";
 
 import { hasCloudPublicConfig } from "../features/cloud/publicConfig";
 import { useConnectionController } from "../features/connection/useConnectionController";
@@ -182,14 +182,14 @@ export function useRemoteConnections() {
     if (environment.isRelayManaged) {
       Dialog.alert(
         "Remove from this device?",
-        `Forget ${environment.environmentLabel} and its cached threads on this device.\n\nIt stays on your T3 Connect account and keeps its host space. Deregister it under T3 Account → T3 Connect to free it.`,
+        `Forget ${environment.environmentLabel} and its cached threads on this device.\n\nIt stays on your Marp Connect account and keeps its host space. Deregister it under Marp Account → Marp Connect to free it.`,
         [
           { text: "Cancel", style: "cancel" },
           // SettingsAuth renders nothing in builds without cloud config.
           ...(hasCloudPublicConfig()
             ? [
                 {
-                  text: "Open T3 Account",
+                  text: "Open Marp Account",
                   onPress: () => navigation.navigate("SettingsAuth"),
                 },
               ]

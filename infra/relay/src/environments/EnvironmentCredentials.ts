@@ -79,7 +79,7 @@ export class EnvironmentCredentials extends Context.Service<
       readonly environmentPublicKey: string;
     }) => Effect.Effect<boolean, EnvironmentCredentialRevokePersistenceError>;
   }
->()("t3code-relay/environments/EnvironmentCredentials") {}
+>()("marp-relay/environments/EnvironmentCredentials") {}
 
 const make = Effect.gen(function* () {
   const db = yield* RelayDb.RelayDb;
@@ -96,7 +96,7 @@ const make = Effect.gen(function* () {
     const secret = yield* randomTokenPart(3);
     return {
       credentialId,
-      token: `t3env_${credentialId}_${secret}`,
+      token: `marpenv_${credentialId}_${secret}`,
     };
   });
 

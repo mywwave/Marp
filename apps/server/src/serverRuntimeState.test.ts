@@ -1,6 +1,6 @@
 import { assert, describe, it } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@marp/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -29,10 +29,10 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
 }) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-boot-service-" });
-  const t3Home = path.join(root, ".t3");
-  const serviceHome = input.unitServesOtherHome ? path.join(root, "other") : t3Home;
-  for (const home of [t3Home, serviceHome]) {
+  const root = yield* fs.makeTempDirectoryScoped({ prefix: "marp-owner-boot-service-" });
+  const marpHome = path.join(root, ".marp");
+  const serviceHome = input.unitServesOtherHome ? path.join(root, "other") : marpHome;
+  for (const home of [marpHome, serviceHome]) {
     yield* fs.makeDirectory(path.join(home, "userdata"), { recursive: true });
   }
   yield* fs.makeDirectory(path.join(serviceHome, "runtime"));
@@ -45,7 +45,7 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
   }
   if (input.npmRuntime) {
     const versionDir = path.join(serviceHome, "runtime", "versions", activeVersion);
-    const entryPath = path.join(versionDir, "node_modules", "t3", "dist", "bin.mjs");
+    const entryPath = path.join(versionDir, "node_modules", "marp", "dist", "bin.mjs");
     yield* fs.makeDirectory(path.dirname(entryPath), { recursive: true });
     yield* fs.writeFileString(entryPath, "");
   }
@@ -67,11 +67,11 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
   const [unitPath, unit] =
     input.platform === "darwin"
       ? [
-          path.join(root, "Library", "LaunchAgents", "com.t3tools.t3code.service.plist"),
+          path.join(root, "Library", "LaunchAgents", "com.marp.marp.service.plist"),
           renderBootServicePlist(plan, { homeDir: root, environmentPath: "" }),
         ]
       : [
-          path.join(root, ".config", "systemd", "user", "t3code.service"),
+          path.join(root, ".config", "systemd", "user", "marp.service"),
           renderBootServiceUnit(plan),
         ];
   yield* fs.makeDirectory(path.dirname(unitPath), { recursive: true });
@@ -105,7 +105,7 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
       }),
   });
   const result = yield* Effect.scoped(
-    ServerOwnership.acquireServerOwnership(path.join(t3Home, "userdata", "server-runtime.json")),
+    ServerOwnership.acquireServerOwnership(path.join(marpHome, "userdata", "server-runtime.json")),
   ).pipe(
     Effect.provideService(ProcessRunner.ProcessRunner, runner),
     Effect.provideService(HostProcess.Platform, input.platform),
@@ -124,7 +124,7 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
     ["launchctl print", "launchctl print-disabled", "systemctl is-active", "systemctl is-enabled"],
     probes,
   );
-  return { result, t3Home };
+  return { result, marpHome };
 });
 
 describe("server ownership", () => {
@@ -148,7 +148,7 @@ describe("server ownership", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-race-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "marp-owner-race-" });
       const statePath = path.join(root, "server-runtime.json");
       const attempts = yield* Effect.all(
         [
@@ -167,7 +167,7 @@ describe("server ownership", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "marp-owner-" });
       const statePath = path.join(root, "server-runtime.json");
       const state = yield* makeState;
       yield* Effect.scoped(
@@ -191,7 +191,7 @@ describe("server ownership", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-legacy-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "marp-owner-legacy-" });
       const statePath = path.join(root, "server-runtime.json");
       const state = yield* makeState;
       yield* ServerRuntimeState.persistServerRuntimeState({
@@ -215,7 +215,7 @@ describe("server ownership", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-cleanup-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "marp-owner-cleanup-" });
       const statePath = path.join(root, "server-runtime.json");
       const state = yield* makeState;
       yield* Effect.scoped(
@@ -247,7 +247,7 @@ describe("server ownership", () => {
               "launchctl print": { code: 113 },
               "launchctl print-disabled": {
                 code: 0,
-                stdout: '"com.t3tools.t3code.service" => false',
+                stdout: '"com.marp.marp.service" => false',
               },
             },
           },
@@ -272,14 +272,14 @@ describe("server ownership", () => {
             environment: { [SERVICE_LAUNCHER_CONTEXT_ENV]: "{}" },
           },
         ] as const) {
-          const { result, t3Home } = yield* startBesideBootService(fixture);
+          const { result, marpHome } = yield* startBesideBootService(fixture);
           assert.equal(result._tag, "Failure");
           if (result._tag !== "Failure") return;
           assert.equal(result.failure._tag, "OlderBootServiceError");
           assert.equal(Runtime.getErrorExitCode(result.failure), 78);
-          assert.include(result.failure.message, t3Home);
-          assert.include(result.failure.message, "t3 update");
-          assert.include(result.failure.message, "t3 service restart");
+          assert.include(result.failure.message, marpHome);
+          assert.include(result.failure.message, "marp update");
+          assert.include(result.failure.message, "marp service restart");
           assert.include(result.failure.message, "No server was stopped");
         }
       }).pipe(Effect.provide(NodeServices.layer)),
@@ -360,7 +360,7 @@ describe("server ownership", () => {
               "launchctl print": { code: 113 },
               "launchctl print-disabled": {
                 code: 0,
-                stdout: '"com.t3tools.t3code.service" => disabled',
+                stdout: '"com.marp.marp.service" => disabled',
               },
             },
           },

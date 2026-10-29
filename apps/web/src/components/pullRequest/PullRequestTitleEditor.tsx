@@ -1,10 +1,7 @@
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId, PullRequestDetail, PullRequestRef } from "@t3tools/contracts";
+import { squashAtomCommandFailure } from "@marp/client-runtime/state/runtime";
+import type { EnvironmentId, PullRequestDetail, PullRequestRef } from "@marp/contracts";
 import { useState } from "react";
-import {
-  capitalizeTerm,
-  sourceControlClients,
-} from "@t3tools/client-runtime/source-control-clients";
+import { capitalizeTerm, sourceControlClients } from "@marp/client-runtime/source-control-clients";
 
 import { pullRequestEnvironment } from "~/state/pullRequests";
 import { useAtomCommand } from "~/state/use-atom-command";
@@ -15,7 +12,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { PullRequestDetailTitleRow } from "./PullRequestDetailLayout";
 import { PullRequestEditButton } from "./PullRequestEditButton";
 import { readableFailure } from "./pullRequestDetail.logic";
-import { canEditPullRequestChangeRequest } from "@t3tools/client-runtime/pull-request-editing";
+import { canEditPullRequestChangeRequest } from "@marp/client-runtime/pull-request-editing";
 
 /** The pull request title, which the reader can rename in place when the host allows it. */
 export function PullRequestTitleEditor({

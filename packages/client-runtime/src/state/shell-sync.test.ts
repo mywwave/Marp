@@ -5,7 +5,7 @@ import {
   type OrchestrationV2ShellStreamItem,
   ThreadId,
   type ThreadPullRequestLink,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -730,9 +730,9 @@ describe("environment shell synchronization", () => {
     Effect.gen(function* () {
       const link = (number: number): ThreadPullRequestLink => ({
         host: "github.com",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/marp",
         number,
-        url: `https://github.com/pingdotgg/t3code/pull/${number}`,
+        url: `https://github.com/pingdotgg/marp/pull/${number}`,
         source: "agent",
         linkedAt: "2026-06-20T00:00:00.000Z",
         snapshot: null,
@@ -825,9 +825,9 @@ describe("environment shell synchronization", () => {
     Effect.gen(function* () {
       const link = (number: number): ThreadPullRequestLink => ({
         host: "github.com",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/marp",
         number,
-        url: `https://github.com/pingdotgg/t3code/pull/${number}`,
+        url: `https://github.com/pingdotgg/marp/pull/${number}`,
         source: "agent",
         linkedAt: "2026-06-20T00:00:00.000Z",
         snapshot: null,

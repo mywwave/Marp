@@ -14,7 +14,7 @@ import * as HttpClientResponse from "effect/http/HttpClientResponse";
 import * as HttpServer from "effect/http/HttpServer";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@marp/shared/HostProcess";
 
 import * as ServerConfig from "../config.ts";
 import { getTelemetryIdentity } from "./Identify.ts";
@@ -32,7 +32,7 @@ interface RecordedBatchRequest {
         readonly serverArch?: string;
         readonly serverAppVersion?: string;
         readonly serverMode?: string;
-        readonly t3CodeVersion?: string;
+        readonly marpVersion?: string;
       };
     }>;
   } | null;
@@ -48,7 +48,7 @@ interface RecordedBatchBody {
       readonly serverArch?: string;
       readonly serverAppVersion?: string;
       readonly serverMode?: string;
-      readonly t3CodeVersion?: string;
+      readonly marpVersion?: string;
     };
   }>;
 }
@@ -135,14 +135,14 @@ const sendFor = (
     );
     const runtimeLayer = AnalyticsService.layer.pipe(
       Layer.provideMerge(
-        ServerConfig.ServerConfig.layerTest(process.cwd(), { prefix: "t3-telemetry-retry-" }),
+        ServerConfig.ServerConfig.layerTest(process.cwd(), { prefix: "marp-telemetry-retry-" }),
       ),
       Layer.provide(
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
-            T3CODE_TELEMETRY_ENABLED: true,
-            T3CODE_POSTHOG_KEY: "phc_test_key",
-            T3CODE_POSTHOG_HOST: "http://localhost",
+            MARP_TELEMETRY_ENABLED: true,
+            MARP_POSTHOG_KEY: "phc_test_key",
+            MARP_POSTHOG_HOST: "http://localhost",
           }),
         ),
       ),
@@ -225,16 +225,16 @@ it.layer(NodeServices.layer)("AnalyticsService test", (it) => {
     Effect.gen(function* () {
       const capturedRequests: Array<RecordedBatchRequest> = [];
       const layerServerConfig = ServerConfig.ServerConfig.layerTest(process.cwd(), {
-        prefix: "t3-telemetry-base-",
+        prefix: "marp-telemetry-base-",
       });
 
       const layerTelemetry = AnalyticsService.layer.pipe(Layer.provideMerge(layerServerConfig));
       const layerConfig = ConfigProvider.layer(
         ConfigProvider.fromUnknown({
-          T3CODE_TELEMETRY_ENABLED: true,
-          T3CODE_POSTHOG_KEY: "phc_test_key",
-          T3CODE_POSTHOG_HOST: "http://localhost",
-          T3CODE_TELEMETRY_FLUSH_BATCH_SIZE: 20,
+          MARP_TELEMETRY_ENABLED: true,
+          MARP_POSTHOG_KEY: "phc_test_key",
+          MARP_POSTHOG_HOST: "http://localhost",
+          MARP_TELEMETRY_FLUSH_BATCH_SIZE: 20,
         }),
       );
       const layerBatchServer = HttpServer.serve(
@@ -314,7 +314,7 @@ it.layer(NodeServices.layer)("AnalyticsService test", (it) => {
             (event) =>
               event.properties?.serverOs === "Linux" &&
               event.properties.serverArch === "arm64" &&
-              event.properties.serverAppVersion === event.properties.t3CodeVersion &&
+              event.properties.serverAppVersion === event.properties.marpVersion &&
               event.properties.serverMode === "web",
           ),
         ),
@@ -327,14 +327,14 @@ it.layer(NodeServices.layer)("AnalyticsService test", (it) => {
     Effect.gen(function* () {
       const capturedPaths: Array<string> = [];
       const layerServerConfig = ServerConfig.ServerConfig.layerTest(process.cwd(), {
-        prefix: "t3-telemetry-disabled-",
+        prefix: "marp-telemetry-disabled-",
       });
       const layerTelemetry = AnalyticsService.layer.pipe(Layer.provideMerge(layerServerConfig));
       const layerConfig = ConfigProvider.layer(
         ConfigProvider.fromUnknown({
-          T3CODE_TELEMETRY_ENABLED: false,
-          T3CODE_POSTHOG_KEY: "phc_test_key",
-          T3CODE_POSTHOG_HOST: "http://localhost",
+          MARP_TELEMETRY_ENABLED: false,
+          MARP_POSTHOG_KEY: "phc_test_key",
+          MARP_POSTHOG_HOST: "http://localhost",
         }),
       );
       const layerBatchServer = HttpServer.serve(

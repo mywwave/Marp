@@ -1,4 +1,4 @@
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@marp/shared/HostProcess";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -39,10 +39,10 @@ const runStep = Effect.fn("browserSetup.runStep")(function* (
   }
 });
 
-/** Under sudo, an unspecified home uses the invoking user's ~/.t3. */
+/** Under sudo, an unspecified home uses the invoking user's ~/.marp. */
 const setupBaseDir = Effect.fn("browserSetup.baseDir")(function* (explicit: Option.Option<string>) {
   const env = yield* HostProcess.Environment;
-  const raw = Option.getOrUndefined(explicit) ?? env.T3CODE_HOME;
+  const raw = Option.getOrUndefined(explicit) ?? env.MARP_HOME;
   if (raw !== undefined || env.SUDO_USER === undefined) return yield* resolveBaseDir(raw);
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const entry = yield* spawner
@@ -52,7 +52,7 @@ const setupBaseDir = Effect.fn("browserSetup.baseDir")(function* (explicit: Opti
     .pipe(Effect.orElseSucceed(() => ""));
   const home = entry.trim().split(":")[5];
   const path = yield* Path.Path;
-  return home ? path.join(home, ".t3") : yield* resolveBaseDir(undefined);
+  return home ? path.join(home, ".marp") : yield* resolveBaseDir(undefined);
 });
 
 const aptOffers = Effect.fn("browserSetup.aptOffers")(function* (name: string) {
@@ -105,12 +105,12 @@ const FONT_PACKAGES = ["fontconfig", "fonts-liberation"];
 
 const browserSetupCommand = Command.make("setup", { baseDir: baseDirFlag }).pipe(
   Command.withDescription(
-    "Set up this Linux host for T3's browser: allow Chrome's sandbox and install its libraries and fonts.",
+    "Set up this Linux host for Marp's browser: allow Chrome's sandbox and install its libraries and fonts.",
   ),
   Command.withHandler(({ baseDir }) =>
     Effect.gen(function* () {
       if ((yield* HostProcess.Platform) !== "linux") {
-        return yield* Console.log("Nothing to set up: T3's browser runs as is on this system.");
+        return yield* Console.log("Nothing to set up: Marp's browser runs as is on this system.");
       }
       const fs = yield* FileSystem.FileSystem;
       const isRoot = (yield* HostProcess.UserId) === 0;
@@ -134,23 +134,25 @@ const browserSetupCommand = Command.make("setup", { baseDir: baseDirFlag }).pipe
         return yield* Console.log(
           rootWarning ??
             (Option.isSome(browser)
-              ? "This host is ready for T3's browser."
-              : "Chrome's sandbox is allowed here. T3's browser installs on first use; if it then reports missing libraries, run this again."),
+              ? "This host is ready for Marp's browser."
+              : "Chrome's sandbox is allowed here. Marp's browser installs on first use; if it then reports missing libraries, run this again."),
         );
       }
 
       if (!isRoot) {
         if (needsProfile) {
           yield* Console.log(
-            `This host blocks the sandbox T3's browser runs in. Setup installs an AppArmor profile at ${PreviewBrowserHost.APPARMOR_PROFILE_PATH} that allows it.`,
+            `This host blocks the sandbox Marp's browser runs in. Setup installs an AppArmor profile at ${PreviewBrowserHost.APPARMOR_PROFILE_PATH} that allows it.`,
           );
         }
         if (missing.length > 0) {
-          yield* Console.log(`T3's browser is missing ${missing.join(", ")}; setup installs them.`);
+          yield* Console.log(
+            `Marp's browser is missing ${missing.join(", ")}; setup installs them.`,
+          );
         }
         if (needsFonts) {
           yield* Console.log(
-            "T3's browser needs fontconfig and system fonts; setup installs them.",
+            "Marp's browser needs fontconfig and system fonts; setup installs them.",
           );
         }
         return yield* Console.log(`\nThis needs root. Run:\n\n  ${setupCommand}\n`);
@@ -175,18 +177,18 @@ const browserSetupCommand = Command.make("setup", { baseDir: baseDirFlag }).pipe
           "-r",
           PreviewBrowserHost.APPARMOR_PROFILE_PATH,
         ]);
-        yield* Console.log("Allowed Chrome's sandbox for T3's browser.");
+        yield* Console.log("Allowed Chrome's sandbox for Marp's browser.");
       }
 
       if ((missing.length > 0 || needsFonts) && !hasApt) {
         if (missing.length > 0) {
           yield* Console.log(
-            `T3's browser is missing ${missing.join(", ")}. Install them with your package manager, then run this again.`,
+            `Marp's browser is missing ${missing.join(", ")}. Install them with your package manager, then run this again.`,
           );
         }
         if (needsFonts) {
           yield* Console.log(
-            "T3's browser needs fontconfig and system fonts. Install them with your package manager, then run this again.",
+            "Marp's browser needs fontconfig and system fonts. Install them with your package manager, then run this again.",
           );
         }
         return;
@@ -221,16 +223,16 @@ const browserSetupCommand = Command.make("setup", { baseDir: baseDirFlag }).pipe
           );
         }
         yield* Console.log(
-          "Installed the browser's fonts. Restart the T3 server if browser tabs were already open.",
+          "Installed the browser's fonts. Restart the Marp server if browser tabs were already open.",
         );
       }
 
-      yield* Console.log(rootWarning ?? "This host is ready for T3's browser.");
+      yield* Console.log(rootWarning ?? "This host is ready for Marp's browser.");
     }),
   ),
 );
 
 export const browserCommand = Command.make("browser").pipe(
-  Command.withDescription("Manage T3's headless browser on this host."),
+  Command.withDescription("Manage Marp's headless browser on this host."),
   Command.withSubcommands([browserSetupCommand]),
 );

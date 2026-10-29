@@ -1,22 +1,16 @@
 import {
   pullRequestLinkProject,
   resolveLinkPullRequestInput,
-} from "@t3tools/client-runtime/pull-request-link-input";
-import type {
-  EnvironmentProject,
-  EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
+} from "@marp/client-runtime/pull-request-link-input";
+import type { EnvironmentProject, EnvironmentThreadShell } from "@marp/client-runtime/state/shell";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
-import { planThreadPullRequestMutation } from "@t3tools/client-runtime/thread-pull-request-compatibility";
-import {
-  capitalizeTerm,
-  sourceControlClients,
-} from "@t3tools/client-runtime/source-control-clients";
-import { AuthOrchestrationOperateScope, type ThreadPullRequestLink } from "@t3tools/contracts";
+} from "@marp/client-runtime/state/runtime";
+import { planThreadPullRequestMutation } from "@marp/client-runtime/thread-pull-request-compatibility";
+import { capitalizeTerm, sourceControlClients } from "@marp/client-runtime/source-control-clients";
+import { AuthOrchestrationOperateScope, type ThreadPullRequestLink } from "@marp/contracts";
 import * as Clipboard from "expo-clipboard";
 
 import * as Dialog from "../../components/ui/Dialog";

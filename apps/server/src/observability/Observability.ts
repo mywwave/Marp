@@ -1,8 +1,8 @@
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import * as HttpObservability from "@t3tools/shared/httpObservability";
-import { makeLocalFileTracer, makeTraceSink } from "@t3tools/shared/observability";
-import * as SharedObservability from "@t3tools/shared/observability";
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
+import * as HostProcess from "@marp/shared/HostProcess";
+import * as HttpObservability from "@marp/shared/httpObservability";
+import { makeLocalFileTracer, makeTraceSink } from "@marp/shared/observability";
+import * as SharedObservability from "@marp/shared/observability";
+import * as OtelEnvironment from "@marp/shared/otelEnvironment";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as References from "effect/References";

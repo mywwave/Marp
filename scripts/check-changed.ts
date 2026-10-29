@@ -141,7 +141,7 @@ for (const file of code) {
   }
 }
 // It reads files other than the ones beside it, so no changed file selects it.
-if (affected.includes("t3")) tests.add("apps/server/src/provider/AgentContextBudget.test.ts");
+if (affected.includes("marp")) tests.add("apps/server/src/provider/AgentContextBudget.test.ts");
 
 // React Compiler coverage compiles every client source file, so run only the
 // changed files' cases, in one extra step: a -t filter in the main test step
@@ -222,7 +222,7 @@ const runPatchCheck = files.some(
 // Copy mobile modules too: they are file: dependencies, not workspace packages.
 // Cached registry metadata limits this to patches stranded by local changes, not registry drift.
 const checkPatches = (): boolean => {
-  const temp = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-patch-check-"));
+  const temp = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "marp-patch-check-"));
   try {
     const copy = (relative: string) => {
       const dest = NodePath.join(temp, relative);

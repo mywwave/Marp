@@ -4,7 +4,7 @@ import {
   EnvironmentId,
   type AuthMcpClientAccess,
   type ExecutionEnvironmentDescriptor,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -75,7 +75,7 @@ export const servePeer = <E, R>(
       Layer.provide(Sqlite.layerMemory),
       Layer.provideMerge(ServerSecretStore.layer),
       Layer.provideMerge(ServerEnvironment.layerIdentity),
-      Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-peer-link-peer-" })),
+      Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "marp-peer-link-peer-" })),
       Layer.provideMerge(NodeServices.layer),
       Layer.fresh,
       Layer.build,
@@ -84,7 +84,7 @@ export const servePeer = <E, R>(
       (httpEffect) =>
         Effect.gen(function* () {
           const request = yield* HttpServerRequest.HttpServerRequest;
-          if (request.url.startsWith("/.well-known/t3/environment")) {
+          if (request.url.startsWith("/.well-known/marp/environment")) {
             yield* Ref.update(probes, (count) => count + 1);
           }
           const authorization = request.headers.authorization;
@@ -140,7 +140,7 @@ export const servePeer = <E, R>(
         .listSessions()
         .pipe(
           Effect.map((sessions) =>
-            sessions.filter((session) => session.client.label?.startsWith("T3 Code · ")),
+            sessions.filter((session) => session.client.label?.startsWith("Marp · ")),
           ),
         ),
     };
@@ -168,7 +168,7 @@ export const layerLinkingEnvironment = (
         getDescriptor: Effect.succeed(descriptor),
       }),
     ),
-    Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-peer-link-here-" })),
+    Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "marp-peer-link-here-" })),
     Layer.provideMerge(NodeServices.layer),
     Layer.fresh,
   );

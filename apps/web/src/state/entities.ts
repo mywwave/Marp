@@ -6,26 +6,22 @@ import type {
   EnvironmentThreadShell,
   EnvironmentThreadStructure,
   ThreadStructureVisibleTurnItem,
-} from "@t3tools/client-runtime/state/shell";
+} from "@marp/client-runtime/state/shell";
 import {
   EMPTY_THREAD_HISTORY_META,
   type EnvironmentThreadStatus,
   type ThreadHistoryMeta,
-} from "@t3tools/client-runtime/state/threads";
-import {
-  arrayElementsEqual,
-  parseThreadKey,
-  threadKey,
-} from "@t3tools/client-runtime/state/entities";
-import type { ScopedProjectRef, ScopedThreadRef } from "@t3tools/contracts";
+} from "@marp/client-runtime/state/threads";
+import { arrayElementsEqual, parseThreadKey, threadKey } from "@marp/client-runtime/state/entities";
+import type { ScopedProjectRef, ScopedThreadRef } from "@marp/contracts";
 import type {
   EnvironmentId,
   OrchestrationV2ProjectedTurnItem,
   OrchestrationV2ThreadProjection,
   OrchestrationV2ThreadShell,
   ThreadId,
-} from "@t3tools/contracts";
-import type { ThreadCheckpointSummary } from "@t3tools/client-runtime/state/thread-checkpoints";
+} from "@marp/contracts";
+import type { ThreadCheckpointSummary } from "@marp/client-runtime/state/thread-checkpoints";
 import { Atom } from "effect/reactivity";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { environmentProjects } from "./projects";

@@ -1,4 +1,4 @@
-import type { ServerConfigStreamEvent } from "@t3tools/contracts";
+import type { ServerConfigStreamEvent } from "@marp/contracts";
 
 const KEYBINDINGS_SUCCESS_TOAST_COOLDOWN_MS = 2_000;
 

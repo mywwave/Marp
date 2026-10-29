@@ -1,4 +1,4 @@
-import { secretSettingsFields } from "@t3tools/contracts";
+import { secretSettingsFields } from "@marp/contracts";
 
 import { sourceControlDefinitions } from "./sourceControlDefinitions.ts";
 

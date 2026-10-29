@@ -1,4 +1,4 @@
-import { OtlpHeadersFromString, OtlpProtocol } from "@t3tools/shared/observability";
+import { OtlpHeadersFromString, OtlpProtocol } from "@marp/shared/observability";
 import * as Config from "effect/Config";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Option from "effect/Option";
@@ -37,29 +37,27 @@ export const DesktopConfig = Config.all({
   appDataDirectory: trimmedString("APPDATA"),
   xdgConfigHome: trimmedString("XDG_CONFIG_HOME"),
   xdgDataHome: trimmedString("XDG_DATA_HOME"),
-  t3Home: trimmedString("T3CODE_HOME"),
+  marpHome: trimmedString("MARP_HOME"),
   devServerUrl: Config.URL("VITE_DEV_SERVER_URL").pipe(Config.option),
-  appUserModelIdOverride: trimmedString("T3CODE_DESKTOP_APP_USER_MODEL_ID"),
-  devRemoteT3ServerEntryPath: trimmedString("T3CODE_DEV_REMOTE_T3_SERVER_ENTRY_PATH"),
-  configuredBackendPort: Config.Port("T3CODE_PORT").pipe(Config.option),
-  commitHashOverride: trimmedString("T3CODE_COMMIT_HASH"),
-  desktopLanHostOverride: trimmedString("T3CODE_DESKTOP_LAN_HOST"),
-  desktopHttpsEndpointUrls: commaSeparatedStrings("T3CODE_DESKTOP_HTTPS_ENDPOINTS"),
-  otlpTracesUrl: trimmedString("T3CODE_OTLP_TRACES_URL"),
-  otlpMetricsUrl: trimmedString("T3CODE_OTLP_METRICS_URL"),
-  otlpLogsUrl: trimmedString("T3CODE_OTLP_LOGS_URL"),
-  otlpExportIntervalMs: Config.Int("T3CODE_OTLP_EXPORT_INTERVAL_MS").pipe(
-    Config.withDefault(10_000),
-  ),
-  otlpHeaders: Config.schema(OtlpHeadersFromString, "T3CODE_OTLP_HEADERS").pipe(Config.option),
-  otlpProtocol: Config.schema(OtlpProtocol, "T3CODE_OTLP_PROTOCOL").pipe(
+  appUserModelIdOverride: trimmedString("MARP_DESKTOP_APP_USER_MODEL_ID"),
+  devRemoteMarpServerEntryPath: trimmedString("MARP_DEV_REMOTE_MARP_SERVER_ENTRY_PATH"),
+  configuredBackendPort: Config.Port("MARP_PORT").pipe(Config.option),
+  commitHashOverride: trimmedString("MARP_COMMIT_HASH"),
+  desktopLanHostOverride: trimmedString("MARP_DESKTOP_LAN_HOST"),
+  desktopHttpsEndpointUrls: commaSeparatedStrings("MARP_DESKTOP_HTTPS_ENDPOINTS"),
+  otlpTracesUrl: trimmedString("MARP_OTLP_TRACES_URL"),
+  otlpMetricsUrl: trimmedString("MARP_OTLP_METRICS_URL"),
+  otlpLogsUrl: trimmedString("MARP_OTLP_LOGS_URL"),
+  otlpExportIntervalMs: Config.Int("MARP_OTLP_EXPORT_INTERVAL_MS").pipe(Config.withDefault(10_000)),
+  otlpHeaders: Config.schema(OtlpHeadersFromString, "MARP_OTLP_HEADERS").pipe(Config.option),
+  otlpProtocol: Config.schema(OtlpProtocol, "MARP_OTLP_PROTOCOL").pipe(
     Config.withDefault("http/json"),
   ),
-  desktopLauncherPath: trimmedString("T3CODE_DESKTOP_LAUNCHER_PATH"),
+  desktopLauncherPath: trimmedString("MARP_DESKTOP_LAUNCHER_PATH"),
   appImagePath: trimmedString("APPIMAGE"),
-  disableAutoUpdate: optionalBoolean("T3CODE_DISABLE_AUTO_UPDATE"),
-  mockUpdates: optionalBoolean("T3CODE_DESKTOP_MOCK_UPDATES"),
-  mockUpdateServerPort: Config.Port("T3CODE_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(
+  disableAutoUpdate: optionalBoolean("MARP_DISABLE_AUTO_UPDATE"),
+  mockUpdates: optionalBoolean("MARP_DESKTOP_MOCK_UPDATES"),
+  mockUpdateServerPort: Config.Port("MARP_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(
     Config.withDefault(3000),
   ),
 });

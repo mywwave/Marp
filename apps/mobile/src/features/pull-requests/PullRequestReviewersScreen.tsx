@@ -4,9 +4,9 @@ import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { usePullRequestConnected } from "./usePullRequestConnected";
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import type { PullRequestReviewerCandidate } from "@t3tools/contracts";
+import { squashAtomCommandFailure } from "@marp/client-runtime/state/runtime";
+import { sourceControlClients } from "@marp/client-runtime/source-control-clients";
+import type { PullRequestReviewerCandidate } from "@marp/contracts";
 import { useRef, useState } from "react";
 import {
   FlatList,
@@ -213,7 +213,7 @@ export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequ
               >
                 <PullRequestAvatar actor={item} size={32} />
                 <View className="min-w-0 flex-1 gap-0.5">
-                  <Text className="text-sm font-t3-medium" numberOfLines={1}>
+                  <Text className="text-sm font-marp-medium" numberOfLines={1}>
                     {item.name || item.login}
                   </Text>
                   <Text className="text-xs text-foreground-muted" numberOfLines={1}>

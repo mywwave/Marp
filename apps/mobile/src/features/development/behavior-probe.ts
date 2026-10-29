@@ -9,7 +9,7 @@ interface Fiber {
 }
 interface DevToolsHook {
   onCommitFiberRoot?: (id: unknown, root: { current: Fiber }, ...rest: unknown[]) => unknown;
-  __t3BehaviorProbe?: true;
+  __marpBehaviorProbe?: true;
 }
 interface ListState {
   readonly scroll: number;
@@ -41,8 +41,8 @@ function installCommitHook() {
     setTimeout(installCommitHook, 50);
     return;
   }
-  if (hook.__t3BehaviorProbe) return;
-  hook.__t3BehaviorProbe = true;
+  if (hook.__marpBehaviorProbe) return;
+  hook.__marpBehaviorProbe = true;
   const original = hook.onCommitFiberRoot.bind(hook);
   hook.onCommitFiberRoot = (id, next, ...rest) => {
     roots.add(next);
@@ -237,12 +237,12 @@ function jsFrame(time: number) {
 
 function uiFramesStart() {
   "worklet";
-  const ui = globalThis as { __t3UiFrames?: number[]; __t3UiFramesOn?: boolean };
-  ui.__t3UiFrames = [];
-  ui.__t3UiFramesOn = true;
+  const ui = globalThis as { __marpUiFrames?: number[]; __marpUiFramesOn?: boolean };
+  ui.__marpUiFrames = [];
+  ui.__marpUiFramesOn = true;
   const tick = (time: number) => {
-    if (!ui.__t3UiFramesOn) return;
-    ui.__t3UiFrames!.push(time);
+    if (!ui.__marpUiFramesOn) return;
+    ui.__marpUiFrames!.push(time);
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -250,9 +250,9 @@ function uiFramesStart() {
 
 function uiFramesStop() {
   "worklet";
-  const ui = globalThis as { __t3UiFrames?: number[]; __t3UiFramesOn?: boolean };
-  ui.__t3UiFramesOn = false;
-  return ui.__t3UiFrames ?? [];
+  const ui = globalThis as { __marpUiFrames?: number[]; __marpUiFramesOn?: boolean };
+  ui.__marpUiFramesOn = false;
+  return ui.__marpUiFrames ?? [];
 }
 
 let samples: Array<Record<string, unknown>> = [];
@@ -274,7 +274,7 @@ function visibleFeed(feeds: ReadonlyArray<Feed>) {
 installCommitHook();
 
 Object.assign(globalThis, {
-  __t3Behavior: {
+  __marpBehavior: {
     open(url: string) {
       const { Linking } = require("react-native") as typeof import("react-native");
       void Linking.openURL(url);
@@ -289,7 +289,7 @@ Object.assign(globalThis, {
     state: () => JSON.stringify(snapshot()),
     /** Removes these saved environments (and their cached threads) through the app's own command. */
     async forgetEnvironments(ids: ReadonlyArray<string>) {
-      const { runAtomCommand } = require("@t3tools/client-runtime/state/runtime") as {
+      const { runAtomCommand } = require("@marp/client-runtime/state/runtime") as {
         runAtomCommand: (
           registry: unknown,
           command: unknown,

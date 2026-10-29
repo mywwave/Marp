@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ThreadId } from "@t3tools/contracts";
+import { ThreadId } from "@marp/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -49,7 +49,7 @@ describe("claimPreviewRecording", () => {
       expect(wrongPath._tag).toBe("Failure");
     }).pipe(
       Effect.provide(
-        ServerConfig.layerTest(process.cwd(), { prefix: "t3-preview-recording-" }).pipe(
+        ServerConfig.layerTest(process.cwd(), { prefix: "marp-preview-recording-" }).pipe(
           Layer.provideMerge(NodeServices.layer),
         ),
       ),
@@ -94,7 +94,7 @@ describe("claimPreviewRecording", () => {
         }
       }).pipe(
         Effect.provide(
-          ServerConfig.layerTest(process.cwd(), { prefix: "t3-preview-recording-" }).pipe(
+          ServerConfig.layerTest(process.cwd(), { prefix: "marp-preview-recording-" }).pipe(
             Layer.provideMerge(NodeServices.layer),
           ),
         ),

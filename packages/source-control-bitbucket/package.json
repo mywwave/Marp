@@ -1,5 +1,5 @@
 {
-  "name": "@t3tools/source-control-bitbucket",
+  "name": "@marp/source-control-bitbucket",
   "private": true,
   "type": "module",
   "exports": {
@@ -17,16 +17,16 @@
     "test": "vp test run --config ../../vite.config.ts --dir ."
   },
   "dependencies": {
-    "@t3tools/contracts": "workspace:*",
-    "@t3tools/provider-core": "workspace:*",
-    "@t3tools/shared": "workspace:*",
-    "@t3tools/source-control-core": "workspace:*",
+    "@marp/contracts": "workspace:*",
+    "@marp/provider-core": "workspace:*",
+    "@marp/shared": "workspace:*",
+    "@marp/source-control-core": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",
     "@effect/vitest": "catalog:",
-    "@t3tools/source-control-testing": "workspace:*",
+    "@marp/source-control-testing": "workspace:*",
     "@types/node": "catalog:",
     "vite-plus": "catalog:"
   }

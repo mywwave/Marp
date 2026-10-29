@@ -18,7 +18,7 @@ import * as HttpRouter from "effect/http/HttpRouter";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import * as HttpApiScalar from "effect/http-api/HttpApiScalar";
 
-import { RelayApi } from "@t3tools/contracts/relay";
+import { RelayApi } from "@marp/contracts/relay";
 
 import {
   RELAY_HTTP_ROUTER_CONFIG,
@@ -174,7 +174,7 @@ export const layer = Api.make(
       ),
     );
     const t3ChatBaseUrl = yield* Config.String("T3CHAT_URL").pipe(
-      Config.withDefault("https://t3.chat"),
+      Config.withDefault("https://marp.chat"),
     );
 
     const cloudMintPrivateKey = yield* cloudMintKeyPair.privateKey;
@@ -578,7 +578,7 @@ export const layer = Api.make(
           Layer.unwrap(
             Effect.map(RelayObservability, (observability) =>
               Axiom.Telemetry({
-                serviceName: "t3code-relay",
+                serviceName: "marp-relay",
                 token: observability.workerIngestToken,
                 traces: observability.traces,
               }),

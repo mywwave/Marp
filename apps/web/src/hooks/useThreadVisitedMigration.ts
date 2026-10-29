@@ -1,6 +1,6 @@
-import { scopeThreadRef, scopedThreadKey } from "@t3tools/client-runtime/environment";
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
-import { runAtomCommand } from "@t3tools/client-runtime/state/runtime";
+import { scopeThreadRef, scopedThreadKey } from "@marp/client-runtime/environment";
+import type { EnvironmentThreadShell } from "@marp/client-runtime/state/shell";
+import { runAtomCommand } from "@marp/client-runtime/state/runtime";
 import type { AtomRegistry } from "effect/reactivity";
 
 import { environmentThreadShells, threadEnvironment } from "../state/threads";

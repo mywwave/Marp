@@ -1,5 +1,5 @@
 // @effect-diagnostics nodeBuiltinImport:off - exercises concurrent real CLI subprocesses.
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@marp/shared/HostProcess";
 import { describe, expect, it } from "@effect/vitest";
 import * as NodeChildProcess from "node:child_process";
 import * as NodeNet from "node:net";
@@ -22,7 +22,7 @@ import {
 
 const exec = NodeUtil.promisify(NodeChildProcess.execFile);
 
-/** A loopback port that accepts connections until the scope closes, like T3's device connection. */
+/** A loopback port that accepts connections until the scope closes, like Marp's device connection. */
 const listeningPort = Effect.acquireRelease(
   Effect.promise(
     () =>
@@ -41,10 +41,10 @@ describe("host-bound agent commands", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const temp = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-target-" });
+        const temp = yield* fs.makeTempDirectoryScoped({ prefix: "marp-device-target-" });
         const dir = path.join(temp, "quotes '\" $HOME `literal`");
         yield* fs.makeDirectory(dir);
-        const desktopApp = path.join(dir, "T3 Code");
+        const desktopApp = path.join(dir, "Marp");
         // Dropping Node mode after checking it forces each hop to set it independently.
         yield* fs.writeFileString(
           desktopApp,
@@ -89,7 +89,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-bound-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "marp-device-bound-" });
       const entryPath = path.join(dir, "cli.mjs");
       yield* fs.writeFileString(entryPath, "console.log(JSON.stringify(process.argv.slice(2)));");
       const target = [
@@ -100,12 +100,12 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
         "--config",
         "/h.json",
         "--session",
-        "t3-a",
+        "marp-a",
       ];
       const command = yield* bindAgentDeviceLauncher({
         entryPath,
         stateDir: dir,
-        session: "t3-a",
+        session: "marp-a",
         targetArgs: target,
       });
       const shared = yield* ensureAgentDeviceShim({ entryPath, stateDir: dir });
@@ -153,12 +153,12 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
       }
       expect(
         yield* Effect.promise(() =>
-          launch(shared, ["snapshot", "--config=/h.json", "--session=t3-a"]),
+          launch(shared, ["snapshot", "--config=/h.json", "--session=marp-a"]),
         ),
-      ).toEqual(["snapshot", "--config=/h.json", "--session=t3-a"]);
+      ).toEqual(["snapshot", "--config=/h.json", "--session=marp-a"]);
       yield* Effect.promise(() =>
         expect(
-          launch(shared, ["fill", "@e5", "--", "--config", "/h.json", "--session", "t3-a"]),
+          launch(shared, ["fill", "@e5", "--", "--config", "/h.json", "--session", "marp-a"]),
         ).rejects.toThrow("Call device_open first"),
       );
       for (const args of [["help", "gesture"], ["open", "--help"], ["record", "-h"], []]) {
@@ -181,13 +181,13 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-commands-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "marp-device-commands-" });
       const entryPath = path.join(dir, "cli.mjs");
       yield* fs.writeFileString(entryPath, "console.log(JSON.stringify(process.argv.slice(2)));");
       const command = yield* bindAgentDeviceLauncher({
         entryPath,
         stateDir: dir,
-        session: "t3-a",
+        session: "marp-a",
         targetArgs: [
           "--platform",
           "ios",
@@ -196,7 +196,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
           "--config",
           "/h.json",
           "--session",
-          "t3-a",
+          "marp-a",
         ],
       });
       const launch = (args: ReadonlyArray<string>) =>
@@ -212,7 +212,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
         "--config",
         "/h.json",
         "--session",
-        "t3-a",
+        "marp-a",
       ]);
       // The command is found past leading flags and their values, in either form.
       for (const config of [["--config", "/o.json"], ["--config=/o.json"]]) {
@@ -220,7 +220,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
           ...config,
           "connection",
           "--session",
-          "t3-a",
+          "marp-a",
         ]);
         // device status reads claims on the machine it runs on, which is not the device's host.
         yield* Effect.promise(() =>
@@ -240,7 +240,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
       ]) {
         yield* Effect.promise(() =>
           expect(launch(managed)).rejects.toThrow(
-            `T3 Code manages this command's connection to the device, so \`${managed.find((arg) => ["connect", "disconnect", "auth", "daemon"].includes(arg))}\` is not available through it.`,
+            `Marp manages this command's connection to the device, so \`${managed.find((arg) => ["connect", "disconnect", "auth", "daemon"].includes(arg))}\` is not available through it.`,
           ),
         );
       }
@@ -272,11 +272,11 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
     expect(agentDeviceCloseOutcome(result(null, "", true))).toBe("timed-out");
   });
 
-  it.live("stops before agent-device when T3's device connection is down", () =>
+  it.live("stops before agent-device when Marp's device connection is down", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-endpoint-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "marp-device-endpoint-" });
       const entryPath = path.join(dir, "cli.mjs");
       yield* fs.writeFileString(entryPath, "console.log(JSON.stringify(process.argv.slice(2)));");
       const configPath = path.join(dir, "host.json");
@@ -298,8 +298,8 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
       const command = yield* bindAgentDeviceLauncher({
         entryPath,
         stateDir: dir,
-        session: "t3-a",
-        targetArgs: ["--config", configPath, "--session", "t3-a"],
+        session: "marp-a",
+        targetArgs: ["--config", configPath, "--session", "marp-a"],
       });
       const launch = (args: ReadonlyArray<string>) =>
         exec(process.execPath, [
@@ -310,7 +310,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
         expect(launch(["screenshot", "/tmp/shot.png"])).rejects.toMatchObject({
           code: 1,
           stdout: "",
-          stderr: `T3 Code's device connection at 127.0.0.1:${port} is not reachable from this shell (connect ECONNREFUSED). Call device_open again to reconnect; if that succeeds and this repeats, this shell runs in a network sandbox, so run the command with network access, outside the sandbox.\n`,
+          stderr: `Marp's device connection at 127.0.0.1:${port} is not reachable from this shell (connect ECONNREFUSED). Call device_open again to reconnect; if that succeeds and this repeats, this shell runs in a network sandbox, so run the command with network access, outside the sandbox.\n`,
         }),
       );
       // An explicit --daemon-base-url wins over the config, as it does in agent-device.
@@ -327,10 +327,10 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
           "--config",
           configPath,
           "--session",
-          "t3-a",
+          "marp-a",
         ]);
       }
-      // cdp talks to Metro, not to T3's connection, so it still runs.
+      // cdp talks to Metro, not to Marp's connection, so it still runs.
       expect(
         JSON.parse((yield* Effect.promise(() => launch(["cdp", "target", "list"]))).stdout),
       ).toEqual(["cdp", "target", "list"]);
@@ -346,14 +346,14 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-prune-" });
+      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "marp-device-prune-" });
       const entryPath = path.join(stateDir, "cli.mjs");
       const shared = yield* ensureAgentDeviceShim({ entryPath, stateDir });
       const bind = (session: string) =>
         bindAgentDeviceLauncher({ entryPath, stateDir, session, targetArgs: [] });
-      const kept = yield* bind("t3-open");
-      const ended = yield* bind("t3-closed");
-      yield* pruneAgentDeviceLaunchers({ stateDir, live: new Set(["t3-open"]) });
+      const kept = yield* bind("marp-open");
+      const ended = yield* bind("marp-closed");
+      yield* pruneAgentDeviceLaunchers({ stateDir, live: new Set(["marp-open"]) });
       expect(yield* fs.exists(kept)).toBe(true);
       expect(yield* fs.exists(path.dirname(ended))).toBe(false);
       expect(yield* fs.exists(shared)).toBe(true);
@@ -373,15 +373,15 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-stale-" });
+        const dir = yield* fs.makeTempDirectoryScoped({ prefix: "marp-device-stale-" });
         const runtime = path.join(dir, "old-node");
         yield* fs.writeFileString(runtime, "#!/bin/sh\nexit 0\n");
         yield* fs.chmod(runtime, 0o755);
         const command = yield* bindAgentDeviceLauncher({
           entryPath: path.join(dir, "cli.mjs"),
           stateDir: dir,
-          session: "t3-a",
-          targetArgs: ["--config", "/h.json", "--session", "t3-a"],
+          session: "marp-a",
+          targetArgs: ["--config", "/h.json", "--session", "marp-a"],
         }).pipe(Effect.provideService(HostProcess.ExecutablePath, runtime));
         yield* fs.remove(runtime);
         yield* Effect.promise(() =>
@@ -401,7 +401,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const temp = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-target-" });
+      const temp = yield* fs.makeTempDirectoryScoped({ prefix: "marp-device-target-" });
       const platform = yield* HostProcess.Platform;
       const dir = path.join(
         temp,
@@ -473,7 +473,7 @@ if (process.env.AGENT_DEVICE_DAEMON_BASE_URL) process.exit(2);`,
     }).pipe(
       Effect.scoped,
       Effect.provideService(HostProcess.IsExecutable, true),
-      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t3"),
+      Effect.provideService(HostProcess.ExecutablePath, "/packaged/marp"),
       Effect.provide(NodeServices.layer),
     ),
   );

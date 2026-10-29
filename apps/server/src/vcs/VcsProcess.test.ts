@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, expect, it } from "@effect/vitest";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@marp/shared/HostProcess";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
@@ -14,7 +14,7 @@ import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import { ChildProcessSpawner } from "effect/process";
 
-import { VcsProcessExitError, VcsProcessSpawnError } from "@t3tools/contracts";
+import { VcsProcessExitError, VcsProcessSpawnError } from "@marp/contracts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as VcsProcess from "./VcsProcess.ts";
 
@@ -55,7 +55,7 @@ describe("VcsProcess.run", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-index-lock-" });
+      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "marp-index-lock-" });
       const git = (args: readonly string[]) =>
         run({ operation: "test.checkpoint.restore", command: "git", cwd, args });
       yield* git(["init"]);
@@ -154,13 +154,13 @@ describe("VcsProcess.run", () => {
     },
     {
       stderr:
-        "fatal: update_ref failed for ref 'refs/t3/checkpoints/x': cannot update ref 'refs/t3/checkpoints/x': couldn't write '/Volumes/share/.git/refs/t3/checkpoints/x.lock'",
+        "fatal: update_ref failed for ref 'refs/marp/checkpoints/x': cannot update ref 'refs/marp/checkpoints/x': couldn't write '/Volumes/share/.git/refs/marp/checkpoints/x.lock'",
       fsyncMethods: ["fsync", "writeout-only"],
     },
     { stderr: "fatal: Operation not supported", fsyncMethods: ["fsync"] },
     {
       stderr:
-        "fatal: update_ref failed for ref 'refs/t3/checkpoints/x': cannot update ref 'refs/t3/checkpoints/x': couldn't write '/Volumes/share/.git/refs/t3/checkpoints/x.lock': Input/output error",
+        "fatal: update_ref failed for ref 'refs/marp/checkpoints/x': cannot update ref 'refs/marp/checkpoints/x': couldn't write '/Volumes/share/.git/refs/marp/checkpoints/x.lock': Input/output error",
       fsyncMethods: ["fsync"],
     },
     {
@@ -184,7 +184,7 @@ describe("VcsProcess.run", () => {
     },
     {
       stderr:
-        "fatal: update_ref failed for ref 'refs/t3/checkpoints/x': cannot update ref 'refs/t3/checkpoints/x': couldn't write '/Volumes/share/.git/refs/t3/checkpoints/x.lock'",
+        "fatal: update_ref failed for ref 'refs/marp/checkpoints/x': cannot update ref 'refs/marp/checkpoints/x': couldn't write '/Volumes/share/.git/refs/marp/checkpoints/x.lock'",
       fsyncMethods: ["batch", "writeout-only"],
     },
   ] as const)(
@@ -320,7 +320,7 @@ describe("VcsProcess.run", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-vcs-bare-" });
+      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-vcs-bare-" });
       yield* fileSystem.makeDirectory(path.join(cwd, "objects", "info"), { recursive: true });
       yield* fileSystem.makeDirectory(path.join(cwd, "refs", "heads"), { recursive: true });
       yield* fileSystem.writeFileString(path.join(cwd, "HEAD"), "ref: refs/heads/main\n");
@@ -421,7 +421,7 @@ describe("VcsProcess.run", () => {
       const secretArgument = "--token=super-secret-token";
       const error = yield* run({
         operation: "test.spawn",
-        command: "definitely-not-a-t3code-executable",
+        command: "definitely-not-a-marp-executable",
         args: [secretArgument],
         cwd: process.cwd(),
       }).pipe(Effect.flip);
@@ -429,7 +429,7 @@ describe("VcsProcess.run", () => {
       expect(error).toBeInstanceOf(VcsProcessSpawnError);
       expect(error).toMatchObject({
         operation: "test.spawn",
-        command: "definitely-not-a-t3code-executable",
+        command: "definitely-not-a-marp-executable",
         argumentCount: 1,
       });
       expect(error).toHaveProperty("cause");

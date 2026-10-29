@@ -21,7 +21,7 @@ const layerEnvironmentAuthPolicy = (overrides?: Partial<ServerConfig.ServerConfi
           } satisfies ServerConfig.ServerConfig["Service"];
         }),
       ).pipe(
-        Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-auth-policy-test-" })),
+        Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "marp-auth-policy-test-" })),
       ),
     ),
   );
@@ -32,7 +32,7 @@ it.layer(NodeServices.layer)("EnvironmentAuthPolicy.layer", (it) => {
       const policy = yield* EnvironmentAuthPolicy.EnvironmentAuthPolicy;
       const descriptor = yield* policy.getDescriptor();
 
-      expect(descriptor.sessionCookieName).toBe("t3_session_3774");
+      expect(descriptor.sessionCookieName).toBe("marp_session_3774");
     }).pipe(
       Effect.provide(
         layerEnvironmentAuthPolicy({
@@ -68,7 +68,7 @@ it.layer(NodeServices.layer)("EnvironmentAuthPolicy.layer", (it) => {
       expect(descriptor.policy).toBe("loopback-browser");
       expect(descriptor.bootstrapMethods).toEqual(["one-time-token"]);
       expect(descriptor.serverUpdateScope).toBe("environment:maintain");
-      expect(descriptor.sessionCookieName).toMatch(/^t3_session_3773_[a-f0-9]{12}$/);
+      expect(descriptor.sessionCookieName).toMatch(/^marp_session_3773_[a-f0-9]{12}$/);
     }).pipe(
       Effect.provide(
         layerEnvironmentAuthPolicy({

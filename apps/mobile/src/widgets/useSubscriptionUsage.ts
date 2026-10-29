@@ -1,5 +1,5 @@
-import { runAtomCommand } from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId } from "@t3tools/contracts";
+import { runAtomCommand } from "@marp/client-runtime/state/runtime";
+import type { EnvironmentId } from "@marp/contracts";
 
 import { environmentCatalog } from "../connection/catalog";
 import { isAppActive, subscribeAppState } from "../lib/appState";

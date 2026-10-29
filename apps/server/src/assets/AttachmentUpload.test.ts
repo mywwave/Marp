@@ -5,7 +5,7 @@ import * as NodePath from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
-import { ChatAttachmentId } from "@t3tools/contracts";
+import { ChatAttachmentId } from "@marp/contracts";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
@@ -31,7 +31,7 @@ import {
 } from "./AttachmentUpload.ts";
 
 const layerTest = ServerSecretStore.layer.pipe(
-  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-attachment-upload-" })),
+  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "marp-attachment-upload-" })),
   Layer.provideMerge(DocumentText.layer.pipe(Layer.provideMerge(NodeServices.layer))),
 );
 

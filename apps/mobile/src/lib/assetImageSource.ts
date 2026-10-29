@@ -1,4 +1,4 @@
-import type { AssetResource, EnvironmentId } from "@t3tools/contracts";
+import type { AssetResource, EnvironmentId } from "@marp/contracts";
 import type { ImageSource } from "expo-image";
 
 /** Cache immutable attachments by id; signed URLs change on each mint and reconnect. */
@@ -10,7 +10,7 @@ export function assetImageSource(
   return resource._tag === "attachment"
     ? {
         uri,
-        cacheKey: `t3-attachment:${JSON.stringify([environmentId, resource.attachmentId])}`,
+        cacheKey: `marp-attachment:${JSON.stringify([environmentId, resource.attachmentId])}`,
       }
     : { uri };
 }

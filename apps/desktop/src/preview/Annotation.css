@@ -1,55 +1,55 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--t3-font-sans);
-  --font-mono: var(--t3-font-mono);
-  --color-background: var(--t3-background);
-  --color-foreground: var(--t3-foreground);
-  --color-popover: var(--t3-popover);
-  --color-popover-foreground: var(--t3-popover-foreground);
-  --color-primary: var(--t3-primary);
-  --color-primary-foreground: var(--t3-primary-foreground);
-  --color-muted: var(--t3-muted);
-  --color-muted-foreground: var(--t3-muted-foreground);
-  --color-accent: var(--t3-accent);
-  --color-accent-foreground: var(--t3-accent-foreground);
-  --color-border: var(--t3-border);
-  --color-input: var(--t3-input);
-  --color-ring: var(--t3-ring);
-  --radius-sm: calc(var(--t3-radius) - 4px);
-  --radius-md: calc(var(--t3-radius) - 2px);
-  --radius-lg: var(--t3-radius);
-  --radius-xl: calc(var(--t3-radius) + 4px);
-  --radius-2xl: calc(var(--t3-radius) + 8px);
+  --font-sans: var(--marp-font-sans);
+  --font-mono: var(--marp-font-mono);
+  --color-background: var(--marp-background);
+  --color-foreground: var(--marp-foreground);
+  --color-popover: var(--marp-popover);
+  --color-popover-foreground: var(--marp-popover-foreground);
+  --color-primary: var(--marp-primary);
+  --color-primary-foreground: var(--marp-primary-foreground);
+  --color-muted: var(--marp-muted);
+  --color-muted-foreground: var(--marp-muted-foreground);
+  --color-accent: var(--marp-accent);
+  --color-accent-foreground: var(--marp-accent-foreground);
+  --color-border: var(--marp-border);
+  --color-input: var(--marp-input);
+  --color-ring: var(--marp-ring);
+  --radius-sm: calc(var(--marp-radius) - 4px);
+  --radius-md: calc(var(--marp-radius) - 2px);
+  --radius-lg: var(--marp-radius);
+  --radius-xl: calc(var(--marp-radius) + 4px);
+  --radius-2xl: calc(var(--marp-radius) + 8px);
 }
 
 :host {
-  --t3-font-sans:
+  --marp-font-sans:
     "DM Sans Variable", "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
     sans-serif;
-  --t3-font-mono:
+  --marp-font-mono:
     "SF Mono", "SFMono-Regular", "JetBrains Mono", Consolas, "Liberation Mono", Menlo, monospace;
-  --t3-radius: 0.625rem;
-  --t3-background: white;
-  --t3-foreground: oklch(0.269 0 0);
-  --t3-popover: white;
-  --t3-popover-foreground: oklch(0.269 0 0);
-  --t3-primary: oklch(0.488 0.217 264);
-  --t3-primary-foreground: white;
-  --t3-muted: rgb(0 0 0 / 4%);
-  --t3-muted-foreground: oklch(0.556 0 0);
-  --t3-accent: rgb(0 0 0 / 4%);
-  --t3-accent-foreground: oklch(0.269 0 0);
-  --t3-border: rgb(0 0 0 / 8%);
-  --t3-input: rgb(0 0 0 / 10%);
-  --t3-ring: oklch(0.488 0.217 264);
-  color: var(--t3-foreground);
-  font-family: var(--t3-font-sans);
+  --marp-radius: 0.625rem;
+  --marp-background: white;
+  --marp-foreground: oklch(0.269 0 0);
+  --marp-popover: white;
+  --marp-popover-foreground: oklch(0.269 0 0);
+  --marp-primary: oklch(0.488 0.217 264);
+  --marp-primary-foreground: white;
+  --marp-muted: rgb(0 0 0 / 4%);
+  --marp-muted-foreground: oklch(0.556 0 0);
+  --marp-accent: rgb(0 0 0 / 4%);
+  --marp-accent-foreground: oklch(0.269 0 0);
+  --marp-border: rgb(0 0 0 / 8%);
+  --marp-input: rgb(0 0 0 / 10%);
+  --marp-ring: oklch(0.488 0.217 264);
+  color: var(--marp-foreground);
+  font-family: var(--marp-font-sans);
 }
 
 * {
   box-sizing: border-box;
-  border-color: var(--t3-border);
+  border-color: var(--marp-border);
 }
 
 button,
@@ -63,6 +63,6 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--t3-ring) 72%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--marp-ring) 72%, transparent);
   outline-offset: -2px;
 }

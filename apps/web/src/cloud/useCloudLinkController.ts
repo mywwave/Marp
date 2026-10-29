@@ -1,19 +1,19 @@
 import { useAtomValue } from "@effect/atom-react";
 import { useAuth } from "@clerk/react";
-import { findErrorTraceId } from "@t3tools/client-runtime/errors";
+import { findErrorTraceId } from "@marp/client-runtime/errors";
 import {
   EnvironmentId,
   AuthRelayReadScope,
   AuthRelayWriteScope,
   type EnvironmentCloudLinkStateResult,
-} from "@t3tools/contracts";
-import { ManagedRelay } from "@t3tools/client-runtime/relay";
-import type { RelayManagedEndpointProviderKind } from "@t3tools/contracts/relay";
+} from "@marp/contracts";
+import { ManagedRelay } from "@marp/client-runtime/relay";
+import type { RelayManagedEndpointProviderKind } from "@marp/contracts/relay";
 import {
   isAtomCommandInterrupted,
   settlePromise,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@marp/client-runtime/state/runtime";
 import * as Schema from "effect/Schema";
 import { useState } from "react";
 
@@ -87,13 +87,14 @@ export function useCloudLinkController() {
   const [tunnelLimit, setTunnelLimit] = useState<number | null>(null);
 
   const reportUpdateFailure = (cause: unknown) => {
-    const message = cause instanceof Error ? cause.message : "Could not update T3 Connect access.";
+    const message =
+      cause instanceof Error ? cause.message : "Could not update Marp Connect access.";
     const traceId = findErrorTraceId(cause);
-    console.error("[t3-connect] Could not update T3 Connect", { message, traceId, cause });
+    console.error("[marp-connect] Could not update Marp Connect", { message, traceId, cause });
     setOperationError(traceId ? `${message} Trace ID: ${traceId}` : message);
     toastManager.add({
       type: "error",
-      title: "Could not update T3 Connect",
+      title: "Could not update Marp Connect",
       description: message,
       data: traceId
         ? {
@@ -130,7 +131,7 @@ export function useCloudLinkController() {
         !readEnvironmentScope(environmentId, AuthRelayWriteScope)
       ) {
         reportUpdateFailure(
-          new Error("This connection needs permission to view and manage T3 Connect settings."),
+          new Error("This connection needs permission to view and manage Marp Connect settings."),
         );
         return false;
       }
@@ -139,7 +140,7 @@ export function useCloudLinkController() {
     const readLinkState = () => {
       const state = readCachedPrimaryCloudLinkState(target);
       if (state === null) {
-        reportUpdateFailure(new Error("Wait until the current T3 Connect settings can be read."));
+        reportUpdateFailure(new Error("Wait until the current Marp Connect settings can be read."));
       }
       return state;
     };
@@ -173,7 +174,7 @@ export function useCloudLinkController() {
       }
       const clerkToken = tokenResult.value;
       if (!clerkToken) {
-        reportUpdateFailure(new Error("Sign in to T3 Connect before enabling this."));
+        reportUpdateFailure(new Error("Sign in to Marp Connect before enabling this."));
         return false;
       }
       const currentManagedTunnel = isManagedTunnelActive(currentLinkState, relayProviderKind);

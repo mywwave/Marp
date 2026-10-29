@@ -1,0 +1,17 @@
+{
+  "name": "@marp/mobile-highlights-native",
+  "version": "0.0.0",
+  "private": true,
+  "expo-module": {
+    "ios": {
+      "modules": [
+        "MarpHighlightsModule"
+      ]
+    },
+    "android": {
+      "modules": [
+        "expo.modules.marphighlights.MarpHighlightsModule"
+      ]
+    }
+  }
+}

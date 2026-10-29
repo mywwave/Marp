@@ -8,7 +8,7 @@ import * as NodePath from "node:path";
 import * as NodeStream from "node:stream";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
-import { ProviderSessionId, ThreadId } from "@t3tools/contracts";
+import { ProviderSessionId, ThreadId } from "@marp/contracts";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Deferred from "effect/Deferred";
@@ -19,11 +19,11 @@ import * as Path from "effect/Path";
 import * as TestClock from "effect/testing/TestClock";
 import { vi } from "vite-plus/test";
 
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { AgentScope } from "@t3tools/shared/AgentScope";
-import { ProviderEventLoggers } from "@t3tools/provider-core/server/ProviderEventLoggers";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
-import { signalProcessGroup } from "@t3tools/provider-core/server/processGroup";
+import * as HostProcess from "@marp/shared/HostProcess";
+import { AgentScope } from "@marp/shared/AgentScope";
+import { ProviderEventLoggers } from "@marp/provider-core/server/ProviderEventLoggers";
+import { makeProviderFailure } from "@marp/provider-core/server/failure";
+import { signalProcessGroup } from "@marp/provider-core/server/processGroup";
 import * as PortScanner from "../../preview/PortScanner.ts";
 import {
   ClaudeAgentSdkQueryRunner,
@@ -77,7 +77,7 @@ it.effect("forks a session stored under the instance's own CLAUDE_CONFIG_DIR", (
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const configDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-claude-fork-config-",
+        prefix: "marp-claude-fork-config-",
       });
       const projectDir = yield* writeClaudeSession(configDir);
       const hostConfigDir = process.env.CLAUDE_CONFIG_DIR;
@@ -131,7 +131,7 @@ const resumedMcpQueryInput = {
     tools: [],
     permissionMode: "default",
     mcpServers: {
-      "t3-code": {
+      marp: {
         type: "http",
         url: "http://localhost:3773/mcp",
         headers: { Authorization: "Bearer test-mcp-credential" },
@@ -154,7 +154,7 @@ it.effect("reopens a stalled MCP registration before delivering the resumed prom
         return new Promise<ClaudeSdk.McpSetServersResult>(() => {});
       });
       const secondRegistration = vi.fn(async () => ({
-        added: ["t3-code"],
+        added: ["marp"],
         removed: [],
         errors: {},
       }));
@@ -241,7 +241,7 @@ it.effect.each([true, false])("only retries after confirmed process exit: %s", (
             registrationStarted.resolve();
             return first
               ? new Promise<ClaudeSdk.McpSetServersResult>(() => {})
-              : Promise.resolve({ added: ["t3-code"], removed: [], errors: {} });
+              : Promise.resolve({ added: ["marp"], removed: [], errors: {} });
           },
           close: vi.fn(),
           [Symbol.asyncDispose]: disposed,
@@ -385,7 +385,7 @@ it.effect("does not reuse a fresh session ID after MCP registration times out", 
 );
 
 function fakeClaudeCli(script: string): string {
-  const dir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-claude-cli-"));
+  const dir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "marp-claude-cli-"));
   const cli = NodePath.join(dir, "claude");
   NodeFS.writeFileSync(cli, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
   return cli;
@@ -442,7 +442,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")("Claude CLI pro
               Layer.succeed(AgentScope, {
                 ...AgentScope.defaultValue(),
                 wrap: ({ command, args }) =>
-                  Effect.succeed({ command, args, unit: "t3code-claude-test.scope" }),
+                  Effect.succeed({ command, args, unit: "marp-claude-test.scope" }),
                 stop: (unit) => Deferred.succeed(stopped, unit).pipe(Effect.asVoid),
               }),
             ),
@@ -452,7 +452,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")("Claude CLI pro
       yield* Effect.promise(() => leftoverStarted);
       yield* session.close;
       yield* Effect.promise(() => leftoverStopped);
-      assert.strictEqual(yield* Deferred.await(stopped), "t3code-claude-test.scope");
+      assert.strictEqual(yield* Deferred.await(stopped), "marp-claude-test.scope");
     }),
   );
 

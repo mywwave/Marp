@@ -13,7 +13,7 @@ import {
   type ServerSettingsPatch,
   type SimlockDeviceHostConfig,
   type SshDeviceHostConfig,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import { ChevronDownIcon, MoreVertical, PlusIcon } from "lucide-react";
 
 import { confirmDestructiveAction } from "../../confirmDialog";

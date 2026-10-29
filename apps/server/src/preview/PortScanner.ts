@@ -5,10 +5,10 @@ import {
   ThreadId,
   type DiscoveredLocalServer,
   type PreviewStopLocalServerInput,
-} from "@t3tools/contracts";
-import { signalProcessGroup } from "@t3tools/provider-core/server/processGroup";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { isLoopbackHost, LSOF_LOCAL_HOST_TOKENS } from "@t3tools/shared/preview";
+} from "@marp/contracts";
+import { signalProcessGroup } from "@marp/provider-core/server/processGroup";
+import * as HostProcess from "@marp/shared/HostProcess";
+import { isLoopbackHost, LSOF_LOCAL_HOST_TOKENS } from "@marp/shared/preview";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
@@ -60,13 +60,13 @@ export class PortDiscovery extends Context.Service<
       input: PreviewStopLocalServerInput,
     ) => Effect.Effect<void, PreviewStopLocalServerError>;
   }
->()("t3/preview/PortScanner/PortDiscovery") {}
+>()("marp/preview/PortScanner/PortDiscovery") {}
 
 /**
  * Agents launch with this set to their thread, and every job they start inherits it, so a
  * server stays attributed after its launching shell exits or the agent settles.
  */
-export const AGENT_THREAD_ENV = "T3CODE_THREAD_ID";
+export const AGENT_THREAD_ENV = "MARP_THREAD_ID";
 
 const POLL_INTERVAL = Duration.seconds(3);
 const LSOF_TIMEOUT_MS = 5_000;

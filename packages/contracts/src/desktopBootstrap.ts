@@ -10,10 +10,10 @@ export const DesktopBackendBootstrap = Schema.Struct({
   noBrowser: Schema.Boolean,
   port: PortSchema,
   // Omit in WSL to use the Linux home instead of the mapped Windows directory.
-  t3Home: Schema.optional(Schema.String),
+  marpHome: Schema.optional(Schema.String),
   host: Schema.String,
   desktopBootstrapToken: Schema.String,
-  // Derives rotating tokens instead of trusting desktopBootstrapToken indefinitely; see @t3tools/shared/desktopBootstrapToken.
+  // Derives rotating tokens instead of trusting desktopBootstrapToken indefinitely; see @marp/shared/desktopBootstrapToken.
   desktopBootstrapSecret: Schema.optionalKey(Schema.String),
   // Absent means the backend must hydrate PATH, as WSL and older desktops require.
   shellEnvironmentPrepared: Schema.optionalKey(Schema.Boolean),
@@ -31,5 +31,5 @@ export const DesktopBackendBootstrap = Schema.Struct({
 
 export type DesktopBackendBootstrap = typeof DesktopBackendBootstrap.Type;
 
-/** Written to `<t3Home>/runtime` before update shutdown so the backend retains its managed tunnel. */
+/** Written to `<marpHome>/runtime` before update shutdown so the backend retains its managed tunnel. */
 export const DESKTOP_UPDATE_RESTART_MARKER_FILE = "desktop-update-restart";

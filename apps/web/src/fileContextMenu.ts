@@ -1,9 +1,4 @@
-import {
-  EDITORS,
-  type ContextMenuItem,
-  type EditorId,
-  type EnvironmentId,
-} from "@t3tools/contracts";
+import { EDITORS, type ContextMenuItem, type EditorId, type EnvironmentId } from "@marp/contracts";
 
 import { resolveDiffPathForWorkspace } from "./diffFileActions";
 import {
@@ -14,7 +9,7 @@ import { readLocalApi } from "./localApi";
 import { serverEnvironment } from "./state/server";
 import { shellEnvironment } from "./state/shell";
 import { useAtomCommand } from "./state/use-atom-command";
-import { resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
+import { resolvePathLinkTarget } from "@marp/shared/fileLinks";
 import { toastManager } from "./components/ui/toast";
 import { useAtomValue } from "@effect/atom-react";
 

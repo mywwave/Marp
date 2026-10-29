@@ -8,11 +8,8 @@ import {
   type ProjectId,
   type ProviderInteractionMode,
   type RuntimeMode,
-} from "@t3tools/contracts";
-import {
-  deriveThreadTitleSeed,
-  threadTitleTextFromPrompt,
-} from "@t3tools/client-runtime/operations";
+} from "@marp/contracts";
+import { deriveThreadTitleSeed, threadTitleTextFromPrompt } from "@marp/client-runtime/operations";
 
 import type { UploadedMobileAttachment } from "./attachmentUpload";
 

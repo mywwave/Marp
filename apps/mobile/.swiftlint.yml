@@ -1,15 +1,15 @@
 included:
-  - ios/T3Code
-  - modules/t3-composer-editor/ios
-  - modules/t3-highlights/ios
-  - modules/t3-native-controls/ios
-  - modules/t3-terminal/ios
-  - modules/t3-review-diff/ios
+  - ios/Marp
+  - modules/marp-composer-editor/ios
+  - modules/marp-highlights/ios
+  - modules/marp-native-controls/ios
+  - modules/marp-terminal/ios
+  - modules/marp-review-diff/ios
 
 excluded:
   - ios/Pods
   - ios/build
-  - modules/t3-terminal/Vendor
+  - modules/marp-terminal/Vendor
 
 reporter: xcode
 

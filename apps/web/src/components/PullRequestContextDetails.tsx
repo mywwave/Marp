@@ -1,8 +1,5 @@
-import type { PullRequestContextMetadata } from "@t3tools/contracts";
-import {
-  capitalizeTerm,
-  sourceControlClients,
-} from "@t3tools/client-runtime/source-control-clients";
+import type { PullRequestContextMetadata } from "@marp/contracts";
+import { capitalizeTerm, sourceControlClients } from "@marp/client-runtime/source-control-clients";
 import { ArrowRightIcon } from "lucide-react";
 
 import { cn } from "~/lib/utils";

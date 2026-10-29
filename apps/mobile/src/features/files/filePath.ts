@@ -1,8 +1,5 @@
-import { joinPath, resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
-import {
-  isWorkspaceAudioPreviewPath,
-  isWorkspaceVideoPreviewPath,
-} from "@t3tools/shared/filePreview";
+import { joinPath, resolvePathLinkTarget } from "@marp/shared/fileLinks";
+import { isWorkspaceAudioPreviewPath, isWorkspaceVideoPreviewPath } from "@marp/shared/filePreview";
 
 function isWindowsAbsolutePath(value: string): boolean {
   return /^[A-Za-z]:[\\/]/.test(value) || value.startsWith("\\\\");

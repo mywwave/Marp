@@ -10,7 +10,7 @@ import {
 } from "./appLinking";
 
 describe("shouldHandleAppLink", () => {
-  it.each(["t3code://", "t3code:///", "t3code-dev://", "t3code-preview://"])(
+  it.each(["marp://", "marp:///", "marp-dev://", "marp-preview://"])(
     "ignores scheme-only URL %s",
     (url) => {
       expect(shouldHandleAppLink(url, true)).toBe(false);
@@ -18,14 +18,14 @@ describe("shouldHandleAppLink", () => {
   );
 
   it.each([
-    "t3code://threads/env-1/thread-1",
-    "t3code://pair?pairingUrl=x",
-    "t3code-dev://settings/usage?tab=limits",
+    "marp://threads/env-1/thread-1",
+    "marp://pair?pairingUrl=x",
+    "marp-dev://settings/usage?tab=limits",
   ])("handles path-bearing URL %s", (url) => {
     expect(shouldHandleAppLink(url, true)).toBe(true);
   });
 
-  it.each(["t3code://expo-development-client/?url=x", "t3code://expo-sharing/anything"])(
+  it.each(["marp://expo-development-client/?url=x", "marp://expo-sharing/anything"])(
     "ignores lifecycle URL %s",
     (url) => {
       expect(shouldHandleAppLink(url, true)).toBe(false);
@@ -35,10 +35,10 @@ describe("shouldHandleAppLink", () => {
 
 describe("cloud-only deep links", () => {
   it.each([
-    "t3code://connect-onboarding",
-    "t3code-dev://connect-onboarding/?source=x",
-    "t3code://settings/waitlist",
-    "t3code://settings/auth",
+    "marp://connect-onboarding",
+    "marp-dev://connect-onboarding/?source=x",
+    "marp://settings/waitlist",
+    "marp://settings/auth",
     "exp://192.168.1.2:8081/--/settings/auth",
   ])("ignores %s without cloud config", (url) => {
     expect(shouldHandleAppLink(url, false)).toBe(false);
@@ -46,11 +46,11 @@ describe("cloud-only deep links", () => {
   });
 
   it.each([
-    "t3code://settings",
-    "t3code://settings/authors",
-    "t3code://pair?next=settings/auth",
-    "t3code://threads/env/thread/files/scripts/connect-onboarding",
-    "t3code://new/draft/files/settings/auth",
+    "marp://settings",
+    "marp://settings/authors",
+    "marp://pair?next=settings/auth",
+    "marp://threads/env/thread/files/scripts/connect-onboarding",
+    "marp://new/draft/files/settings/auth",
     "exp://192.168.1.2:8081/--/threads/env/thread/files/settings/waitlist",
   ])("still handles %s without cloud config", (url) => {
     expect(shouldHandleAppLink(url, false)).toBe(true);

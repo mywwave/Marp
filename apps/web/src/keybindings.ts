@@ -8,7 +8,7 @@ import {
   THREAD_JUMP_KEYBINDING_COMMANDS,
   type ModelPickerJumpKeybindingCommand,
   type ThreadJumpKeybindingCommand,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import {
   isMacPlatform,
   matchesKeybindingShortcut,
@@ -17,12 +17,12 @@ import {
   resolveEventKeys,
   type ShortcutEventLike,
   type ShortcutModifierStateLike,
-} from "@t3tools/shared/keybindings";
+} from "@marp/shared/keybindings";
 import { isElectron } from "./env";
 import { projectScriptIdFromCommand } from "./projectScripts";
 
-export type { ShortcutEventLike, ShortcutModifierStateLike } from "@t3tools/shared/keybindings";
-export { shortcutKeyFromEvent } from "@t3tools/shared/keybindings";
+export type { ShortcutEventLike, ShortcutModifierStateLike } from "@marp/shared/keybindings";
+export { shortcutKeyFromEvent } from "@marp/shared/keybindings";
 
 export interface ShortcutMatchContext {
   terminalFocus: boolean;

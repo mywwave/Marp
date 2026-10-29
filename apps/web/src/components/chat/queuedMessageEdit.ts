@@ -1,5 +1,5 @@
-import { resolveQueuedEditExit } from "@t3tools/client-runtime/queued-run-edit";
-import type { ChatAttachment } from "@t3tools/contracts";
+import { resolveQueuedEditExit } from "@marp/client-runtime/queued-run-edit";
+import type { ChatAttachment } from "@marp/contracts";
 import {
   composerDraftHasUserContent,
   useComposerDraftStore,

@@ -3,8 +3,8 @@ import {
   EnvironmentId,
   makeProviderSettingsSchema,
   SourceControlProviderKind,
-} from "@t3tools/contracts";
-import { UNKNOWN_SOURCE_CONTROL_CLIENT } from "@t3tools/client-runtime/source-control-clients";
+} from "@marp/contracts";
+import { UNKNOWN_SOURCE_CONTROL_CLIENT } from "@marp/client-runtime/source-control-clients";
 import * as Schema from "effect/Schema";
 
 import {
@@ -115,7 +115,7 @@ describe("searchSettings", () => {
       "review-guide-model",
       "review-guide-instructions",
       "source-control-writing-style",
-      "t3-connect",
+      "marp-connect",
       "hold-webhooks-while-offline",
       "tailscale-https",
       "wsl-backend",

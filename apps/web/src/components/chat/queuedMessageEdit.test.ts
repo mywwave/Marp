@@ -1,5 +1,5 @@
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { EnvironmentId, ThreadId } from "@marp/contracts";
+import { scopeThreadRef } from "@marp/client-runtime/environment";
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import {
   DraftId,

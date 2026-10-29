@@ -1,13 +1,10 @@
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { DesktopAppActivationRequest } from "@t3tools/contracts";
+import { squashAtomCommandFailure } from "@marp/client-runtime/state/runtime";
+import type { DesktopAppActivationRequest } from "@marp/contracts";
 import { useEffect, useEffectEvent, useRef } from "react";
 
 import { handleDesktopAppActivationRequest } from "../../desktopAppActivation";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
-import {
-  findProjectByPath,
-  inferProjectTitleFromPath,
-} from "@t3tools/client-runtime/state/projects";
+import { findProjectByPath, inferProjectTitleFromPath } from "@marp/client-runtime/state/projects";
 import { newProjectId } from "../../lib/utils";
 import { readProjects, waitForProject } from "../../state/entities";
 import { usePrimaryEnvironment } from "../../state/environments";
@@ -63,7 +60,7 @@ export function DesktopAppActivationCoordinator() {
         });
         if (result._tag === "Failure") {
           const error = squashAtomCommandFailure(result);
-          throw error instanceof Error ? error : new Error("T3 Code could not add the project.");
+          throw error instanceof Error ? error : new Error("Marp could not add the project.");
         }
         return projectId;
       },
@@ -74,7 +71,7 @@ export function DesktopAppActivationCoordinator() {
     }),
   );
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to desktop activation requests over the bridge and marks the renderer ready
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- subscribes to desktop activation requests over the bridge and marks the renderer ready
   useEffect(() => {
     if (!ready || activation === undefined) return;
 
