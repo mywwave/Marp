@@ -46,7 +46,6 @@ export const SETTINGS_DEVICE_ONLY_PATHS: ReadonlySet<string> = new Set([
   "/settings/general",
   "/settings/appearance",
   "/settings/chat",
-  "/settings/diffs",
   "/settings/snap-shot",
   "/settings/connections",
   // Network access and authorized clients belong to the environment serving this app.
@@ -67,6 +66,7 @@ export function SettingsStorageBadge() {
   const scope = useOptionalSettingsScope();
   const pathname = useLocation({ select: (location) => location.pathname });
   const { environments } = useEnvironments();
+  if (pathname === "/settings/overview") return null;
   if (SETTINGS_DEVICE_ONLY_PATHS.has(pathname)) {
     return (
       <span className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-muted ps-2 pe-3 font-medium text-muted-foreground text-xs">

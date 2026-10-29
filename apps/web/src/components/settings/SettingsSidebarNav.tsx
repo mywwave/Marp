@@ -9,11 +9,11 @@ import {
 } from "react";
 import {
   ArchiveIcon,
+  LayoutDashboardIcon,
   FlaskConicalIcon,
   BotIcon,
   createLucideIcon,
   CalendarClockIcon,
-  FileDiffIcon,
   FolderTreeIcon,
   GitBranchIcon,
   GlobeIcon,
@@ -55,6 +55,12 @@ import {
   type SettingsSearchItem,
 } from "./settingsSearch";
 import { AppRouteModalBackButton } from "../AppRouteModal";
+import {
+  useEnvironmentProviders,
+  useEnvironments,
+  usePrimaryEnvironmentId,
+} from "../../state/environments";
+import { buildSettingsOverview } from "./settingsOverview.logic";
 import { useAvailableSettingsSearchItems } from "./useAvailableSettingsSearchItems";
 import { validateSettingsScopeSearch } from "./settingsScope";
 import { useSettingsSectionNavigation } from "./useSettingsSectionNavigation";
@@ -86,11 +92,11 @@ const T3ConnectSidebarAvatar = lazy(() =>
 const SETTINGS_SECTION_ICONS: Readonly<
   Record<SettingsPath, ComponentType<{ className?: string }>>
 > = {
+  "/settings/overview": LayoutDashboardIcon,
   "/settings/general": Settings2Icon,
   "/settings/diagnostics": WrenchIcon,
   "/settings/appearance": PaletteIcon,
   "/settings/chat": MessageSquareTextIcon,
-  "/settings/diffs": FileDiffIcon,
   "/settings/projects": PanelsTopLeftIcon,
   "/settings/keybindings": KeyboardIcon,
   "/settings/snap-shot": SnapShotIcon,
@@ -115,6 +121,29 @@ const SETTINGS_DETAIL_PAGE_PARENTS: Readonly<Record<string, SettingsPath>> = {
   "/settings/open-source-licenses": "/settings/about",
 };
 
+/** Nav dots for sections that need the user, from the same rules as the Overview page. */
+function useSettingsAttentionByPath(): ReadonlyMap<SettingsPath, "danger" | "warning"> {
+  const { environments } = useEnvironments();
+  const providersByEnvironment = useEnvironmentProviders();
+  const primaryEnvironmentId = usePrimaryEnvironmentId();
+  const { attention } = buildSettingsOverview({
+    environments: environments.map((environment) => ({
+      environmentId: environment.environmentId,
+      label: environment.label,
+      phase: environment.connection.phase,
+    })),
+    providersByEnvironment,
+    primaryEnvironmentId,
+  });
+  const byPath = new Map<SettingsPath, "danger" | "warning">();
+  for (const item of attention) {
+    if (item.tone === "notice") continue;
+    const path = item.kind === "machine-offline" ? "/settings/connections" : "/settings/providers";
+    if (byPath.get(path) !== "danger") byPath.set(path, item.tone);
+  }
+  return byPath;
+}
+
 // Attached only to the highlighted result, so it runs whenever the highlight lands on a row.
 function scrollResultIntoView(row: HTMLElement | null) {
   row?.scrollIntoView({ block: "nearest" });
@@ -138,6 +167,7 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
       navPaths[0] ??
       "",
   );
+  const attentionByPath = useSettingsAttentionByPath();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   // Below md the nav is an icon rail; searching expands it over the page.
@@ -424,6 +454,18 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
                                 >
                                   {SETTINGS_SECTION_LABELS[to]}
                                 </span>
+                                {attentionByPath.get(to) ? (
+                                  <span
+                                    aria-label="Needs attention"
+                                    className={cn(
+                                      "ms-auto size-1.5 shrink-0 rounded-full",
+                                      attentionByPath.get(to) === "danger"
+                                        ? "bg-destructive"
+                                        : "bg-warning",
+                                      !compactSearchOpen && "max-md:hidden",
+                                    )}
+                                  />
+                                ) : null}
                               </SidebarMenuButton>
                             </SidebarMenuItem>
                           );

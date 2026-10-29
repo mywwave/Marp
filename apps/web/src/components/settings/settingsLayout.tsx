@@ -2,7 +2,7 @@ import { SettingsGroup } from "./SettingsGroup";
 import { AuthSettingsWriteScope } from "@t3tools/contracts";
 import { usePrimaryEnvironmentId, usePrimaryEnvironment } from "../../state/environments";
 import { useEnvironmentScope, useEnvironmentsWithScope } from "../../state/session";
-import { InfoIcon, Undo2Icon } from "lucide-react";
+import { InfoIcon, LaptopIcon, Undo2Icon } from "lucide-react";
 import { DEFAULT_SERVER_SETTINGS, type ServerSettings } from "@t3tools/contracts";
 import * as Equal from "effect/Equal";
 import { useLocation, useNavigate } from "@tanstack/react-router";
@@ -192,6 +192,16 @@ export function PolicyTooltip({ children }: { readonly children: string }) {
       />
       <TooltipPopup side="top">{children}</TooltipPopup>
     </Tooltip>
+  );
+}
+
+/** Marks a section that is saved on this device on a page that otherwise follows the scope. */
+export function SettingsDeviceTag() {
+  return (
+    <span className="ms-1 inline-flex h-5 items-center gap-1 rounded-full bg-muted px-2 font-medium text-muted-foreground text-xs">
+      <LaptopIcon aria-hidden className="size-3" strokeWidth={1.75} />
+      This device
+    </span>
   );
 }
 

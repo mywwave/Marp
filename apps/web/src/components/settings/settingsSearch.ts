@@ -16,12 +16,12 @@ import { commandLabel } from "./KeybindingsSettings.logic";
 import type { ResolvedSettingsScope } from "./settingsScope";
 
 export type SettingsPath =
+  | "/settings/overview"
   | "/settings/projects"
   | "/settings/general"
   | "/settings/diagnostics"
   | "/settings/appearance"
   | "/settings/chat"
-  | "/settings/diffs"
   | "/settings/keybindings"
   | "/settings/snap-shot"
   | "/settings/providers"
@@ -39,6 +39,7 @@ export type SettingsPath =
   | "/settings/archived";
 
 export type SettingsSearchScope =
+  | "device"
   | "environment"
   | "environment-defaults"
   | "project-defaults"
@@ -84,20 +85,20 @@ export interface SettingsSearchAvailability {
 }
 
 export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
+  "/settings/overview": "Overview",
   "/settings/diagnostics": "Diagnostics",
   "/settings/projects": "Projects",
   "/settings/general": "General",
   "/settings/appearance": "Appearance",
   "/settings/chat": "Chat",
-  "/settings/diffs": "Diffs & pull requests",
   "/settings/keybindings": "Keybindings",
   "/settings/snap-shot": "SnapShots",
   "/settings/providers": "Providers",
-  "/settings/threads": "Threads",
+  "/settings/threads": "Threads & models",
   "/settings/browser": "Browser",
   "/settings/devices": "Devices",
   "/settings/scheduled-tasks": "Scheduled tasks",
-  "/settings/source-control": "Source control",
+  "/settings/source-control": "Git & pull requests",
   "/settings/worktrees": "Worktrees",
   "/settings/connections": "Environments",
   "/settings/access": "Sharing & access",
@@ -109,12 +110,12 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
 
 /** One line under each page title: what the page is for. */
 export const SETTINGS_SECTION_DESCRIPTIONS: Readonly<Record<SettingsPath, string>> = {
+  "/settings/overview": "What needs attention, and where everything is set up.",
   "/settings/diagnostics": "What Marp is using on this machine right now.",
   "/settings/projects": "Name, icon, scripts and defaults for each project.",
   "/settings/general": "Notifications, the sidebar and confirmations on this device.",
   "/settings/appearance": "Theme, colors and type on this device.",
   "/settings/chat": "How the composer and follow-ups behave on this device.",
-  "/settings/diffs": "How diffs and pull requests open on this device.",
   "/settings/keybindings":
     "Shortcuts for every command. Saved on your machines, so they follow you.",
   "/settings/snap-shot": "Capture a window and attach it to your current draft.",
@@ -123,7 +124,7 @@ export const SETTINGS_SECTION_DESCRIPTIONS: Readonly<Record<SettingsPath, string
   "/settings/browser": "The built-in browser agents use, and how links open.",
   "/settings/devices": "Simulators and phones agents can drive.",
   "/settings/scheduled-tasks": "Agent runs on a schedule or a webhook.",
-  "/settings/source-control": "Repositories, git tools and AI-written commit messages.",
+  "/settings/source-control": "Repositories, pull requests, diffs and AI-written commit messages.",
   "/settings/worktrees": "Where thread worktrees live and when they are cleaned up.",
   "/settings/connections": "Every machine Marp connects to.",
   "/settings/access": "Who can reach this machine, and how.",
@@ -138,6 +139,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   readonly heading: string | null;
   readonly paths: ReadonlyArray<SettingsPath>;
 }> = [
+  { heading: null, paths: ["/settings/overview"] },
   {
     heading: "You",
     paths: [
@@ -160,12 +162,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   },
   {
     heading: "Code",
-    paths: [
-      "/settings/projects",
-      "/settings/source-control",
-      "/settings/diffs",
-      "/settings/worktrees",
-    ],
+    paths: ["/settings/projects", "/settings/source-control", "/settings/worktrees"],
   },
   { heading: "Connections", paths: ["/settings/connections", "/settings/access"] },
   {
@@ -336,7 +333,8 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "diff-color-scheme",
     title: "Diff colors",
-    to: "/settings/diffs",
+    to: "/settings/source-control",
+    scope: "device",
     searchTerms: ["red green blue orange additions deletions changes counts palette colorblind"],
   },
   {
@@ -423,7 +421,7 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "composer-context",
     title: "Composer context",
-    to: "/settings/appearance",
+    to: "/settings/chat",
   },
   {
     id: "project-grouping",
@@ -565,25 +563,29 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "hide-whitespace-changes",
     title: "Hide whitespace changes",
-    to: "/settings/diffs",
+    to: "/settings/source-control",
+    scope: "device",
     searchTerms: ["diff ignore spaces edits default"],
   },
   {
     id: "default-diff-file-state",
     title: "Default diff file state",
-    to: "/settings/diffs",
+    to: "/settings/source-control",
+    scope: "device",
     searchTerms: ["collapsed expanded collapse expand files pull request pr code tab"],
   },
   {
     id: "diff-layout",
     title: "Diff layout",
-    to: "/settings/diffs",
+    to: "/settings/source-control",
+    scope: "device",
     searchTerms: ["stacked split side by side unified inline view"],
   },
   {
     id: "proactive-panels",
     title: "Proactive panels",
-    to: "/settings/diffs",
+    to: "/settings/source-control",
+    scope: "device",
     searchTerms: ["automatically open diff pull request pr right panel agent completion"],
   },
   {
@@ -756,13 +758,13 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "legacy-plan-mode",
     title: "Plan mode (legacy)",
-    to: "/settings/labs",
+    to: "/settings/chat",
     searchTerms: ["build plan composer old"],
   },
   {
     id: "legacy-context-window-indicator",
     title: "Context window indicator (legacy)",
-    to: "/settings/labs",
+    to: "/settings/chat",
     searchTerms: ["composer meter usage tokens circle old"],
   },
   {
@@ -941,7 +943,8 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "pull-request-links-open-in-app",
     title: "Open pull requests in T3 Code",
-    to: "/settings/diffs",
+    to: "/settings/source-control",
+    scope: "device",
     searchTerms: [
       `pr links ${SOURCE_CONTROL_HOST_LABELS} browser external click default pull request view panel`,
     ],
@@ -1185,12 +1188,12 @@ export type SettingsSearchItemId = (typeof SETTINGS_SEARCH_ITEMS)[number]["id"];
 const SEARCH_ITEMS_BY_ID = new Map(SETTINGS_SEARCH_ITEMS.map((item) => [item.id, item] as const));
 
 const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScope | null>> = {
+  "/settings/overview": null,
   "/settings/diagnostics": "environment",
   "/settings/projects": "project",
   "/settings/general": null,
   "/settings/appearance": null,
   "/settings/chat": null,
-  "/settings/diffs": null,
   "/settings/snap-shot": null,
   "/settings/keybindings": null,
   "/settings/providers": null,
@@ -1209,12 +1212,14 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
 };
 
 const RENAMED_SETTINGS_PATHS: Readonly<Record<string, SettingsPath>> = {
+  "/settings/diffs": "/settings/source-control",
   "/settings/integrations": "/settings/browser",
   "/settings/storage": "/settings/maintenance",
   "/settings/beta": "/settings/labs",
 };
 const SPLIT_SETTINGS_PATHS: ReadonlySet<string> = new Set([
   "/settings/general",
+  "/settings/labs",
   "/settings/appearance",
   "/settings/source-control",
   "/settings/connections",
@@ -1223,7 +1228,7 @@ const SPLIT_SETTINGS_PATHS: ReadonlySet<string> = new Set([
 // Section anchors that moved but are not search results themselves.
 const MOVED_SECTION_ANCHORS: Readonly<Record<string, SettingsPath>> = {
   "authorized-clients": "/settings/access",
-  "legacy-features": "/settings/labs",
+  "legacy-features": "/settings/chat",
   "text-generation": "/settings/threads",
   about: "/settings/about",
 };
@@ -1288,6 +1293,7 @@ export function isSettingsSearchScopeAvailable(
 ): boolean {
   switch (requiredScope) {
     case null:
+    case "device":
     case "connections":
       return true;
     case "environment":

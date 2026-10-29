@@ -314,7 +314,11 @@ describe("movedSettingsPath", () => {
     expect(movedSettingsPath("/settings/source-control", "worktree-branch-naming")).toBe(
       "/settings/worktrees",
     );
-    expect(movedSettingsPath("/settings/appearance", "diff-color-scheme")).toBe("/settings/diffs");
+    expect(movedSettingsPath("/settings/appearance", "diff-color-scheme")).toBe(
+      "/settings/source-control",
+    );
+    expect(movedSettingsPath("/settings/diffs", "")).toBe("/settings/source-control");
+    expect(movedSettingsPath("/settings/diffs", "diff-layout")).toBe("/settings/source-control");
     expect(movedSettingsPath("/settings/connections", "network-access")).toBe("/settings/access");
     expect(movedSettingsPath("/settings/storage", "storage-worktrees")).toBe("/settings/worktrees");
     expect(movedSettingsPath("/settings/storage", "")).toBe("/settings/maintenance");

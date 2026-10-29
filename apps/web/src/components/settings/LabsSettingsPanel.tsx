@@ -8,10 +8,9 @@ import { Switch } from "../ui/switch";
 import { ScopedSwitch } from "./ScopedSwitch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
-import { LegacyFeaturesSection } from "./SettingsPanels";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
 
-/** Features still settling in, and legacy behavior kept for people who rely on it. */
+/** Features still settling in. Legacy composer behavior lives on the Chat page. */
 export function LabsSettingsPanel() {
   return (
     <SettingsPageContainer>
@@ -23,7 +22,6 @@ export function LabsSettingsPanel() {
         <LinkedEnvironmentsRow />
         <SimlockHostsRow />
       </SettingsSection>
-      <LegacyFeaturesSection />
     </SettingsPageContainer>
   );
 }
