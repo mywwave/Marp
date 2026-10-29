@@ -16,6 +16,7 @@ import {
 } from "@t3tools/contracts";
 import { ChevronDownIcon, MoreVertical, PlusIcon } from "lucide-react";
 
+import { confirmDestructiveAction } from "../../confirmDialog";
 import { cn, randomUUID } from "../../lib/utils";
 import { deviceEnvironment } from "../../state/device";
 import { environmentAtomList, environmentIdsKey } from "../../state/environmentAtomList";
@@ -326,7 +327,22 @@ export function DeviceSourcesSettings(props: {
   const retry = (environmentId: EnvironmentId, hostId: string) =>
     void list({ environmentId, input: { retryHostId: hostId } });
 
-  const rowActions = (onEdit: () => void, onRemove: () => void, extra?: ReactNode) => (
+  const confirmRemove = (label: string, remove: () => void) =>
+    void confirmDestructiveAction({
+      title: `Remove “${label}”?`,
+      description:
+        "Its connection settings are deleted and its devices leave the device list on every environment that uses it.",
+      confirmLabel: "Remove source",
+    }).then((confirmed) => {
+      if (confirmed) remove();
+    });
+
+  const rowActions = (
+    label: string,
+    onEdit: () => void,
+    onRemove: () => void,
+    extra?: ReactNode,
+  ) => (
     <>
       <Button size="sm" variant="outline" disabled={disabled} onClick={onEdit}>
         Edit
@@ -341,8 +357,8 @@ export function DeviceSourcesSettings(props: {
         </MenuTrigger>
         <MenuPopup align="end">
           {extra}
-          <MenuItem variant="destructive" onClick={onRemove}>
-            Remove
+          <MenuItem variant="destructive" onClick={() => confirmRemove(label, onRemove)}>
+            Remove…
           </MenuItem>
         </MenuPopup>
       </Menu>
@@ -431,6 +447,7 @@ export function DeviceSourcesSettings(props: {
         };
       }),
       actions: rowActions(
+        host.label,
         () =>
           setEditing({ kind: "ssh", host, original: host, ...(grouped ? {} : { only: holders }) }),
         () => void saveSsh(host, true, host, holders),
@@ -476,6 +493,7 @@ export function DeviceSourcesSettings(props: {
           };
         }),
         actions: rowActions(
+          host.label,
           () => setEditing({ kind: "eas", host, isNew: false, environmentId: checkOn }),
           () => void saveEas(host, true),
         ),
@@ -511,7 +529,7 @@ export function DeviceSourcesSettings(props: {
             status: hostStatus(member.state, host.id),
           };
         }),
-        actions: rowActions(edit, () => removeSimlock(host)),
+        actions: rowActions(host.label, edit, () => removeSimlock(host)),
       });
     }
   }

@@ -1,3 +1,4 @@
+import { Trash2Icon } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
 import {
@@ -59,6 +60,8 @@ export function ConfirmDialogHost() {
 
   const copy = resolveConfirmDialogCopy(state.status === "idle" ? "" : state.message);
   const confirmVariant = state.status === "idle" ? "default" : state.variant;
+  const confirmLabel = (state.status === "idle" ? undefined : state.confirmLabel) ?? "Confirm";
+  const destructive = confirmVariant === "destructive";
   const onCancel = () => respondToConfirmDialog(false);
   const onConfirm = () => respondToConfirmDialog(true);
 
@@ -74,17 +77,29 @@ export function ConfirmDialogHost() {
     >
       <AlertDialogPopup>
         <AlertDialogHeader>
-          <AlertDialogTitle>{copy.title}</AlertDialogTitle>
-          {copy.description ? (
-            <AlertDialogDescription className="whitespace-pre-line">
-              {copy.description}
-            </AlertDialogDescription>
-          ) : null}
+          <div className="flex items-start gap-4 max-sm:flex-col max-sm:items-center">
+            {destructive ? (
+              <span
+                aria-hidden
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-error-surface text-destructive-foreground"
+              >
+                <Trash2Icon className="size-4.5" />
+              </span>
+            ) : null}
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <AlertDialogTitle>{copy.title}</AlertDialogTitle>
+              {copy.description ? (
+                <AlertDialogDescription className="whitespace-pre-line">
+                  {copy.description}
+                </AlertDialogDescription>
+              ) : null}
+            </div>
+          </div>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+        <AlertDialogFooter variant="bare">
+          <AlertDialogClose render={<Button variant="ghost" />}>Cancel</AlertDialogClose>
           <Button variant={confirmVariant} onClick={onConfirm}>
-            Confirm
+            {confirmLabel}
           </Button>
         </AlertDialogFooter>
       </AlertDialogPopup>

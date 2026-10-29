@@ -2,6 +2,7 @@ import type { DesktopWslState } from "@t3tools/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 import {
   applyWslEnableSelection,
+  describeRevokeOtherClients,
   selectQrEndpointOption,
   togglePairingScopeSelection,
 } from "./ConnectionsSettings.logic";
@@ -121,5 +122,27 @@ describe("selectQrEndpointOption", () => {
     expect(selectQrEndpointOption(options, "tailscale-ip:gone", "nope")?.id).toBe(
       "tailscale-ip:http://100.84.12.7:4780",
     );
+  });
+});
+
+describe("describeRevokeOtherClients", () => {
+  it("names the other clients", () => {
+    expect(describeRevokeOtherClients(["iPhone", "iPad"])).toEqual({
+      title: "Revoke 2 other clients?",
+      description:
+        "iPhone and iPad lose access right away. They'll need a new pairing link to come back.",
+      confirmLabel: "Revoke 2 clients",
+    });
+  });
+
+  it("shortens long lists and handles one client or an unreadable list", () => {
+    expect(describeRevokeOtherClients(["A", "B", "C", "D"]).description).toMatch(
+      /^A, B and 2 more lose access/,
+    );
+    expect(describeRevokeOtherClients(["iPhone"])).toMatchObject({
+      title: "Revoke 1 other client?",
+      confirmLabel: "Revoke 1 client",
+    });
+    expect(describeRevokeOtherClients(null).confirmLabel).toBe("Revoke others");
   });
 });

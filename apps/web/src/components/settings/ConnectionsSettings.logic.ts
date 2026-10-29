@@ -295,6 +295,33 @@ export function summarizeAuthorizedClients(
   return parts.filter((part): part is string => part !== null).join(" · ");
 }
 
+/** Names up to three of the other clients' labels; null means the list is unreadable. */
+export function describeRevokeOtherClients(otherClientLabels: ReadonlyArray<string> | null): {
+  readonly title: string;
+  readonly description: string;
+  readonly confirmLabel: string;
+} {
+  const loseAccess = "They'll need a new pairing link to come back.";
+  if (otherClientLabels === null) {
+    return {
+      title: "Revoke all other clients?",
+      description: `Every other paired client loses access right away. ${loseAccess}`,
+      confirmLabel: "Revoke others",
+    };
+  }
+  const labels = otherClientLabels;
+  const count = labels.length;
+  const named =
+    count <= 3
+      ? new Intl.ListFormat("en", { type: "conjunction" }).format(labels)
+      : `${labels.slice(0, 2).join(", ")} and ${count - 2} more`;
+  return {
+    title: count === 1 ? "Revoke 1 other client?" : `Revoke ${count} other clients?`,
+    description: `${named} ${count === 1 ? "loses" : "lose"} access right away. ${loseAccess}`,
+    confirmLabel: count === 1 ? "Revoke 1 client" : `Revoke ${count} clients`,
+  };
+}
+
 export function sortDesktopClientSessions(sessions: ReadonlyArray<ServerClientSessionRecord>) {
   return [...sessions].toSorted((left, right) => {
     if (left.current !== right.current) {

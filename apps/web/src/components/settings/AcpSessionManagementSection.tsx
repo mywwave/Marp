@@ -190,8 +190,8 @@ export function AcpSessionManagementSection(props: {
     if (projectId === null || deletingSessionId !== null || session.importedThreadId !== null)
       return;
     const confirmed = await ensureLocalApi().dialogs.confirm(
-      `Permanently delete native ACP session "${session.title ?? session.sessionId}"?`,
-      { variant: "destructive" },
+      `Delete “${session.title ?? session.sessionId}”?\nThe agent's native session is deleted for good. You can't undo this.`,
+      { variant: "destructive", confirmLabel: "Delete session" },
     );
     if (!confirmed || !readEnvironmentScope(props.environmentId, AuthOrchestrationOperateScope))
       return;
@@ -280,10 +280,10 @@ export function AcpSessionManagementSection(props: {
 
   const disableConfiguredProvider = async (provider: AcpRegistryConfigurableProvider) => {
     if (projectId === null || savingProviderId !== null || provider.required) return;
-    const confirmed = await ensureLocalApi().dialogs.confirm(
-      `Disable ACP provider "${provider.providerId}"?`,
-      { variant: "destructive" },
-    );
+    const confirmed = await ensureLocalApi().dialogs.confirm(`Disable “${provider.providerId}”?`, {
+      variant: "destructive",
+      confirmLabel: "Disable provider",
+    });
     if (!confirmed || !readEnvironmentScope(props.environmentId, AuthProvidersManageScope)) return;
     setSavingProviderId(provider.providerId);
     const result = await disableProvider({

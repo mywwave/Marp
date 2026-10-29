@@ -100,7 +100,7 @@ import {
   useEnvironments,
   usePrimaryEnvironment,
 } from "~/state/environments";
-import { requestConfirmDialog } from "~/confirmDialog";
+import { confirmDestructiveAction } from "~/confirmDialog";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { environmentIdsKey } from "~/state/environmentAtomList";
 import { environmentUpdateStatesAtom, serverEnvironment } from "~/state/server";
@@ -116,6 +116,7 @@ import {
   sortDesktopClientSessions,
   toDesktopPairingLinkRecord,
   toDesktopClientSessionRecord,
+  describeRevokeOtherClients,
   selectPairingEndpoint,
   isTailscaleHttpsEndpoint,
   endpointDefaultPreferenceKey,
@@ -123,6 +124,7 @@ import {
 import {
   AdvertisedEndpointListRow,
   AuthorizedClientsHeaderAction,
+  clientSessionLabel,
   NetworkAccessDescription,
   PairingClientsList,
 } from "./AuthorizedClientsSettings";
@@ -329,6 +331,10 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
       ),
     );
   })();
+  const readableDesktopClientSessions =
+    canReadAccess && authAccessChanges.error === null && authAccessChanges.data?.type === "snapshot"
+      ? desktopClientSessions
+      : null;
   const isLocalBackendNetworkAccessible = desktopBridge
     ? desktopServerExposureState?.mode === "network-accessible"
     : currentAuthPolicy === "remote-reachable";
@@ -473,6 +479,14 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
       !readEnvironmentScope(primaryEnvironmentId, AuthAccessWriteScope)
     )
       return;
+    const pairingLink = desktopPairingLinks.find((link) => link.id === id);
+    const confirmed = await confirmDestructiveAction({
+      title: pairingLink?.label ? `Revoke “${pairingLink.label}”?` : "Revoke this pairing link?",
+      description:
+        "The link and its code stop working right away. Clients already paired with it keep access.",
+      confirmLabel: "Revoke link",
+    });
+    if (!confirmed) return;
     setRevokingDesktopPairingLinkId(id);
     setDesktopAccessManagementMutationError(null);
     const settled = await settlePromise(async () => {
@@ -501,6 +515,14 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
       !readEnvironmentScope(primaryEnvironmentId, AuthAccessWriteScope)
     )
       return;
+    const clientSession = desktopClientSessions.find((session) => session.sessionId === sessionId);
+    const confirmed = await confirmDestructiveAction({
+      title: `Revoke “${clientSession ? clientSessionLabel(clientSession) : "this client"}”?`,
+      description:
+        "It loses access right away and disconnects. It'll need a new pairing link to come back.",
+      confirmLabel: "Revoke client",
+    });
+    if (!confirmed) return;
     setRevokingDesktopClientSessionId(sessionId);
     setDesktopAccessManagementMutationError(null);
     const settled = await settlePromise(async () => {
@@ -527,6 +549,14 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
       !readEnvironmentScope(primaryEnvironmentId, AuthAccessWriteScope)
     )
       return;
+    const confirmed = await confirmDestructiveAction(
+      describeRevokeOtherClients(
+        readableDesktopClientSessions
+          ?.filter((session) => !session.current)
+          .map(clientSessionLabel) ?? null,
+      ),
+    );
+    if (!confirmed) return;
     setIsRevokingOtherDesktopClients(true);
     setDesktopAccessManagementMutationError(null);
     const settled = await settlePromise(async () => {
@@ -601,11 +631,13 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
       setPendingT3ConnectRemoval(environment);
       return;
     }
-    const confirmed = await requestConfirmDialog(
-      `Remove ${environment.label} from this device?\nThis forgets its pairing, credentials, and cached threads here. Switch it off instead to keep it saved.`,
-      { variant: "destructive" },
-    );
-    if (confirmed === true) await removeSavedBackend(environment);
+    const confirmed = await confirmDestructiveAction({
+      title: `Remove “${environment.label}” from this device?`,
+      description:
+        "This forgets its pairing, credentials, and cached threads here. Switch it off instead to keep it saved.",
+      confirmLabel: "Remove environment",
+    });
+    if (confirmed) await removeSavedBackend(environment);
   };
 
   const visibleDesktopPairingLinks = desktopPairingLinks;
@@ -1158,13 +1190,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                   <AuthorizedClientsHeaderAction
                     delegatableScopes={currentSessionScopes ?? []}
                     onPairingLinkCreated={handlePairingLinkCreated}
-                    clientSessions={
-                      canReadAccess &&
-                      authAccessChanges.error === null &&
-                      authAccessChanges.data?.type === "snapshot"
-                        ? desktopClientSessions
-                        : null
-                    }
+                    clientSessions={readableDesktopClientSessions}
                     isRevokingOtherClients={isRevokingOtherDesktopClients}
                     onRevokeOtherClients={handleRevokeOtherDesktopClients}
                   />

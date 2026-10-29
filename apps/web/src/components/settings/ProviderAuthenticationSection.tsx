@@ -304,6 +304,7 @@ export function ProviderAuthenticationSection({
                   void ensureLocalApi()
                     .dialogs.confirm(
                       `Sign out of ${provider.displayName ?? provider.driver} on ${environmentLabel}? This stops running threads that share this sign-in. Thread history is kept.`,
+                      { variant: "destructive", confirmLabel: "Sign out" },
                     )
                     .then((confirmed) => {
                       if (confirmed) void run(() => logout(target));

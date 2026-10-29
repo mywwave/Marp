@@ -3,18 +3,10 @@ import { useAtomValue } from "@effect/atom-react";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
+import { confirmDestructiveAction } from "../../confirmDialog";
 import { useUpdateEnvironmentSettings } from "../../hooks/useSettings";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
-import {
-  AlertDialog,
-  AlertDialogClose,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogPopup,
-  AlertDialogTitle,
-} from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { AddUsageLimitSourceDialog } from "./AddUsageLimitSourceDialog";
@@ -134,36 +126,22 @@ function RemoveUsageProviderButton({
   readonly label: string;
   readonly onConfirm: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   return (
-    <>
-      <Button size="xs" variant="ghost" onClick={() => setOpen(true)}>
-        Remove
-      </Button>
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogPopup>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove {label}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The hub's management key is deleted from this server. Its accounts leave the Limits
-              view; the hub itself is untouched. Add it again with the URL and key to bring them
-              back.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setOpen(false);
-                onConfirm();
-              }}
-            >
-              Remove hub
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogPopup>
-      </AlertDialog>
-    </>
+    <Button
+      size="xs"
+      variant="ghost"
+      onClick={() =>
+        void confirmDestructiveAction({
+          title: `Remove “${label}”?`,
+          description:
+            "The hub's management key is deleted from this server. Its accounts leave the Limits view; the hub itself is untouched. Add it again with the URL and key to bring them back.",
+          confirmLabel: "Remove hub",
+        }).then((confirmed) => {
+          if (confirmed) onConfirm();
+        })
+      }
+    >
+      Remove…
+    </Button>
   );
 }

@@ -177,6 +177,7 @@ function ProviderSetupActions({
   async function removeRuntime() {
     const confirmed = await ensureLocalApi().dialogs.confirm(
       `Remove the downloaded Antigravity runtime from ${environmentLabel}? Google sign-in and thread history are kept.`,
+      { variant: "destructive", confirmLabel: "Remove runtime" },
     );
     if (confirmed) {
       await runCommand("Removing runtime", () => removeInstall(target));

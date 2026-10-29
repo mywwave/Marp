@@ -49,7 +49,7 @@ import { useEnvironmentSettings } from "../../hooks/useSettings";
 import { getCustomModelOptionsByInstance } from "../../modelSelection";
 import { providerInstanceEntriesFor } from "../../providerInstances";
 import { usePrimaryCloudLinkState } from "../../cloud/primaryCloudLinkState";
-import { requestConfirmDialog } from "../../confirmDialog";
+import { confirmDestructiveAction } from "../../confirmDialog";
 import { webhookAddress } from "@t3tools/client-runtime/webhook-address";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
@@ -779,9 +779,22 @@ function ScheduledTaskRow({
                 </MenuItem>
               )}
               <MenuSeparator />
-              <MenuItem onClick={() => void act("delete")}>
+              <MenuItem
+                variant="destructive"
+                onClick={() =>
+                  void confirmDestructiveAction({
+                    title: `Delete “${task.title}”?`,
+                    description: isWebhook
+                      ? "Removes the task and its webhook URL. Threads it already started stay. You can't undo this."
+                      : "Removes the task and its schedule. Threads it already started stay. You can't undo this.",
+                    confirmLabel: "Delete task",
+                  }).then((confirmed) => {
+                    if (confirmed) void act("delete");
+                  })
+                }
+              >
                 <Trash2Icon />
-                Delete
+                Delete…
               </MenuItem>
             </MenuPopup>
           </Menu>
@@ -995,10 +1008,11 @@ function WebhookEndpointField({
   }
   const { address: url, copyable, note } = webhookAddress(endpoint, httpBaseUrl);
   const rotateUrl = async () => {
-    const confirmed =
-      (await requestConfirmDialog("Rotate this webhook URL?\nThe current URL stops working.", {
-        variant: "destructive",
-      })) ?? window.confirm("Rotate this webhook URL? The current URL stops working.");
+    const confirmed = await confirmDestructiveAction({
+      title: "Rotate this webhook URL?",
+      description: "The current URL stops working right away. Senders need the new one.",
+      confirmLabel: "Rotate URL",
+    });
     if (!confirmed) return;
     setRotating(true);
     const result = await rotate({ environmentId, input: { id: task.id } });

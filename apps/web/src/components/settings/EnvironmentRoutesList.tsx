@@ -27,7 +27,7 @@ import {
 import { GripVerticalIcon, PlusIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 
-import { requestConfirmDialog } from "~/confirmDialog";
+import { confirmDestructiveAction } from "~/confirmDialog";
 import { environmentCatalog } from "~/connection/catalog";
 import { cn } from "~/lib/utils";
 import type { EnvironmentPresentation } from "~/state/environments";
@@ -69,11 +69,12 @@ export function EnvironmentRoutesList({
 
   const confirmRemove = async (route: ConnectionRoute) => {
     const address = connectionRouteAddress(route);
-    const confirmed = await requestConfirmDialog(
-      `Remove ${connectionRouteLabel(route)} route?${address === null ? "" : `\n${address}`}`,
-      { variant: "destructive" },
-    );
-    if (confirmed !== true) return;
+    const confirmed = await confirmDestructiveAction({
+      title: `Remove the “${connectionRouteLabel(route)}” route?`,
+      description: `${address === null ? "" : `${address}\n`}This device stops using it to reach ${environment.label}.`,
+      confirmLabel: "Remove route",
+    });
+    if (!confirmed) return;
     await removeRoute({
       environmentId: environment.environmentId,
       routeId: connectionRouteId(route.target),

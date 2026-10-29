@@ -488,6 +488,14 @@ type ConnectedClientListRowProps = {
   canRevoke: boolean;
 };
 
+export function clientSessionLabel(clientSession: ServerClientSessionRecord): string {
+  return (
+    clientSession.client.label ??
+    ([clientSession.client.os, clientSession.client.browser].filter(Boolean).join(" · ") ||
+      clientSession.subject)
+  );
+}
+
 const ConnectedClientListRow = memo(function ConnectedClientListRow({
   clientSession,
   revokingClientSessionId,
@@ -512,10 +520,7 @@ const ConnectedClientListRow = memo(function ConnectedClientListRow({
     clientSession.client.browser ?? null,
     clientSession.client.ipAddress ?? null,
   ].filter((value): value is string => value !== null);
-  const primaryLabel =
-    clientSession.client.label ??
-    ([clientSession.client.os, clientSession.client.browser].filter(Boolean).join(" · ") ||
-      clientSession.subject);
+  const primaryLabel = clientSessionLabel(clientSession);
 
   return (
     <div className={ITEM_ROW_CLASSNAME}>

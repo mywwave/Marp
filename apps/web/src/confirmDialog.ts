@@ -1,23 +1,32 @@
 import type { ConfirmDialogOptions, ConfirmDialogVariant } from "@t3tools/contracts";
 
-export type ConfirmDialogState =
-  | { readonly status: "idle" }
-  | {
-      readonly status: "confirming";
-      readonly message: string;
-      readonly variant: ConfirmDialogVariant;
-    }
-  | {
-      readonly status: "closing";
-      readonly message: string;
-      readonly variant: ConfirmDialogVariant;
-    };
-
-type PendingConfirmation = {
+type ConfirmDialogRequest = {
   readonly message: string;
   readonly variant: ConfirmDialogVariant;
+  readonly confirmLabel?: string;
+};
+
+export type ConfirmDialogState =
+  | { readonly status: "idle" }
+  | ({ readonly status: "confirming" } & ConfirmDialogRequest)
+  | ({ readonly status: "closing" } & ConfirmDialogRequest);
+
+type PendingConfirmation = ConfirmDialogRequest & {
   readonly resolve: (confirmed: boolean) => void;
 };
+
+// Keeps an absent label absent so state snapshots stay comparable.
+function requestOf({
+  message,
+  variant,
+  confirmLabel,
+}: {
+  readonly message: string;
+  readonly variant: ConfirmDialogVariant;
+  readonly confirmLabel?: string | undefined;
+}): ConfirmDialogRequest {
+  return confirmLabel === undefined ? { message, variant } : { message, variant, confirmLabel };
+}
 
 const idleState: ConfirmDialogState = { status: "idle" };
 let state: ConfirmDialogState = idleState;
@@ -66,21 +75,45 @@ export function requestConfirmDialog(
   if (listeners.size === 0) return undefined;
 
   const confirmation = new Promise<boolean>((resolve) => {
-    const pending = {
-      message,
-      variant: options?.variant ?? "default",
+    const pending: PendingConfirmation = {
+      ...requestOf({
+        message,
+        variant: options?.variant ?? "default",
+        confirmLabel: options?.confirmLabel,
+      }),
       resolve,
-    } satisfies PendingConfirmation;
+    };
     if (activeConfirmation || state.status === "closing") {
       queuedConfirmations.push(pending);
       return;
     }
 
     activeConfirmation = pending;
-    publish({ status: "confirming", message, variant: pending.variant });
+    publish({ status: "confirming", ...requestOf(pending) });
   });
 
   return confirmation;
+}
+
+/**
+ * The one confirmation for destructive, irreversible actions. The title is a
+ * question naming the object; the description says exactly what is lost.
+ */
+export function confirmDestructiveAction(input: {
+  readonly title: string;
+  readonly description: string;
+  readonly confirmLabel: string;
+}): Promise<boolean> {
+  return (
+    requestConfirmDialog(
+      `${input.title}
+${input.description}`,
+      {
+        variant: "destructive",
+        confirmLabel: input.confirmLabel,
+      },
+    ) ?? Promise.resolve(false)
+  );
 }
 
 export function isConfirmDialogActive(): boolean {
@@ -93,7 +126,7 @@ export function respondToConfirmDialog(confirmed: boolean): void {
   const confirmation = activeConfirmation;
   activeConfirmation = null;
   confirmation.resolve(confirmed);
-  publish({ status: "closing", message: state.message, variant: state.variant });
+  publish({ status: "closing", ...requestOf(state) });
 }
 
 export function completeConfirmDialogClose(): void {
@@ -106,7 +139,7 @@ export function completeConfirmDialogClose(): void {
   }
 
   activeConfirmation = next;
-  publish({ status: "confirming", message: next.message, variant: next.variant });
+  publish({ status: "confirming", ...requestOf(next) });
 }
 
 export function resetConfirmDialogForTests(): void {

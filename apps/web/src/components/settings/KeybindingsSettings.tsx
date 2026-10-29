@@ -1405,6 +1405,25 @@ export function KeybindingsSettingsPanel() {
       );
       setSavingCommand(null);
       const result = results.find((entry) => entry._tag === "Failure") ?? results[0];
+      if (result?._tag === "Success") {
+        const toastId = toastManager.add({
+          type: "success",
+          title: "Removed shortcut",
+          description: `${commandLabel(row.command)} · ${formatShortcutLabel(row.binding.shortcut)}`,
+          actionProps: {
+            children: "Undo",
+            onClick: () => {
+              toastManager.close(toastId);
+              saveKeybinding({
+                command: row.command,
+                key: row.key,
+                ...(row.when.trim().length > 0 ? { when: row.when } : {}),
+              });
+            },
+          },
+        });
+        return;
+      }
       if (result?._tag === "Failure" && !isAtomCommandInterrupted(result)) {
         const error = squashAtomCommandFailure(result);
         toastManager.add({
