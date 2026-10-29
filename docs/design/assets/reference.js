@@ -139,7 +139,11 @@
     $$("i[data-i]", root).forEach((el) => {
       const tmp = document.createElement("span");
       tmp.innerHTML = svg(el.dataset.i, el.className);
-      el.replaceWith(tmp.firstChild);
+      const icon = tmp.firstChild;
+      // Keep inline layout (e.g. margin-left: auto on a trailing check).
+      const style = el.getAttribute("style");
+      if (style) icon.setAttribute("style", style);
+      el.replaceWith(icon);
     });
   }
 

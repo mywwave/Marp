@@ -1374,6 +1374,8 @@ button.chip:hover {
   color: var(--ink-2);
   text-align: left;
   transition: background var(--dur-fast);
+  white-space: nowrap;
+  overflow: hidden;
 }
 .opt:hover,
 .opt.active {
@@ -1383,7 +1385,14 @@ button.chip:hover {
 .opt > .i {
   color: var(--ink-3);
 }
+/* A long label truncates instead of wrapping out of the fixed row height. */
+.opt .lbl {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .opt .meta {
+  flex: none;
   margin-left: auto;
   color: var(--ink-3);
   font: var(--text-caption);
