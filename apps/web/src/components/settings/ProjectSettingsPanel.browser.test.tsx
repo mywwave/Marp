@@ -121,6 +121,12 @@ vi.mock(import("./ProjectActionsSettings"), async (original) => ({
   ProjectActionsSettings: (() => null) as never,
 }));
 
+// Open folder would otherwise probe each environment's open routes over the network.
+vi.mock(import("~/remoteOpen"), async (original) => ({
+  ...(await original()),
+  useRemoteOpenState: (() => ({ mode: "local-exec" })) as never,
+}));
+
 vi.mock(import("../files/projectFilesQueryState"), async (original) => ({
   ...(await original()),
   getProjectFileQueryAtom: () => missingProjectFile,
@@ -132,6 +138,7 @@ import { buildSidebarProjectSnapshots } from "../../sidebarProjectGrouping";
 import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
 import { ProjectsSettings } from "./ProjectsSettings";
 import { SettingsScopeProvider } from "./SettingsScopeContext";
+import { SettingsStorageBadge } from "./SettingsScopeSentence";
 import { validateSettingsScopeSearch, type SettingsScopeSearch } from "./settingsScope";
 import { retainSettingsScope, validateSettingsRouteSearch } from "./settingsScopeNavigation";
 
@@ -145,6 +152,7 @@ const environments = [primaryId, remoteId].map((environmentId) => ({
   serverConfig: {
     keybindings: DEFAULT_RESOLVED_KEYBINDINGS,
     settings: DEFAULT_SERVER_SETTINGS,
+    availableEditors: [],
     environment: { platform: { machine: "server" } },
   },
 }));
@@ -273,6 +281,8 @@ async function mountSettings(search: SettingsScopeSearch) {
         search={route.useSearch()}
         onChange={(next) => void router.navigate({ to: "/settings/projects", search: () => next })}
       >
+        {/* The settings page header carries the scope pickers. */}
+        <SettingsStorageBadge />
         <ProjectsSettings />
       </SettingsScopeProvider>
     ),
@@ -384,6 +394,7 @@ describe("project settings permissions", () => {
     const initialHref = screen.router.state.location.href;
     expect(removeAll(screen).disabled).toBe(true);
 
+    await userEvent.click(page.getByRole("tab", { name: /^Checkouts/ }));
     await userEvent.click(removeCheckout(screen, "/work/primary"));
     await vi.waitFor(() => expect(state.delete).toHaveBeenCalledOnce());
     expect(state.delete).toHaveBeenCalledWith({

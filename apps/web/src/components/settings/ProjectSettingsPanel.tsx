@@ -15,7 +15,7 @@ import { AsyncResult } from "effect/reactivity";
 import { type EnvironmentId, type ProjectIconOverride } from "@t3tools/contracts";
 import { Navigate, useLocation, useNavigate } from "@tanstack/react-router";
 import * as Cause from "effect/Cause";
-import { InfoIcon, Trash2Icon } from "lucide-react";
+import { FolderOpenIcon, InfoIcon, Trash2Icon } from "lucide-react";
 import { lazy, Suspense, useRef, useState, type ReactNode } from "react";
 
 import { useComposerDraftStore } from "../../composerDraftStore";
@@ -32,13 +32,18 @@ import { ProjectFavicon } from "../ProjectFavicon";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { MiddleTruncate } from "../ui/middle-truncate";
+import { Tabs, TabsCount, TabsList, TabsPanel, TabsTab } from "../ui/tabs";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { useRemoteOpenState } from "../../remoteOpen";
+import { shellEnvironment } from "../../state/shell";
+import { useAtomCommand } from "../../state/use-atom-command";
 import {
   SettingResetButton,
-  SettingsPageContainer,
   SettingsRow,
   SettingsSection,
+  useSettingsSearchTargetId,
 } from "./settingsLayout";
 import {
   canPickExternalProjectFavicon,
@@ -58,6 +63,14 @@ const ProjectIconPickerDialog = lazy(() =>
 );
 
 export type ProjectSettingsCategory = "general" | "source-control" | "project";
+
+type ProjectTab = "general" | "scripts" | "thread-defaults" | "checkouts";
+
+function projectTabForSearchTarget(targetId: string | null): ProjectTab | null {
+  if (targetId === "project-overview") return "general";
+  if (targetId === "project-actions") return "scripts";
+  return null;
+}
 
 interface ProjectSelection {
   readonly key: string;
@@ -198,6 +211,11 @@ function ProjectDetail({
     reportFailure: false,
   });
   const projectNameEditedRef = useRef(false);
+  const searchTargetId = useSettingsSearchTargetId();
+  const [tab, setTab] = useState<ProjectTab>(
+    () => projectTabForSearchTarget(searchTargetId) ?? "general",
+  );
+  const openInEditor = useAtomCommand(shellEnvironment.openInEditor, { reportFailure: false });
 
   const faviconPath = representative.faviconPath ?? null;
   const projectIcon = representative.projectIcon ?? null;
@@ -220,6 +238,26 @@ function ProjectDetail({
         title,
         description: error instanceof Error ? error.message : "An error occurred.",
       }),
+    );
+  };
+
+  const remoteOpen = useRemoteOpenState(representative.environmentId);
+  const canOpenFolder =
+    remoteOpen.mode === "local-exec" &&
+    editableIds.has(representative.environmentId) &&
+    (environmentById
+      .get(representative.environmentId)
+      ?.serverConfig?.availableEditors.includes("file-manager") ??
+      false);
+  const openFolder = async () => {
+    if (!readEnvironmentScope(representative.environmentId, AuthOrchestrationOperateScope)) return;
+    const result = await openInEditor({
+      environmentId: representative.environmentId,
+      input: { cwd: representative.workspaceRoot, editor: "file-manager" },
+    });
+    reportFailure(
+      "Could not open folder",
+      mapAtomCommandResult(result, () => undefined),
     );
   };
 
@@ -472,134 +510,190 @@ function ProjectDetail({
     </SettingsSection>
   );
 
+  const searchTab = projectTabForSearchTarget(searchTargetId);
+  if (searchTab !== null && searchTab !== tab) setTab(searchTab);
+  const activeTab = tab === "checkouts" && !hasMultipleCheckouts ? "general" : tab;
+
   return (
     <>
-      <SettingsPageContainer className="gap-6">
-        <Alert variant="info">
-          <InfoIcon aria-hidden />
-          <AlertDescription>
-            Can't find a setting? Keep this project picked above and hop to any other settings page.
-          </AlertDescription>
-        </Alert>
-        <SettingsSection id="project-overview" title="Project" hideTitle>
-          {!canEditGroup ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground sm:px-4">
-              {group.memberProjects.length > 1
-                ? "Shared settings require permission to change every checkout in this group."
-                : "This connection cannot change this project."}
+      <div className="flex min-w-0 flex-col gap-4">
+        <header className="flex min-w-0 items-center gap-3">
+          <ProjectFavicon project={representative} className="size-9 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate font-semibold text-foreground text-lg">{group.displayName}</h2>
+            <p className="flex min-w-0 font-mono text-muted-foreground text-xs">
+              <MiddleTruncate value={representative.workspaceRoot} className="min-w-0" />
+              {hasMultipleCheckouts ? (
+                <span className="shrink-0 whitespace-pre">
+                  {" · "}
+                  {group.memberProjects.length} checkouts
+                </span>
+              ) : null}
             </p>
+          </div>
+          {canOpenFolder ? (
+            <Button size="sm" variant="ghost" onClick={() => void openFolder()}>
+              <FolderOpenIcon />
+              Open folder
+            </Button>
           ) : null}
-          <SettingsRow
-            title="Name"
-            description="The shared name for this project group in the sidebar and thread lists."
-            control={
-              <Input
-                key={`${group.projectKey}:${group.displayName}`}
-                size="sm"
-                className="w-full sm:w-64"
-                aria-label="Project name"
-                disabled={!canEditGroup}
-                defaultValue={group.displayName}
-                onChange={() => {
-                  projectNameEditedRef.current = true;
-                }}
-                onBlur={(event) => {
-                  const wasEdited = projectNameEditedRef.current;
-                  projectNameEditedRef.current = false;
-                  void renameGroup(event.currentTarget.value, wasEdited);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") event.currentTarget.blur();
-                }}
-              />
-            }
-          />
-          <SettingsRow
-            title="Project icon"
-            description={
-              projectIcon?.kind === "lucide"
-                ? `${projectIcon.name} · ${projectIcon.color}`
-                : projectIcon?.kind === "monogram"
-                  ? `${projectIcon.text} · ${projectIcon.color}`
-                  : projectIcon?.kind === "emoji"
-                    ? projectIcon.emoji
-                    : (faviconPath ?? "Automatic")
-            }
-            resetAction={
-              group.memberProjects.some(
-                (member) => member.faviconPath != null || member.projectIcon != null,
-              ) ? (
-                <SettingResetButton
-                  label="project icon"
-                  disabled={isSavingFavicon || !canEditGroup}
-                  onClick={() => void setProjectIcon({ faviconPath: null, projectIcon: null })}
+        </header>
+
+        <Tabs value={activeTab} onValueChange={(value) => setTab(value as ProjectTab)}>
+          <TabsList aria-label={`${group.displayName} settings`}>
+            <TabsTab value="general">General</TabsTab>
+            <TabsTab value="scripts">Scripts</TabsTab>
+            <TabsTab value="thread-defaults">Thread defaults</TabsTab>
+            {hasMultipleCheckouts ? (
+              <TabsTab value="checkouts">
+                Checkouts <TabsCount>{group.memberProjects.length}</TabsCount>
+              </TabsTab>
+            ) : null}
+          </TabsList>
+
+          <TabsPanel value="general" keepMounted>
+            <div className="flex flex-col gap-6">
+              <Alert variant="info">
+                <InfoIcon aria-hidden />
+                <AlertDescription>
+                  Can't find a setting? Keep this project picked above and hop to any other settings
+                  page.
+                </AlertDescription>
+              </Alert>
+              <SettingsSection id="project-overview" title="Project" hideTitle>
+                {!canEditGroup ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground sm:px-4">
+                    {group.memberProjects.length > 1
+                      ? "Shared settings require permission to change every checkout in this group."
+                      : "This connection cannot change this project."}
+                  </p>
+                ) : null}
+                <SettingsRow
+                  title="Name"
+                  description="The shared name for this project group in the sidebar and thread lists."
+                  control={
+                    <Input
+                      key={`${group.projectKey}:${group.displayName}`}
+                      size="sm"
+                      className="w-full sm:w-64"
+                      aria-label="Project name"
+                      disabled={!canEditGroup}
+                      defaultValue={group.displayName}
+                      onChange={() => {
+                        projectNameEditedRef.current = true;
+                      }}
+                      onBlur={(event) => {
+                        const wasEdited = projectNameEditedRef.current;
+                        projectNameEditedRef.current = false;
+                        void renameGroup(event.currentTarget.value, wasEdited);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.currentTarget.blur();
+                      }}
+                    />
+                  }
                 />
-              ) : null
-            }
-            control={
-              <div className="flex items-center gap-2">
-                <ProjectFavicon project={representative} className="size-6" />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  type="button"
-                  aria-label="Choose a project icon"
-                  disabled={isSavingFavicon || !canEditGroup}
-                  onClick={() => setIconPickerOpen(true)}
-                >
-                  Choose icon
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  type="button"
-                  aria-label="Choose a project icon file"
-                  disabled={isSavingFavicon || !canEditGroup}
-                  onClick={() => setFaviconPickerOpen(true)}
-                >
-                  Choose file
-                </Button>
-              </div>
-            }
-          />
-        </SettingsSection>
-        <ProjectDefaultsSettings category="project" />
-        <ProjectActionsSettings />
-        {hasMultipleCheckouts ? checkoutChoices : null}
-        <SettingsSection title="Danger">
-          <SettingsRow
-            title={
-              hasOtherMembers
-                ? "Remove checkout"
-                : group.memberProjects.length > 1
-                  ? "Remove this project everywhere"
-                  : "Remove project"
-            }
-            description={
-              hasOtherMembers
-                ? "Deletes the selected machine's checkout entries and their threads. Other machines and files on disk are not touched."
-                : group.memberProjects.length > 1
-                  ? `Deletes all ${group.memberProjects.length} checkout entries and their threads on every machine. Files on disk are not touched.`
-                  : "Deletes the project entry and its threads. Files on disk are not touched."
-            }
-            control={
-              <Button
-                size="sm"
-                variant="destructive-outline"
-                disabled={!canEditGroup}
-                onClick={() => void removeMembers(group.memberProjects)}
-              >
-                <Trash2Icon />
-                {hasOtherMembers
-                  ? "Remove checkout"
-                  : group.memberProjects.length > 1
-                    ? "Remove all entries"
-                    : "Remove project"}
-              </Button>
-            }
-          />
-        </SettingsSection>
-      </SettingsPageContainer>
+                <SettingsRow
+                  title="Project icon"
+                  description={
+                    projectIcon?.kind === "lucide"
+                      ? `${projectIcon.name} · ${projectIcon.color}`
+                      : projectIcon?.kind === "monogram"
+                        ? `${projectIcon.text} · ${projectIcon.color}`
+                        : projectIcon?.kind === "emoji"
+                          ? projectIcon.emoji
+                          : (faviconPath ?? "Automatic")
+                  }
+                  resetAction={
+                    group.memberProjects.some(
+                      (member) => member.faviconPath != null || member.projectIcon != null,
+                    ) ? (
+                      <SettingResetButton
+                        label="project icon"
+                        disabled={isSavingFavicon || !canEditGroup}
+                        onClick={() =>
+                          void setProjectIcon({ faviconPath: null, projectIcon: null })
+                        }
+                      />
+                    ) : null
+                  }
+                  control={
+                    <div className="flex items-center gap-2">
+                      <ProjectFavicon project={representative} className="size-6" />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        aria-label="Choose a project icon"
+                        disabled={isSavingFavicon || !canEditGroup}
+                        onClick={() => setIconPickerOpen(true)}
+                      >
+                        Choose icon
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        aria-label="Choose a project icon file"
+                        disabled={isSavingFavicon || !canEditGroup}
+                        onClick={() => setFaviconPickerOpen(true)}
+                      >
+                        Choose file
+                      </Button>
+                    </div>
+                  }
+                />
+              </SettingsSection>
+              <SettingsSection title="Danger zone">
+                <SettingsRow
+                  title={
+                    hasOtherMembers
+                      ? "Remove checkout"
+                      : group.memberProjects.length > 1
+                        ? "Remove this project everywhere"
+                        : "Remove project"
+                  }
+                  description={
+                    hasOtherMembers
+                      ? "Deletes the selected machine's checkout entries and their threads. Other machines and files on disk are not touched."
+                      : group.memberProjects.length > 1
+                        ? `Deletes all ${group.memberProjects.length} checkout entries and their threads on every machine. Files on disk are not touched.`
+                        : "Deletes the project entry and its threads. Files on disk are not touched."
+                  }
+                  control={
+                    <Button
+                      size="sm"
+                      variant="destructive-outline"
+                      disabled={!canEditGroup}
+                      onClick={() => void removeMembers(group.memberProjects)}
+                    >
+                      <Trash2Icon />
+                      {hasOtherMembers
+                        ? "Remove checkout"
+                        : group.memberProjects.length > 1
+                          ? "Remove all entries"
+                          : "Remove project"}
+                    </Button>
+                  }
+                />
+              </SettingsSection>
+            </div>
+          </TabsPanel>
+          <TabsPanel value="scripts" keepMounted>
+            <ProjectActionsSettings />
+          </TabsPanel>
+          <TabsPanel value="thread-defaults" keepMounted>
+            <div className="flex flex-col gap-6">
+              <ProjectDefaultsSettings category="project" />
+            </div>
+          </TabsPanel>
+          {hasMultipleCheckouts ? (
+            <TabsPanel value="checkouts" keepMounted>
+              {checkoutChoices}
+            </TabsPanel>
+          ) : null}
+        </Tabs>
+      </div>
 
       <ProjectFaviconPickerDialog
         key={`${representative.environmentId}:${representative.workspaceRoot}:${faviconPickerOpen}`}
