@@ -5,7 +5,7 @@ composer; it applies to that thread. A new thread names its mode under the compo
 on your default mode, open **Permissions** from the effort menu or press `mod+shift+a`. A thread on
 another mode, or a model without an effort menu, shows the mode next to the model.
 
-Set the default for new threads in **Settings → Threads → New threads → Permissions**.
+Set the default for new threads in **Settings → Threads & models → New threads → Permissions**.
 Projects can override the environment default. New threads use this setting rather than the
 mode of the thread you were viewing. The initial default is **Full access**; existing threads
 and modes you choose in a draft keep their permissions.

@@ -2,7 +2,7 @@
 
 The app you use and the server running your agents can be on different machines.
 When a server is behind your web or desktop app, the update button at the bottom
-of the sidebar and **Settings → Environments** offer to update it.
+of the sidebar and **Settings → Machines → Other machines** offer to update it.
 
 ## Update everything at once
 
@@ -25,7 +25,7 @@ restarts.
 Server updates appear only after that version is published to npm. Remote
 desktop apps do not wait for npm. The confirmation lists each machine it skips
 and why, such as a machine that is offline or needs a manual update. Use
-**Settings → Environments** for those.
+**Settings → Machines → Other machines** for those.
 
 If a desktop app restarts on its old version, T3 Code tells you the update did
 not apply. It does not install that version again on its own, even when another
@@ -137,7 +137,7 @@ status and refresh it again.
 
 ## Mobile updates
 
-To update an environment from your phone, open **Settings → Environments** and
+To update an environment from your phone, open **Settings → Machines → Other machines** and
 select it. **Check for updates** finds the latest release on that environment's
 current release channel. Keep the app open while the environment updates and
 reconnects. Hosts that cannot update remotely show instructions for updating on

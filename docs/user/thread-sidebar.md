@@ -119,7 +119,7 @@ To generate a fresh title from the conversation, open a thread's menu and choose
 **Regenerate title**. The action is unavailable while title generation is in progress
 or when the connected environment needs a server update.
 
-To change how titles are written, add **Thread title instructions** in **Settings → Threads →
+To change how titles are written, add **Thread title instructions** in **Settings → Threads & models →
 Text generation**, under Advanced, such as a length limit or an identifier to put first. They apply to new and
 regenerated titles. Select a project to give it its own instructions.
 
@@ -284,7 +284,7 @@ back the standard rows.
 
 ## Snooze until later
 
-To change the choices in the snooze menu, open **Settings → Threads → Snooze options**.
+To change the choices in the snooze menu, open **Settings → Threads & models → Snooze options**.
 Each option is a duration, such as 3 hours, or a time on a day, such as 9:00 PM
 tomorrow. A weekday means the next one after today. Menus list the options soonest
 first and hide a today option after its time passes. Saved with **All environments**
