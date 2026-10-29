@@ -1407,6 +1407,12 @@ export const OrchestrationV2FileChangeDetail = Schema.Struct({
 });
 export type OrchestrationV2FileChangeDetail = typeof OrchestrationV2FileChangeDetail.Type;
 
+/** Wire-only, while an edit runs: the last lines of the content being written. */
+const OrchestrationV2FileChangePreview = Schema.Struct({
+  tail: Schema.String,
+  lineCount: NonNegativeInt,
+});
+
 export const OrchestrationV2ProviderFailureClass = Schema.Literals([
   "usage_limit",
   "provider_error",
@@ -1484,6 +1490,17 @@ export const OrchestrationV2FileSearchResult = Schema.Struct({
   preview: Schema.optional(Schema.String),
 });
 export type OrchestrationV2FileSearchResult = typeof OrchestrationV2FileSearchResult.Type;
+
+/** What a shell command read, listed or searched, when every part of it is read-only. */
+const OrchestrationV2CommandAction = Schema.Union([
+  Schema.Struct({ type: Schema.Literal("read"), path: TrimmedNonEmptyString }),
+  Schema.Struct({ type: Schema.Literal("list"), path: Schema.optional(TrimmedNonEmptyString) }),
+  Schema.Struct({
+    type: Schema.Literal("search"),
+    query: Schema.optional(TrimmedNonEmptyString),
+    path: Schema.optional(TrimmedNonEmptyString),
+  }),
+]);
 
 export const OrchestrationV2WebSearchResult = Schema.Struct({
   title: Schema.optional(Schema.String),
@@ -1617,6 +1634,7 @@ export const OrchestrationV2TurnItem = Schema.Union([
     oldStr: Schema.optional(Schema.String),
     newStr: Schema.optional(Schema.String),
     changes: Schema.optional(Schema.Array(OrchestrationV2FileChangeDetail)),
+    preview: Schema.optional(OrchestrationV2FileChangePreview),
   }),
   Schema.Struct({
     ...OrchestrationV2TurnItemBaseFields,
@@ -1631,6 +1649,7 @@ export const OrchestrationV2TurnItem = Schema.Union([
     exitCode: Schema.optional(Schema.Int),
     /** Set when the command is a monitor, so background work lists it as a monitor. */
     monitor: Schema.optional(Schema.Boolean),
+    actions: Schema.optional(Schema.Array(OrchestrationV2CommandAction)),
   }),
   Schema.Struct({
     ...OrchestrationV2TurnItemBaseFields,
@@ -2445,6 +2464,7 @@ export const OrchestrationV2TurnItemJson = Schema.Union([
     oldStr: Schema.optional(Schema.String),
     newStr: Schema.optional(Schema.String),
     changes: Schema.optional(Schema.Array(OrchestrationV2FileChangeDetail)),
+    preview: Schema.optional(OrchestrationV2FileChangePreview),
   }),
   Schema.Struct({
     ...OrchestrationV2TurnItemJsonBaseFields,
@@ -2459,6 +2479,7 @@ export const OrchestrationV2TurnItemJson = Schema.Union([
     exitCode: Schema.optional(Schema.Int),
     /** Set when the command is a monitor, so background work lists it as a monitor. */
     monitor: Schema.optional(Schema.Boolean),
+    actions: Schema.optional(Schema.Array(OrchestrationV2CommandAction)),
   }),
   Schema.Struct({
     ...OrchestrationV2TurnItemJsonBaseFields,

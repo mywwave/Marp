@@ -3031,6 +3031,53 @@ function claudeFileChangeText(output: ClaudeNativeToolOutput): string {
   return patch.hunks.length === 0 ? "" : formatPatch(patch, FILE_HEADERS_ONLY);
 }
 
+/** The intended change from the tool input, known before the edit runs or awaits approval. */
+function claudeFileChangeContent(input: ClaudeNativeToolInput): {
+  oldStr?: string;
+  newStr?: string;
+} {
+  const edits = inputRecordValue(input, "edits");
+  const pairs = Array.isArray(edits)
+    ? edits.flatMap((edit) =>
+        typeof edit === "object" && edit !== null
+          ? [{ old: Reflect.get(edit, "old_string"), new: Reflect.get(edit, "new_string") }]
+          : [],
+      )
+    : [
+        {
+          old: inputRecordValue(input, "old_string"),
+          new:
+            inputRecordValue(input, "new_string") ??
+            inputRecordValue(input, "content") ??
+            inputRecordValue(input, "new_source"),
+        },
+      ];
+  const join = (values: ReadonlyArray<unknown>) => {
+    const strings = values.filter((value): value is string => typeof value === "string");
+    return strings.length === 0 ? undefined : strings.join("\n");
+  };
+  const oldStr = join(pairs.map((pair) => pair.old));
+  const newStr = join(pairs.map((pair) => pair.new));
+  return {
+    ...(oldStr === undefined ? {} : { oldStr }),
+    ...(newStr === undefined ? {} : { newStr }),
+  };
+}
+
+/** Claude's Write result says whether it created the file or replaced an existing one. */
+function claudeFileChangeOperation(output: ClaudeNativeToolOutput): {
+  changes?: Array<{ operation: string; path: string }>;
+} {
+  const result =
+    output.type === "structured_tool_use_result"
+      ? Option.getOrUndefined(decodeClaudeFileEditResult(output.value))
+      : undefined;
+  if (result?.type !== "create" && result?.type !== "update") return {};
+  const path = result.filePath.trim();
+  if (path.length === 0) return {};
+  return { changes: [{ operation: result.type === "create" ? "add" : "update", path }] };
+}
+
 function claudeCommandOutputText(output: ClaudeNativeToolOutput): string {
   const value = claudeNativeToolOutputValue(output);
   if (typeof value === "object" && value !== null) {
@@ -5581,6 +5628,8 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
                     ...itemBase,
                     type: "file_change",
                     fileName: fileNameFromClaudeTool(input.toolName, input.toolInput),
+                    ...claudeFileChangeContent(input.toolInput),
+                    ...claudeFileChangeOperation(input.output),
                     ...(outputText.length === 0 ? {} : { diffStr: outputText }),
                   }
                 : itemType === "web_search"

@@ -387,6 +387,51 @@ function providerTurnStatusToTerminal(
   }
 }
 
+type CodexCommandAction = Extract<
+  CodexSchema.V2ItemCompletedNotification__ThreadItem,
+  { type: "commandExecution" }
+>["commandActions"][number];
+
+function nonEmpty(value: string | null | undefined): string | undefined {
+  return value?.trim() || undefined;
+}
+
+/** Only a command whose every action Codex recognized reads as exploration; any unknown part stays "Ran". */
+export function codexCommandActions(
+  actions: ReadonlyArray<CodexCommandAction> | undefined,
+): Extract<OrchestrationV2TurnItem, { type: "command_execution" }>["actions"] {
+  if (!actions || actions.length === 0) return undefined;
+  const mapped = [];
+  for (const action of actions) {
+    switch (action.type) {
+      case "read": {
+        const path = nonEmpty(action.path) ?? nonEmpty(action.name);
+        if (!path) return undefined;
+        mapped.push({ type: "read" as const, path });
+        break;
+      }
+      case "listFiles": {
+        const path = nonEmpty(action.path);
+        mapped.push({ type: "list" as const, ...(path ? { path } : {}) });
+        break;
+      }
+      case "search": {
+        const query = nonEmpty(action.query);
+        const path = nonEmpty(action.path);
+        mapped.push({
+          type: "search" as const,
+          ...(query ? { query } : {}),
+          ...(path ? { path } : {}),
+        });
+        break;
+      }
+      default:
+        return undefined;
+    }
+  }
+  return mapped;
+}
+
 function codexItemStatus(status: "inProgress" | "completed" | "failed" | "declined"): {
   readonly node: OrchestrationV2ExecutionNode["status"];
   readonly turnItem: OrchestrationV2TurnItem["status"];
@@ -3510,6 +3555,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
             startedAt,
             completedAt,
           };
+          const actions = codexCommandActions(item.commandActions);
           const turnItem: OrchestrationV2TurnItem = {
             id: turnItemId,
             threadId: context.projectionThreadId,
@@ -3527,6 +3573,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
             updatedAt,
             type: "command_execution",
             input: item.command,
+            ...(actions === undefined ? {} : { actions }),
             ...(item.aggregatedOutput === null || item.aggregatedOutput === undefined
               ? {}
               : { output: item.aggregatedOutput }),

@@ -113,6 +113,40 @@ describe("CodexAdapterV2 context usage", () => {
   });
 });
 
+describe("CodexAdapterV2 command actions", () => {
+  it("keeps only commands whose every action is read-only", () => {
+    const cases: ReadonlyArray<{
+      readonly actions: Parameters<typeof CodexAdapterV2.codexCommandActions>[0];
+      readonly expected: ReturnType<typeof CodexAdapterV2.codexCommandActions>;
+    }> = [
+      {
+        actions: [
+          { type: "read", command: "sed -n 1,80p src/a.ts", name: "a.ts", path: "/w/src/a.ts" },
+          { type: "search", command: "rg foo src", query: "foo", path: "src" },
+          { type: "listFiles", command: "ls", path: null },
+        ],
+        expected: [
+          { type: "read", path: "/w/src/a.ts" },
+          { type: "search", query: "foo", path: "src" },
+          { type: "list" },
+        ],
+      },
+      {
+        actions: [
+          { type: "read", command: "cat a.ts", name: "a.ts", path: "/w/a.ts" },
+          { type: "unknown", command: "rm b.ts" },
+        ],
+        expected: undefined,
+      },
+      { actions: [{ type: "unknown", command: "pwd" }], expected: undefined },
+      { actions: [], expected: undefined },
+    ];
+    for (const { actions, expected } of cases) {
+      assert.deepEqual(CodexAdapterV2.codexCommandActions(actions), expected);
+    }
+  });
+});
+
 describe("CodexAdapterV2 assistant message streaming", () => {
   it.effect("flushes buffered text synchronously before item and turn completion", () =>
     Effect.gen(function* () {

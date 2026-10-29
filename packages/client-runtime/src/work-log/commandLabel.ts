@@ -1433,3 +1433,331 @@ function isPowerShellScript(command: string): boolean {
   }
   return false;
 }
+
+type ReadOnlyCommandAction =
+  | { readonly type: "read"; readonly path: string }
+  | { readonly type: "list"; readonly path?: string }
+  | { readonly type: "search"; readonly query?: string; readonly path?: string };
+
+type ParsedArguments = {
+  readonly positionals: ReadonlyArray<string>;
+  readonly options: ReadonlyMap<string, string | true>;
+};
+
+function parsePosixArguments(
+  args: ReadonlyArray<string>,
+  optionsWithValue: ReadonlySet<string> = new Set(),
+): ParsedArguments {
+  const positionals: string[] = [];
+  const options = new Map<string, string | true>();
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]!;
+    if (arg === "--") {
+      positionals.push(...args.slice(index + 1));
+      break;
+    }
+    if (arg.startsWith("--")) {
+      const equals = arg.indexOf("=");
+      if (equals > 0) options.set(arg.slice(0, equals), arg.slice(equals + 1));
+      else if (optionsWithValue.has(arg)) options.set(arg, args[++index] ?? "");
+      else options.set(arg, true);
+    } else if (arg.length > 1 && arg.startsWith("-")) {
+      const name = arg.slice(0, 2);
+      if (optionsWithValue.has(name)) {
+        const value = arg.length > 2 ? arg.slice(2) : (args[++index] ?? "");
+        if (!options.has(name)) options.set(name, value);
+      } else {
+        for (const flag of arg.slice(1)) options.set(`-${flag}`, true);
+      }
+    } else {
+      positionals.push(arg);
+    }
+  }
+  return { positionals, options };
+}
+
+/** PowerShell `-Name value` parameters, plus cmd's `/S` and `/C:text` switches. */
+function parseWindowsArguments(
+  args: ReadonlyArray<string>,
+  optionsWithValue: ReadonlySet<string> = new Set(),
+): ParsedArguments {
+  const positionals: string[] = [];
+  const options = new Map<string, string | true>();
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]!;
+    if (/^-[A-Za-z][\w-]*$/u.test(arg)) {
+      const name = arg.toLowerCase();
+      options.set(name, optionsWithValue.has(name) ? (args[++index] ?? "") : true);
+    } else if (/^\/[A-Za-z?](?::.*)?$/u.test(arg)) {
+      const colon = arg.indexOf(":");
+      if (colon > 0) options.set(arg.slice(0, colon).toLowerCase(), arg.slice(colon + 1));
+      else options.set(arg.toLowerCase(), true);
+    } else {
+      positionals.push(arg);
+    }
+  }
+  return { positionals, options };
+}
+
+function optionValue(parsed: ParsedArguments, ...names: string[]): string | undefined {
+  for (const name of names) {
+    const value = parsed.options.get(name);
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+const GREP_OPTIONS_WITH_VALUE = new Set([
+  "-e",
+  "-f",
+  "-g",
+  "-t",
+  "-T",
+  "-A",
+  "-B",
+  "-C",
+  "-m",
+  "-M",
+  "-d",
+  "-D",
+  "--regexp",
+  "--file",
+  "--glob",
+  "--iglob",
+  "--type",
+  "--type-not",
+  "--after-context",
+  "--before-context",
+  "--context",
+  "--max-count",
+  "--max-columns",
+  "--max-depth",
+  "--include",
+  "--exclude",
+  "--exclude-dir",
+  "--sort",
+  "--sortr",
+]);
+const HEAD_OPTIONS_WITH_VALUE = new Set(["-n", "-c", "--lines", "--bytes"]);
+const LS_OPTIONS_WITH_VALUE = new Set(["-I", "-w", "--ignore", "--hide", "--width"]);
+const TREE_OPTIONS_WITH_VALUE = new Set(["-L", "-I", "-P", "-o", "--filelimit", "--charset"]);
+const POWERSHELL_PARAMETERS_WITH_VALUE = new Set([
+  "-pattern",
+  "-path",
+  "-literalpath",
+  "-include",
+  "-exclude",
+  "-filter",
+  "-context",
+  "-encoding",
+  "-depth",
+  "-totalcount",
+  "-head",
+  "-tail",
+  "-first",
+  "-last",
+  "-skip",
+  "-readcount",
+  "-delimiter",
+  "-property",
+  "-attributes",
+]);
+const FIND_WRITING_PREDICATES = new Set([
+  "-exec",
+  "-execdir",
+  "-ok",
+  "-okdir",
+  "-delete",
+  "-fprint",
+  "-fprint0",
+  "-fprintf",
+  "-fls",
+]);
+const SED_PRINT_SCRIPT = /^(?:(?:\d+|\$)(?:,(?:\d+|\$))?p;?)+$/u;
+const SED_PRINT_FLAGS = new Set(["-n", "-E", "-r", "--quiet", "--silent"]);
+const PIPE_FILTER_PROGRAMS = new Set([
+  "head",
+  "tail",
+  "wc",
+  "sort",
+  "uniq",
+  "cut",
+  "tr",
+  "nl",
+  "column",
+  "cat",
+  "grep",
+  "egrep",
+  "fgrep",
+  "rg",
+  "sed",
+  "select-object",
+  "select",
+  "measure-object",
+  "measure",
+  "sort-object",
+  "format-table",
+  "ft",
+  "format-list",
+  "fl",
+  "out-string",
+  "select-string",
+  "sls",
+  "findstr",
+]);
+
+function readActions(paths: ReadonlyArray<string>): ReadOnlyCommandAction[] | null {
+  return paths.length > 0 ? paths.map((path) => ({ type: "read" as const, path })) : null;
+}
+
+function searchAction(query: string | undefined, path: string | undefined): ReadOnlyCommandAction {
+  return { type: "search", ...(query ? { query } : {}), ...(path ? { path } : {}) };
+}
+
+function listAction(path: string | undefined): ReadOnlyCommandAction {
+  return { type: "list", ...(path ? { path } : {}) };
+}
+
+function sedPrintsOnly(parsed: ParsedArguments): boolean {
+  return (
+    parsed.options.has("-n") &&
+    [...parsed.options.keys()].every((flag) => SED_PRINT_FLAGS.has(flag)) &&
+    SED_PRINT_SCRIPT.test(parsed.positionals[0]?.replace(/\s+/gu, "") ?? "")
+  );
+}
+
+function classifyReadOnlyProgram(
+  program: string,
+  args: ReadonlyArray<string>,
+): ReadOnlyCommandAction[] | null {
+  switch (program) {
+    case "rg":
+    case "grep":
+    case "egrep":
+    case "fgrep": {
+      const parsed = parsePosixArguments(args, GREP_OPTIONS_WITH_VALUE);
+      if (parsed.options.has("--pre")) return null;
+      if (program === "rg" && parsed.options.has("--files")) {
+        return [listAction(parsed.positionals[0])];
+      }
+      const explicit = optionValue(parsed, "-e", "--regexp");
+      const [query, path] = explicit ? [explicit, parsed.positionals[0]] : parsed.positionals;
+      return [searchAction(query, path)];
+    }
+    case "select-string":
+    case "sls":
+    case "findstr": {
+      const parsed = parseWindowsArguments(args, POWERSHELL_PARAMETERS_WITH_VALUE);
+      const rest = [...parsed.positionals];
+      const query = optionValue(parsed, "-pattern", "/c") ?? rest.shift();
+      return [searchAction(query, optionValue(parsed, "-path", "-literalpath") ?? rest[0])];
+    }
+    case "cat":
+    case "less":
+      return readActions(parsePosixArguments(args).positionals);
+    case "head":
+    case "tail": {
+      const counts = args.filter((arg) => !/^-\d+$/u.test(arg));
+      return readActions(parsePosixArguments(counts, HEAD_OPTIONS_WITH_VALUE).positionals);
+    }
+    case "sed": {
+      const parsed = parsePosixArguments(args);
+      return sedPrintsOnly(parsed) ? readActions(parsed.positionals.slice(1)) : null;
+    }
+    case "get-content":
+    case "gc":
+    case "type": {
+      const parsed = parseWindowsArguments(args, POWERSHELL_PARAMETERS_WITH_VALUE);
+      const path = optionValue(parsed, "-path", "-literalpath");
+      return readActions(path ? [path] : parsed.positionals);
+    }
+    case "ls":
+      return [listAction(parsePosixArguments(args, LS_OPTIONS_WITH_VALUE).positionals[0])];
+    case "tree": {
+      const parsed = parsePosixArguments(args, TREE_OPTIONS_WITH_VALUE);
+      return parsed.options.has("-o") ? null : [listAction(parsed.positionals[0])];
+    }
+    case "dir":
+    case "gci":
+    case "get-childitem": {
+      const parsed = parseWindowsArguments(args, POWERSHELL_PARAMETERS_WITH_VALUE);
+      return [listAction(optionValue(parsed, "-path", "-literalpath") ?? parsed.positionals[0])];
+    }
+    case "find": {
+      if (args.some((arg) => FIND_WRITING_PREDICATES.has(arg))) return null;
+      const first = args[0];
+      return [listAction(first !== undefined && !/^[-(!]/u.test(first) ? first : undefined)];
+    }
+    default:
+      return null;
+  }
+}
+
+function isReadOnlyPipeFilter(program: string, args: ReadonlyArray<string>): boolean {
+  if (!PIPE_FILTER_PROGRAMS.has(program)) return false;
+  if (program === "sed") return sedPrintsOnly(parsePosixArguments(args));
+  if (program === "sort") return !args.some((arg) => /^(?:-o|--output)/u.test(arg));
+  if (program === "uniq") return args.filter((arg) => !arg.startsWith("-")).length <= 1;
+  return !args.includes("--pre");
+}
+
+const HARMLESS_REDIRECTIONS = new Set(["2>/dev/null", "2>&1", "2>$null", "2>nul"]);
+
+function hasUnsafeToken(tokens: ReadonlyArray<string>): boolean {
+  return tokens.some(
+    (token, index) =>
+      (!HARMLESS_REDIRECTIONS.has(token.toLowerCase()) &&
+        indexAfterShellRedirection(tokens, index) !== null) ||
+      token.includes("`") ||
+      token.includes("$(") ||
+      token.includes("{") ||
+      /^[<>]?\(/u.test(token),
+  );
+}
+
+function scriptPayload(command: string): string {
+  const unwrapped = withoutShellWrapper(command);
+  const tokens = tokenizeShellCommand(unwrapped);
+  const shell = tokens?.[0]
+    ?.split(/[\\/]/u)
+    .at(-1)
+    ?.toLowerCase()
+    .replace(/\.exe$/u, "");
+  if (!tokens || !shell || !POWERSHELL_PROGRAMS.has(shell)) return unwrapped;
+  const commandIndex = tokens.findIndex((token) => /^-(?:command|c)$/iu.test(token));
+  return commandIndex > 0 && commandIndex === tokens.length - 2
+    ? tokens[commandIndex + 1]!
+    : unwrapped;
+}
+
+/**
+ * What a plainly read-only command reads, lists or searches, or null when any part of it could
+ * change something: a redirection, a substitution, a writing flag, or a step that isn't read-only.
+ */
+export function readOnlyCommandActions(command: string): ReadOnlyCommandAction[] | null {
+  let rest: string | null = scriptPayload(command).trim();
+  let piped = false;
+  const actions: ReadOnlyCommandAction[] = [];
+  for (let segment = 0; rest && segment < MAX_COMMAND_SEGMENTS; segment += 1) {
+    const { firstCommand, remainingCommand, separator } = splitFirstShellCommand(rest);
+    if (separator === "&" || separator === "|&") return null;
+    const tokens = tokenizeShellCommand(firstCommand);
+    if (!tokens || tokens.length === 0 || hasUnsafeToken(tokens)) return null;
+    const args = tokens.slice(1).filter((token) => !HARMLESS_REDIRECTIONS.has(token.toLowerCase()));
+    const program = tokens[0]!
+      .split(/[\\/]/u)
+      .at(-1)!
+      .toLowerCase()
+      .replace(/\.exe$/u, "");
+    if (piped) {
+      if (!isReadOnlyPipeFilter(program, args)) return null;
+    } else {
+      const classified = classifyReadOnlyProgram(program, args);
+      if (!classified) return null;
+      actions.push(...classified);
+    }
+    piped = separator === "|";
+    rest = remainingCommand;
+  }
+  return rest || piped || actions.length === 0 ? null : actions;
+}

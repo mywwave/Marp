@@ -97,11 +97,46 @@ describe("declining approvals before sending", () => {
         { ...projection.runtimeRequests[0]!, id: second.requestId, kind: "command" },
       ],
       turnItems: [],
+      nodes: [],
     });
     expect(await sendApprovalFeedback(pending.approvals[0]!, "  Safer please.  ", respond)).toBe(
       true,
     );
     expect(respond.mock.calls).toEqual([[approval.requestId, "decline", "Safer please."]]);
+  });
+
+  it("links a file-change approval to the tool call node it gates", () => {
+    const toolNodeId = NodeId.make("edit-tool-node");
+    const pending = derivePendingThreadRequests({
+      runtimeRequests: [
+        { ...projection.runtimeRequests[0]!, kind: "file-change" },
+        { ...projection.runtimeRequests[0]!, id: second.requestId, kind: "command" },
+      ],
+      turnItems: [],
+      nodes: [
+        {
+          id: nodeId,
+          threadId: v2Projection.thread.id,
+          runId: null,
+          parentNodeId: toolNodeId,
+          rootNodeId: toolNodeId,
+          kind: "approval_request",
+          status: "waiting",
+          countsForRun: false,
+          providerThreadId: null,
+          providerTurnId: null,
+          nativeItemRef: null,
+          runtimeRequestId: requestId,
+          checkpointScopeId: null,
+          startedAt: v2Now,
+          completedAt: null,
+        },
+      ],
+    });
+    expect(pending.approvals.map((approval) => approval.toolNodeId)).toEqual([
+      toolNodeId,
+      undefined,
+    ]);
   });
 
   it("keeps feedback unsent when unsupported, stale, empty or rejected", async () => {

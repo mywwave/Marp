@@ -5,6 +5,7 @@ import { stubGlobal } from "../../../test/render";
 import {
   EnvironmentId,
   MessageId,
+  NodeId,
   RunAttemptId,
   RunId,
   RuntimeRequestId,
@@ -1143,6 +1144,78 @@ it("keeps concurrent approvals actionable outside collapsed work and restores se
   await expect
     .element(screen.getByRole("button", { name: "Open the current tab", exact: true }))
     .toBeVisible();
+});
+
+it("shows a file-change approval as the edit card with its decision", async () => {
+  setup();
+  const fixture = makeStreamingTimelineFixture();
+  const source = fixture.visibleTurnItems[4]!;
+  if (source.item.type !== "dynamic_tool") throw new Error("Expected fixture tool");
+  const { toolName: _toolName, input: _input, ...sourceItem } = source.item;
+  const toolNodeId = NodeId.make("edit-node");
+  const requestId = RuntimeRequestId.make("edit-approval");
+  const approval: PendingApproval = {
+    requestId,
+    requestKind: "file-change",
+    createdAt: fixture.time(6),
+    detail: "Edit src/session.ts",
+    responseCapability: "live",
+    toolNodeId,
+  };
+  const timelineEntries = deriveTimelineEntriesFromVisibleTurnItems({
+    visibleTurnItems: [
+      {
+        ...source,
+        item: {
+          ...sourceItem,
+          type: "file_change" as const,
+          nodeId: toolNodeId,
+          status: "running" as const,
+          title: "Edit",
+          fileName: "src/session.ts",
+          additions: 2,
+          deletions: 1,
+        },
+      },
+      {
+        ...source,
+        position: source.position + 1,
+        sourceItemId: TurnItemId.make("edit-approval-item"),
+        item: {
+          ...sourceItem,
+          id: TurnItemId.make("edit-approval-item"),
+          type: "approval_request" as const,
+          status: "waiting" as const,
+          requestId,
+          requestKind: "file-change" as const,
+          prompt: approval.detail,
+        },
+      },
+    ],
+    optimisticMessages: [],
+  });
+  const onRespondToApproval = vi.fn(async () => {});
+  await using screen = await renderElement(
+    <MessagesTimeline
+      {...baseProps()}
+      timelineEntries={timelineEntries}
+      pendingApprovals={[approval]}
+      canOperateThread
+      onRespondToApproval={onRespondToApproval}
+      isWorking
+      runningRunId={fixture.runId}
+    />,
+  );
+  const card = screen.getByRole("group", { name: "File change approval" });
+  await expect.element(card).toBeVisible();
+  await expect
+    .element(card.getByRole("button", { name: "Open src/session.ts", exact: true }))
+    .toBeVisible();
+  await expect.element(card.getByText("Approval needed")).toBeVisible();
+  expect(screen.text()).not.toContain("Change files");
+  await vi.waitFor(() => expect(screen.buttons("Open src/session.ts")).toHaveLength(1));
+  await click(screen.button("Approve"));
+  expect(onRespondToApproval).toHaveBeenLastCalledWith(requestId, "accept");
 });
 
 function checkpointedConversation(userText: string) {

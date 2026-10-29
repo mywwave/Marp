@@ -1,5 +1,6 @@
 import type {
   EnvironmentId,
+  NodeId,
   ThreadId,
   OrchestrationV2ThreadProjection,
   OrchestrationV2RuntimeRequest,
@@ -55,6 +56,8 @@ export interface ThreadPendingApproval {
   readonly options?: ReadonlyArray<ProviderApprovalOption>;
   readonly responseCapability: "live" | "not_resumable";
   readonly supportsFeedback?: boolean;
+  /** A file-change approval's tool call node, whose file_change item shows the intended edit. */
+  readonly toolNodeId?: NodeId;
 }
 
 export const FULL_ACCESS_OVERRIDE_QUESTION = "Why am I being asked this?";
@@ -222,7 +225,7 @@ export function pendingRuntimeRequestIds(
 }
 
 export function derivePendingThreadRequests(
-  projection: Pick<ThreadStructure, "runtimeRequests" | "turnItems">,
+  projection: Pick<ThreadStructure, "runtimeRequests" | "turnItems" | "nodes">,
 ): PendingThreadRequests {
   const approvals: ThreadPendingApproval[] = [];
   const userInputs: ThreadPendingUserInput[] = [];
@@ -256,9 +259,14 @@ export function derivePendingThreadRequests(
     const item = projection.turnItems.findLast(
       (candidate) => candidate.type === "approval_request" && candidate.requestId === request.id,
     );
+    const toolNodeId =
+      request.kind === "file-change"
+        ? projection.nodes.find((node) => node.id === request.nodeId)?.parentNodeId
+        : undefined;
     approvals.push({
       requestId: request.id,
       requestKind: request.kind,
+      ...(toolNodeId ? { toolNodeId } : {}),
       createdAt: DateTime.formatIso(request.createdAt),
       ...(item?.type === "approval_request" && item.prompt ? { detail: item.prompt } : {}),
       ...(item?.type === "approval_request" && item.reason ? { reason: item.reason } : {}),

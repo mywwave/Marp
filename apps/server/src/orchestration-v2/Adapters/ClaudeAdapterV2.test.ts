@@ -8846,6 +8846,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         userModified: false,
         replaceAll: false,
       },
+      operation: undefined,
       diffStr:
         "--- /workspace/src/math.ts\n+++ /workspace/src/math.ts\n@@ -1,3 +1,3 @@\n export function add(a: number, b: number) {\n-  return a - b;\n+  return a + b;\n }\n",
     },
@@ -8861,6 +8862,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         originalFile: null,
         userModified: false,
       },
+      operation: "add",
       diffStr: "--- /dev/null\n+++ /workspace/notes.md\n@@ -0,0 +1,3 @@\n+# Notes\n+\n+Ship it.\n",
     },
     {
@@ -8875,7 +8877,26 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         originalFile: null,
         userModified: false,
       },
+      operation: "add",
       diffStr: undefined,
+    },
+    {
+      case: "a Write that replaces a file",
+      toolName: "Write",
+      toolInput: { file_path: "/workspace/notes.md", content: "# Notes\n" },
+      toolUseResult: {
+        type: "update",
+        filePath: "/workspace/notes.md",
+        content: "# Notes\n",
+        structuredPatch: [
+          { oldStart: 1, oldLines: 1, newStart: 1, newLines: 1, lines: ["-# Todo", "+# Notes"] },
+        ],
+        originalFile: "# Todo\n",
+        userModified: false,
+      },
+      operation: "update",
+      diffStr:
+        "--- /workspace/notes.md\n+++ /workspace/notes.md\n@@ -1,1 +1,1 @@\n-# Todo\n+# Notes\n",
     },
   ])("stores the diff panel patch for $case", (testCase) =>
     Effect.scoped(
@@ -8949,9 +8970,20 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         );
         assert.deepEqual(
           fileChange?.type === "turn_item.updated" && fileChange.turnItem.type === "file_change"
-            ? { diffStr: fileChange.turnItem.diffStr }
+            ? {
+                diffStr: fileChange.turnItem.diffStr,
+                operation: fileChange.turnItem.changes?.[0]?.operation,
+                newStr: fileChange.turnItem.newStr,
+              }
             : undefined,
-          { diffStr: testCase.diffStr },
+          {
+            diffStr: testCase.diffStr,
+            operation: testCase.operation,
+            newStr:
+              "content" in testCase.toolInput
+                ? testCase.toolInput.content
+                : testCase.toolInput.new_string,
+          },
         );
       }).pipe(
         Effect.provide(

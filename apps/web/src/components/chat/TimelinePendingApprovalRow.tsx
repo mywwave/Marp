@@ -3,7 +3,7 @@ import {
   fullAccessOverrideExplanation,
 } from "@marp/client-runtime/state/thread-requests";
 import { HandIcon } from "lucide-react";
-import { memo, use, useEffect, useEffectEvent } from "react";
+import { memo, use, useEffect, useEffectEvent, useState } from "react";
 import { type PendingApproval } from "../../session-logic";
 import { Badge } from "../ui/badge";
 import { Kbd } from "../ui/kbd";
@@ -13,6 +13,7 @@ import { ComposerPendingApprovalActions } from "./ComposerPendingApprovalActions
 import { ToolActivityIconView, type WorkEntryIconName } from "./TimelineToolActivityIcon";
 import { BackgroundThreadContext } from "./backgroundThread";
 import { approvalShortcutDecision, approvalShortcuts } from "./decisionCardKeys";
+import { FileEditCard } from "./TimelineWorkEvents";
 import { TimelineRowCtx } from "./timelineRowContext";
 
 const APPROVAL_PRESENTATION = {
@@ -48,8 +49,15 @@ export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalR
 }: {
   approval: PendingApproval;
 }) {
-  const { pendingApprovals, respondingRequestIds, canOperateThread, onRespondToApproval } =
-    use(TimelineRowCtx);
+  const {
+    pendingApprovals,
+    approvalEditEntries,
+    respondingRequestIds,
+    canOperateThread,
+    onRespondToApproval,
+  } = use(TimelineRowCtx);
+  const editEntry = approvalEditEntries.get(approval.requestId);
+  const [editExpanded, setEditExpanded] = useState(false);
   const backgroundThread = use(BackgroundThreadContext);
   const presentation = APPROVAL_PRESENTATION[approval.requestKind];
   const canRespond = approval.responseCapability === "live";
@@ -77,6 +85,89 @@ export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalR
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [ownsShortcuts]);
+  const decision = (
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex min-w-40 flex-1 flex-col gap-1 text-xs text-muted-foreground">
+        {approval.reason ? (
+          <span className="select-text wrap-anywhere">{approval.reason}</span>
+        ) : null}
+        {ownsShortcuts ? (
+          <span className="flex items-center gap-1.5">
+            {shortcuts.approve ? (
+              <span>
+                <Kbd>Enter</Kbd> approves
+              </span>
+            ) : null}
+            {shortcuts.approve && shortcuts.decline ? <span aria-hidden>·</span> : null}
+            {shortcuts.decline ? (
+              <span>
+                <Kbd>Esc</Kbd> declines
+              </span>
+            ) : null}
+          </span>
+        ) : null}
+        {canRespond ? null : (
+          <span className="text-warning-foreground">
+            Provider process is gone. Interrupt or restart the run to respond.
+          </span>
+        )}
+        {approval.fullAccessOverride ? (
+          <Popover>
+            <PopoverTrigger openOnHover render={<InlineButton tone="muted" />}>
+              {FULL_ACCESS_OVERRIDE_QUESTION}
+            </PopoverTrigger>
+            <PopoverPopup
+              aria-label={FULL_ACCESS_OVERRIDE_QUESTION}
+              tooltipStyle
+              side="top"
+              className="max-w-[min(22rem,calc(100vw-2rem))] whitespace-normal"
+            >
+              {fullAccessOverrideExplanation(approval.fullAccessOverride)}
+            </PopoverPopup>
+          </Popover>
+        ) : null}
+      </div>
+      {canRespond && onRespondToApproval ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <ComposerPendingApprovalActions
+            requestId={approval.requestId}
+            disabled={!canOperateThread}
+            isResponding={isResponding}
+            canRespond={canRespond}
+            options={approval.options}
+            onRespondToApproval={onRespondToApproval}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+  if (editEntry) {
+    return (
+      <div
+        role="group"
+        aria-label={presentation.label}
+        data-v2-item-type="approval_request"
+        className="my-2"
+      >
+        <FileEditCard
+          workEntry={editEntry}
+          live={false}
+          shimmer={false}
+          expanded={editExpanded}
+          onToggleExpanded={() => setEditExpanded((value) => !value)}
+          footer={
+            <div className="flex min-w-0 flex-col gap-2 px-3 pt-1 pb-2.5">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-warning-foreground">
+                <HandIcon aria-hidden className="size-3.5" />
+                Approval needed
+              </span>
+              {decision}
+            </div>
+          }
+        />
+      </div>
+    );
+  }
   return (
     <div
       role="group"
@@ -112,60 +203,7 @@ export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalR
       >
         {approval.detail || presentation.label}
       </code>
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <div className="flex min-w-40 flex-1 flex-col gap-1 text-xs text-muted-foreground">
-          {approval.reason ? (
-            <span className="select-text wrap-anywhere">{approval.reason}</span>
-          ) : null}
-          {ownsShortcuts ? (
-            <span className="flex items-center gap-1.5">
-              {shortcuts.approve ? (
-                <span>
-                  <Kbd>Enter</Kbd> approves
-                </span>
-              ) : null}
-              {shortcuts.approve && shortcuts.decline ? <span aria-hidden>·</span> : null}
-              {shortcuts.decline ? (
-                <span>
-                  <Kbd>Esc</Kbd> declines
-                </span>
-              ) : null}
-            </span>
-          ) : null}
-          {canRespond ? null : (
-            <span className="text-warning-foreground">
-              Provider process is gone. Interrupt or restart the run to respond.
-            </span>
-          )}
-          {approval.fullAccessOverride ? (
-            <Popover>
-              <PopoverTrigger openOnHover render={<InlineButton tone="muted" />}>
-                {FULL_ACCESS_OVERRIDE_QUESTION}
-              </PopoverTrigger>
-              <PopoverPopup
-                aria-label={FULL_ACCESS_OVERRIDE_QUESTION}
-                tooltipStyle
-                side="top"
-                className="max-w-[min(22rem,calc(100vw-2rem))] whitespace-normal"
-              >
-                {fullAccessOverrideExplanation(approval.fullAccessOverride)}
-              </PopoverPopup>
-            </Popover>
-          ) : null}
-        </div>
-        {canRespond && onRespondToApproval ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <ComposerPendingApprovalActions
-              requestId={approval.requestId}
-              disabled={!canOperateThread}
-              isResponding={isResponding}
-              canRespond={canRespond}
-              options={approval.options}
-              onRespondToApproval={onRespondToApproval}
-            />
-          </div>
-        ) : null}
-      </div>
+      {decision}
     </div>
   );
 });

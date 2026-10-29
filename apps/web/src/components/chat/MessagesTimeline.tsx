@@ -7,7 +7,7 @@ import { MarkdownFindContext } from "./markdownFindContext";
 import { useChatCanvas } from "./ChatCanvasContext";
 import { WorkLogBlock } from "./WorkLog";
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
-import type { WorktreeSetupSnapshot } from "@marp/contracts";
+import type { RuntimeRequestId, WorktreeSetupSnapshot } from "@marp/contracts";
 import { deriveTimelineMinimapItems } from "./timelineMinimapItems";
 import {
   type AssistantCitation,
@@ -108,6 +108,7 @@ import {
   TimelineRowActivityCtx,
   type WorkGroupViewState,
   type TimelineRow,
+  type TimelineWorkEntry,
 } from "./timelineRowContext";
 import { ActivityShimmerOverlay } from "./TimelineRowParts";
 import {
@@ -696,13 +697,28 @@ const ConversationTimeline = memo(function ConversationTimeline({
   });
   const rows = useStableRows(rawRows, listIdentityKey);
   const unmatchedPendingApprovals = new Map(pendingApprovalsByRequestId);
+  const approvalEditEntries = new Map<RuntimeRequestId, TimelineWorkEntry>();
   if (unmatchedPendingApprovals.size > 0) {
+    const approvalByToolNodeId = new Map(
+      [...pendingApprovalsByRequestId.values()].flatMap((approval) =>
+        approval.toolNodeId ? [[approval.toolNodeId, approval.requestId] as const] : [],
+      ),
+    );
     for (const row of rows) {
       const entries =
-        row.kind === "work" ? row.groupedEntries : row.kind === "work-live" ? [row.entry] : [];
+        row.kind === "work"
+          ? row.groupedEntries
+          : row.kind === "work-live"
+            ? [row.entry, ...row.groupedEntries]
+            : [];
       for (const entry of entries) {
         const item = entry.projectedItem?.item;
         if (item?.type === "approval_request") unmatchedPendingApprovals.delete(item.requestId);
+        const editRequestId =
+          item?.type === "file_change" && item.nodeId !== null
+            ? approvalByToolNodeId.get(item.nodeId)
+            : undefined;
+        if (editRequestId !== undefined) approvalEditEntries.set(editRequestId, entry);
       }
     }
   }
@@ -1015,6 +1031,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
   const sharedState: TimelineRowSharedState = {
     planActions: planActions ?? null,
     pendingApprovals: pendingApprovalsByRequestId,
+    approvalEditEntries,
     respondingRequestIds,
     canOperateThread,
     onRespondToApproval,

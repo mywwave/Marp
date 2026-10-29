@@ -293,6 +293,50 @@ describe("orchestration V2 wire projection", () => {
     expect(failed).not.toHaveProperty("newStr");
   });
 
+  it("counts lines and sends only a bounded tail while an edit runs", () => {
+    const content = Array.from({ length: 100 }, (_, index) => `line ${index + 1}`).join("\n");
+    const running = projectTurnItemForWire({
+      ...base,
+      type: "file_change" as const,
+      status: "running",
+      fileName: "src/new.ts",
+      newStr: `${content}\n`,
+    });
+    expect(running).toMatchObject({ additions: 100, deletions: 0 });
+    expect(running).not.toHaveProperty("newStr");
+    const preview = running.type === "file_change" ? running.preview : undefined;
+    expect(preview?.lineCount).toBe(100);
+    expect(preview?.tail.split("\n")).toEqual(
+      Array.from({ length: 40 }, (_, index) => `line ${index + 61}`),
+    );
+    const wide = projectTurnItemForWire({
+      ...base,
+      type: "file_change" as const,
+      status: "running",
+      fileName: "src/wide.ts",
+      newStr: Array.from({ length: 40 }, () => "x".repeat(1_000)).join("\n"),
+    });
+    expect(wide.type === "file_change" && wide.preview?.tail.length).toBeLessThanOrEqual(8_192);
+
+    const patch = projectTurnItemForWire({
+      ...base,
+      type: "file_change" as const,
+      fileName: "src/main.ts",
+      diffStr: "--- a/src/main.ts\n+++ b/src/main.ts\n@@ -1,3 +1,3 @@\n keep\n-old\n+new\n keep\n",
+    });
+    expect(patch).toMatchObject({ additions: 1, deletions: 1 });
+    expect(patch).not.toHaveProperty("preview");
+    expect(
+      projectTurnItemForWire({
+        ...base,
+        type: "file_change" as const,
+        fileName: "src/main.ts",
+        oldStr: "a\nold\nz",
+        newStr: "a\nnew\nnewer\nz",
+      }),
+    ).toMatchObject({ additions: 2, deletions: 1 });
+  });
+
   it("retains only result identities and failure metadata in live tool events", () => {
     const output = {
       isError: true,

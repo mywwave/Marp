@@ -7,7 +7,10 @@ import { formatDuration } from "@marp/shared/orchestrationTiming";
 import { collectToolFilePaths } from "@marp/shared/toolActivity";
 import * as DateTime from "effect/DateTime";
 
-import { commandDisplayText } from "@marp/client-runtime/work-log/command-label";
+import {
+  commandDisplayText,
+  readOnlyCommandActions,
+} from "@marp/client-runtime/work-log/command-label";
 import {
   summarizeToolGroup,
   toolGroupAction,
@@ -148,6 +151,8 @@ function fileChangeKind(entry: WorkLogPresentationEntry): WorkEventKind {
     return "delete";
   }
   if (changes.length === 1 && /^(add|create)/iu.test(changes[0]!.operation)) return "write";
+  // A recorded update is an edit even when a Write tool replaced the whole file.
+  if (changes.length > 0) return "edit";
   const token = nativeToolToken(item?.title ?? entry.toolTitle);
   return token === "write" ? "write" : token === "delete" ? "delete" : "edit";
 }
@@ -174,13 +179,45 @@ function fileSearchKind(entry: WorkLogPresentationEntry): WorkEventKind {
   return "grep";
 }
 
-export function workEventKind(entry: WorkLogPresentationEntry): WorkEventKind | null {
+type CommandAction = NonNullable<
+  Extract<OrchestrationV2TurnItem, { type: "command_execution" }>["actions"]
+>[number];
+
+/** Longer scripts are not the simple one-liners worth classifying, and parse on every render. */
+const MAX_CLASSIFIED_COMMAND_CHARS = 500;
+
+/** Codex reports what a command read or searched; other providers' simple commands are parsed. */
+function commandActions(entry: WorkLogPresentationEntry): ReadonlyArray<CommandAction> | null {
+  if (entry.itemType !== "command_execution") return null;
   const item = entry.structuredPayload;
+  if (item?.type === "command_execution" && item.actions?.length) return item.actions;
+  const command = item?.type === "command_execution" ? item.input : entry.command;
+  if (!command || command.length > MAX_CLASSIFIED_COMMAND_CHARS) return null;
+  return readOnlyCommandActions(command);
+}
+
+const COMMAND_ACTION_KINDS: Record<CommandAction["type"], WorkEventKind> = {
+  read: "read",
+  search: "grep",
+  list: "list",
+};
+
+function commandExecutionKind(entry: WorkLogPresentationEntry): WorkEventKind {
+  const item = entry.structuredPayload;
+  if (item?.type === "command_execution" && item.monitor) return "await";
+  const actions = commandActions(entry);
+  const type = actions?.[0]?.type;
+  return type && actions.every((action) => action.type === type)
+    ? COMMAND_ACTION_KINDS[type]
+    : "shell";
+}
+
+export function workEventKind(entry: WorkLogPresentationEntry): WorkEventKind | null {
   switch (entry.itemType) {
     case "reasoning":
       return null;
     case "command_execution":
-      return item?.type === "command_execution" && item.monitor ? "await" : "shell";
+      return commandExecutionKind(entry);
     case "file_change":
       return fileChangeKind(entry);
     case "todo_list":
@@ -247,6 +284,10 @@ function pathBaseName(path: string): string {
 
 function entryPaths(entry: WorkLogPresentationEntry): readonly string[] {
   if (entry.changedFiles?.length) return entry.changedFiles;
+  const reads = commandActions(entry)?.flatMap((action) =>
+    action.type === "read" ? [action.path] : [],
+  );
+  if (reads?.length) return reads;
   const input = entryToolInput(entry);
   const fromInput = input ? collectToolFilePaths({ input }) : [];
   if (fromInput.length > 0) return fromInput;
@@ -280,12 +321,14 @@ function searchTarget(
 ): WorkEventTarget | null {
   const item = entry.structuredPayload;
   const input = entryToolInput(entry);
+  const commandSearch = commandActions(entry)?.find((action) => action.type === "search");
   const query =
+    commandSearch?.query ||
     (item?.type === "file_search" ? item.pattern?.trim() : undefined) ||
     (kind === "glob" ? firstString(input, SEARCH_GLOB_KEYS) : undefined) ||
     firstString(input, SEARCH_QUERY_KEYS) ||
     firstString(input, SEARCH_GLOB_KEYS);
-  const target = firstString(input, SEARCH_TARGET_KEYS);
+  const target = commandSearch?.path ?? firstString(input, SEARCH_TARGET_KEYS);
   if (!query) return target ? { text: target, path: true, mono: true } : null;
   return {
     text: query,
@@ -329,6 +372,7 @@ function workEventTarget(
       return searchTarget(entry, kind);
     case "list": {
       const path =
+        commandActions(entry)?.find((action) => action.type === "list")?.path ??
         firstString(entryToolInput(entry), SEARCH_TARGET_KEYS) ??
         (entry.structuredPayload?.type === "file_search"
           ? entry.structuredPayload.pattern
@@ -576,9 +620,46 @@ export function fileEditSummary(
   }
   const changes = item.changes ?? [];
   const created = changes.length === 1 && /^(add|create)/iu.test(changes[0]!.operation);
+  // A write whose target is unknown reads "Writing" until its result says created or edited.
+  const verb = created
+    ? CREATE_VERBS[action.phase]
+    : action.kind === "write" && action.phase !== "loading"
+      ? WORK_EVENT_VERBS.edit[action.phase]
+      : action.verb;
   return {
-    action: created ? { ...action, verb: CREATE_VERBS[action.phase] } : action,
+    action: { ...action, verb },
     additions: item.additions ?? 0,
-    deletions: item.deletions ?? 0,
+    deletions: created ? 0 : (item.deletions ?? 0),
   };
+}
+
+const FILE_EDIT_FAILURE_REASONS: ReadonlyArray<readonly [RegExp, string]> = [
+  [
+    /string to replace not found|old_string.*not found|could not find .*to replace/iu,
+    "Text to replace wasn't found",
+  ],
+  [
+    /modified since (it was )?(last )?read|changed since .*read|file has been (unexpectedly )?modified/iu,
+    "File changed since it was read",
+  ],
+  [/has not been read yet|read it first/iu, "File wasn't read first"],
+  [
+    /found \d+ matches|multiple (matches|occurrences)|not unique/iu,
+    "Text to replace matches more than once",
+  ],
+  [/no changes to make|are exactly the same/iu, "Nothing to change"],
+  [/does not exist|no such file|enoent/iu, "File doesn't exist"],
+  [/permission denied|eacces|eperm|read-only/iu, "Permission denied"],
+  [/user (rejected|denied|declined)|was (rejected|denied|declined)/iu, "Declined"],
+  [/patch .*(failed|did not apply)|failed to apply|hunk .*failed/iu, "Patch didn't apply"],
+];
+
+/** A failed edit's one-line reason, e.g. "Text to replace wasn't found", from the tool error. */
+export function fileEditFailureReason(error: string | undefined): string | undefined {
+  const text = error?.replace(/<\/?[a-z_]+>/giu, "").trim();
+  if (!text) return undefined;
+  for (const [pattern, reason] of FILE_EDIT_FAILURE_REASONS) {
+    if (pattern.test(text)) return reason;
+  }
+  return clampPreview(text.split("\n", 1)[0]!);
 }

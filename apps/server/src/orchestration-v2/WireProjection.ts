@@ -58,6 +58,104 @@ export function boundFileChangeForStorage(item: OrchestrationV2TurnItem): Orches
     : bounded;
 }
 
+type FileChangeItem = Extract<OrchestrationV2TurnItem, { type: "file_change" }>;
+
+const FILE_CHANGE_LIVE_STATUSES: ReadonlySet<OrchestrationV2TurnItem["status"]> = new Set([
+  "pending",
+  "running",
+  "waiting",
+]);
+const PREVIEW_MAX_LINES = 40;
+const PREVIEW_MAX_BYTES = 8_192;
+const TRANSPORT_TRUNCATION_LINE = "… output truncated for transport";
+
+function contentLines(text: string): string[] {
+  const lines = text.split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  if (lines.at(-1) === TRANSPORT_TRUNCATION_LINE) lines.pop();
+  return lines;
+}
+
+/** A patch's hunk lines, or undefined when the diff is raw file content (Codex add/delete). */
+function patchHunkLines(diff: string): string[] | undefined {
+  const lines = contentLines(diff);
+  const start = lines.findIndex((line) => line.startsWith("@@"));
+  return start < 0 ? undefined : lines.slice(start);
+}
+
+function fileChangeOperation(item: FileChangeItem): string | undefined {
+  return item.changes?.[0]?.operation;
+}
+
+/** Old items and providers without counts get them from the recorded diff or snippets. */
+function fileChangeLineCounts(
+  item: FileChangeItem,
+): { additions: number; deletions: number } | undefined {
+  if (item.diffStr?.trim()) {
+    const hunk = patchHunkLines(item.diffStr);
+    if (hunk === undefined) {
+      const count = contentLines(item.diffStr).length;
+      const operation = fileChangeOperation(item);
+      return operation === "add"
+        ? { additions: count, deletions: 0 }
+        : operation === "delete"
+          ? { additions: 0, deletions: count }
+          : undefined;
+    }
+    let additions = 0;
+    let deletions = 0;
+    for (const line of hunk) {
+      if (line.startsWith("+") && !line.startsWith("+++ ")) additions += 1;
+      else if (line.startsWith("-") && !line.startsWith("--- ")) deletions += 1;
+    }
+    return { additions, deletions };
+  }
+  if (item.oldStr === undefined && item.newStr === undefined) return undefined;
+  const before = item.oldStr ? contentLines(item.oldStr) : [];
+  const after = item.newStr ? contentLines(item.newStr) : [];
+  let start = 0;
+  while (start < before.length && start < after.length && before[start] === after[start]) {
+    start += 1;
+  }
+  let end = 0;
+  while (
+    end < before.length - start &&
+    end < after.length - start &&
+    before[before.length - 1 - end] === after[after.length - 1 - end]
+  ) {
+    end += 1;
+  }
+  return { additions: after.length - start - end, deletions: before.length - start - end };
+}
+
+/** The tail of what a running edit writes, bounded so a large file never rides the wire. */
+function fileChangePreview(item: FileChangeItem): { tail: string; lineCount: number } | undefined {
+  const hunk = item.diffStr?.trim() ? patchHunkLines(item.diffStr) : undefined;
+  const written =
+    hunk !== undefined
+      ? hunk.flatMap((line) =>
+          line.startsWith("+") && !line.startsWith("+++ ") ? [line.slice(1)] : [],
+        )
+      : item.diffStr?.trim()
+        ? fileChangeOperation(item) === "delete"
+          ? []
+          : contentLines(item.diffStr)
+        : item.newStr
+          ? contentLines(item.newStr)
+          : [];
+  if (written.length === 0) return undefined;
+  const tail = written.slice(-PREVIEW_MAX_LINES);
+  let text = tail.join("\n");
+  while (tail.length > 1 && Buffer.byteLength(text, "utf8") > PREVIEW_MAX_BYTES) {
+    tail.shift();
+    text = tail.join("\n");
+  }
+  if (Buffer.byteLength(text, "utf8") > PREVIEW_MAX_BYTES) {
+    text = text.slice(-PREVIEW_MAX_BYTES / 4);
+  }
+  return { tail: text, lineCount: written.length };
+}
+
 function summarizeDynamicValue(value: unknown): unknown {
   let serialized: string;
   try {
@@ -117,9 +215,21 @@ export function projectTurnItemForWire(item: OrchestrationV2TurnItem): Orchestra
     }
     case "file_change": {
       const { diffStr, oldStr: _old, newStr: _new, ...projected } = item;
-      return item.status === "failed" && diffStr?.trim()
-        ? { ...projected, diffStr: truncateDetail(diffStr) }
-        : projected;
+      if (item.status === "failed") {
+        return diffStr?.trim() ? { ...projected, diffStr: truncateDetail(diffStr) } : projected;
+      }
+      const counts =
+        item.additions === undefined && item.deletions === undefined
+          ? fileChangeLineCounts(item)
+          : undefined;
+      const preview = FILE_CHANGE_LIVE_STATUSES.has(item.status)
+        ? fileChangePreview(item)
+        : undefined;
+      return {
+        ...projected,
+        ...counts,
+        ...(preview === undefined ? {} : { preview }),
+      };
     }
     case "subagent":
       return {

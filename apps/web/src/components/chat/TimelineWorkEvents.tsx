@@ -1,21 +1,37 @@
+import type { ContextMenuItem } from "@marp/contracts";
+import { formatFilePathForClipboard } from "@marp/client-runtime/media-actions";
 import {
+  fileEditFailureReason,
   fileEditSummary,
   type WorkEventAction,
 } from "@marp/client-runtime/work-log/event-presentation";
 import { turnItemDetailRevision } from "@marp/client-runtime/work-log/item-detail";
 import { commandDisplayText } from "@marp/client-runtime/work-log/command-label";
+import type { FileDiffMetadata } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import { CheckIcon, ChevronRightIcon, TerminalIcon } from "lucide-react";
-import { use, useState, type ReactNode } from "react";
+import { use, useState, type MouseEvent, type ReactNode } from "react";
 
-import { useFileContextMenuHandler } from "../../fileContextMenu";
+import {
+  resolveFileContextMenuAbsolutePath,
+  useFileContextMenu,
+  type FileContextMenuAction,
+} from "../../fileContextMenu";
 import { formatWorkspaceRelativePath } from "../../filePathDisplay";
+import { writeTextToClipboard } from "../../hooks/useCopyToClipboard";
 import { useClientSettings } from "../../hooks/useSettings";
 import { useRenderedAppearance } from "../../hooks/useTheme";
 import { resolveDiffThemeName } from "../../lib/diffRendering";
 import { PREFERRED_HIGHLIGHTER } from "../../lib/syntaxHighlighting";
-import { toolCallFileDiff } from "../../lib/toolCallDiff";
+import {
+  changedLinesScrollLeft,
+  firstChangedLine,
+  toolCallFileDiff,
+  type ToolCallFileDiff,
+} from "../../lib/toolCallDiff";
 import { observeVisibleAnimation } from "../../lib/visibleAnimation";
+import { readLocalApi } from "../../localApi";
+import { useRightPanelStore } from "../../rightPanelStore";
 import { tickTextContent } from "~/lib/tickTextContent";
 import { cn } from "~/lib/utils";
 import { useTurnItemDetail } from "../../state/queries";
@@ -25,6 +41,7 @@ import { DIFF_VIEW_UNSAFE_CSS } from "../diffs/StyledDiffCodeView";
 import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
 import { Spinner } from "../ui/spinner";
+import { toastManager } from "../ui/toast";
 import { DiffStatLabel } from "./DiffStatLabel";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { ShellCommandBlock } from "./ShellCommandBlock";
@@ -32,7 +49,7 @@ import { ActivityShimmerOverlay } from "./TimelineRowParts";
 import { failedToolIconClassName, ToolActivityIconView } from "./TimelineToolActivityIcon";
 import { workEntryIconName } from "./TimelineWorkEntryRow.logic";
 import { formatWorkingTimerNow } from "./TimelineWorkGroupRows.logic";
-import { WorkLogButton, WorkLogDetails, WorkLogRow } from "./WorkLog";
+import { WorkLogButton } from "./WorkLog";
 import { CommandItemOutput } from "./V2ItemInspector";
 import { TimelineRowCtx, type TimelineWorkEntry } from "./timelineRowContext";
 
@@ -125,14 +142,58 @@ type CardProps = {
   onToggleExpanded: () => void;
 };
 
+/** Collapsed diffs show four 20px lines; an expanded one scrolls past 400px. */
+const EDIT_PREVIEW_LINES = 4;
+const NEAR_VIEWPORT_MARGIN = "160px 0px";
+
+/** Latches true once the element comes within 160px of the viewport, so off-screen edits never fetch. */
+function useNearViewport(): [boolean, (node: HTMLElement | null) => (() => void) | undefined] {
+  const [near, setNear] = useState(false);
+  const ref = (node: HTMLElement | null) => {
+    if (node === null || near) return undefined;
+    if (typeof IntersectionObserver === "undefined") {
+      setNear(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        setNear(true);
+      },
+      { rootMargin: NEAR_VIEWPORT_MARGIN },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  };
+  return [near, ref];
+}
+
+type EditMenuAction = "open-file" | "open-diff" | "copy-path" | FileContextMenuAction;
+
 /**
- * "Edited `session.ts` +3 -1" as one step row. The name opens the edit in the diff panel; the
- * chevron, shown on hover or focus, unfolds the diff inline. Edit content is not on the wire
- * while the step runs, so a running edit is the header alone, shimmering.
+ * One edit as a step: the header names the file and its counts, the body previews the diff.
+ * While a pending approval shows this edit, the approval card renders it instead.
  */
-export function FileEditRow({ workEntry, live, shimmer, expanded, onToggleExpanded }: CardProps) {
+export function FileEditRow(props: CardProps) {
   const ctx = use(TimelineRowCtx);
-  const onFileContextMenu = useFileContextMenuHandler(ctx.activeThreadEnvironmentId);
+  for (const entry of ctx.approvalEditEntries.values()) {
+    if (entry.id === props.workEntry.id) return null;
+  }
+  return <FileEditCard {...props} />;
+}
+
+export function FileEditCard({
+  workEntry,
+  live,
+  shimmer,
+  expanded,
+  onToggleExpanded,
+  footer,
+}: CardProps & { footer?: ReactNode }) {
+  const ctx = use(TimelineRowCtx);
+  const contextMenu = useFileContextMenu(ctx.activeThreadEnvironmentId);
+  const [near, nearRef] = useNearViewport();
   const projectedItem = workEntry.projectedItem;
   const fileChange = projectedItem?.item.type === "file_change" ? projectedItem.item : undefined;
   const summary = fileEditSummary(workEntry, live);
@@ -142,9 +203,19 @@ export function FileEditRow({ workEntry, live, shimmer, expanded, onToggleExpand
   const displayPath = formatWorkspaceRelativePath(path, ctx.workspaceRoot);
   const { name } = splitDisplayPath(displayPath);
   const more = (workEntry.changedFiles?.length ?? 1) - 1;
+  const preview = running ? fileChange?.preview : undefined;
+  const detail = useEditDetail(projectedItem, near && !failed && !running);
+  const diff = detail.diff?.kind === "diff" ? detail.diff : undefined;
+  const fits = diff === undefined || diff.fileDiff.unifiedLineCount <= EDIT_PREVIEW_LINES;
+  const canExpand = !failed && !running && !fits;
+  const showFull = canExpand && expanded;
+  const created = summary?.action.verb === "Created" || summary?.action.verb === "Creating";
+  const counts = diff
+    ? diffLineCounts(diff.fileDiff)
+    : { additions: summary?.additions ?? 0, deletions: summary?.deletions ?? 0 };
   const onOpenToolDiff = ctx.onOpenToolDiff;
   const openDiff =
-    projectedItem && fileChange && onOpenToolDiff && !running
+    projectedItem && fileChange && onOpenToolDiff
       ? () =>
           onOpenToolDiff({
             threadId: projectedItem.sourceThreadId,
@@ -152,15 +223,52 @@ export function FileEditRow({ workEntry, live, shimmer, expanded, onToggleExpand
             revision: turnItemDetailRevision(fileChange),
           })
       : undefined;
-  const canExpand = !running && projectedItem !== undefined && fileChange !== undefined;
-  const nameClassName = "min-w-0 truncate font-mono text-xs text-foreground";
+  const threadRef = ctx.threadRef;
+  const openFile = threadRef
+    ? () => {
+        const line = diff?.lineNumbers ? firstChangedLine(diff.fileDiff) : undefined;
+        useRightPanelStore.getState().openFile(threadRef, displayPath, line);
+      }
+    : openDiff;
+  const fileTarget = {
+    environmentId: ctx.activeThreadEnvironmentId,
+    filePath: path,
+    workspaceRoot: ctx.workspaceRoot,
+  };
+  const showMenu = async (event: MouseEvent) => {
+    const api = readLocalApi();
+    if (api === undefined) return;
+    const absolutePath = resolveFileContextMenuAbsolutePath(fileTarget);
+    const items: ContextMenuItem<EditMenuAction>[] = [
+      ...(threadRef ? [{ id: "open-file" as const, label: "Open file", icon: "file" }] : []),
+      ...(openDiff ? [{ id: "open-diff" as const, label: "Open diff", icon: "file-diff" }] : []),
+      ...(absolutePath ? [{ id: "copy-path" as const, label: "Copy path", icon: "copy" }] : []),
+      ...contextMenu
+        .buildItems(fileTarget)
+        .map((item, index) => (index === 0 ? { ...item, separatorBefore: true } : item)),
+    ];
+    const clicked = await api.contextMenu.show(items, { x: event.clientX, y: event.clientY });
+    if (clicked === null) return;
+    if (clicked === "open-file") openFile?.();
+    else if (clicked === "open-diff") openDiff?.();
+    else if (clicked === "copy-path") {
+      if (absolutePath) await copyPath(formatFilePathForClipboard(absolutePath));
+    } else await contextMenu.activate(clicked, fileTarget);
+  };
+  const failure = failed ? fileEditFailureReason(fileChange?.diffStr) : undefined;
   return (
-    <WorkLogRow
+    <div
+      ref={nearRef}
+      className={cn(cardClassName, footer && "my-0")}
       data-v2-item-type="file_change"
-      icon={
+    >
+      <div
+        className={cn("flex h-8 min-w-0 items-center gap-2 px-3", canExpand && "cursor-pointer")}
+        onClick={canExpand ? onToggleExpanded : undefined}
+      >
         <span
           className={cn(
-            "flex size-4 items-center justify-center",
+            "flex size-4 shrink-0 items-center justify-center",
             failed ? failedToolIconClassName : running ? "text-info-foreground" : "text-icon-muted",
           )}
         >
@@ -175,91 +283,185 @@ export function FileEditRow({ workEntry, live, shimmer, expanded, onToggleExpand
             />
           )}
         </span>
-      }
-      label={
-        <span className="group/edit flex min-w-0 items-baseline gap-1.5">
+        <span className="flex min-w-0 items-baseline gap-1.5 text-secondary-label">
           <Shimmering active={shimmer && running}>
-            <span
-              className={cn("shrink-0", summary?.action.phase === "error" && "text-destructive")}
-            >
+            <span className={cn("shrink-0", failed && "text-destructive")}>
               {summary?.action.verb ?? "Edited"}
             </span>
-            {openDiff ? (
+            {openFile ? (
               <button
                 type="button"
-                className={cn(
-                  nameClassName,
-                  "cursor-pointer rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                )}
-                aria-label={`Open diff for ${displayPath}`}
-                onClick={openDiff}
+                className="min-w-0 cursor-pointer truncate rounded-sm font-mono text-xs text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                aria-label={`Open ${displayPath}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openFile();
+                }}
                 onContextMenu={(event) => {
                   event.preventDefault();
-                  onFileContextMenu(
-                    {
-                      environmentId: ctx.activeThreadEnvironmentId,
-                      filePath: path,
-                      workspaceRoot: ctx.workspaceRoot,
-                    },
-                    event,
-                  );
+                  event.stopPropagation();
+                  void showMenu(event);
                 }}
               >
                 {name}
               </button>
             ) : (
-              <span className={nameClassName}>{name}</span>
+              <span className="min-w-0 truncate font-mono text-xs text-foreground">{name}</span>
             )}
             {more > 0 ? <span className="shrink-0 text-muted-foreground">+{more} more</span> : null}
           </Shimmering>
-          {summary && !running && !failed ? (
+          {failed ? null : (
             <DiffStatLabel
-              additions={summary.additions}
-              deletions={summary.deletions}
+              additions={counts.additions}
+              deletions={created ? 0 : counts.deletions}
               layout="inline"
               hideZero
               className="shrink-0 self-center text-xs"
             />
-          ) : null}
-          {canExpand ? (
-            <span
-              className={cn(
-                "flex shrink-0 self-center transition-opacity duration-150 pointer-coarse:opacity-100",
-                expanded
-                  ? "opacity-100"
-                  : "opacity-0 group-hover/timeline-row:opacity-100 group-focus-within/edit:opacity-100",
-              )}
-            >
-              <Button
-                variant="ghost-muted"
-                size="icon-micro"
-                aria-label={expanded ? "Hide changes" : "Show changes"}
-                aria-expanded={expanded}
-                onClick={onToggleExpanded}
-              >
-                <ChevronRightIcon
-                  className={cn("transition-transform duration-150", expanded && "rotate-90")}
-                />
-              </Button>
+          )}
+        </span>
+        <span className="ms-auto flex shrink-0 items-center gap-1 text-xs text-muted-foreground tabular-nums">
+          {preview ? (
+            <span>
+              {preview.lineCount} {preview.lineCount === 1 ? "line" : "lines"}
             </span>
           ) : null}
+          {canExpand ? (
+            <Button
+              variant="ghost-muted"
+              size="icon-micro"
+              aria-label={expanded ? "Collapse diff" : "Expand diff"}
+              aria-expanded={expanded}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleExpanded();
+              }}
+            >
+              <ChevronRightIcon
+                className={cn("transition-transform duration-150", expanded && "rotate-90")}
+              />
+            </Button>
+          ) : null}
         </span>
-      }
-    >
-      {expanded && canExpand ? (
-        <WorkLogDetails kind="panel">
-          <InlineEditDiff projectedItem={projectedItem} failed={failed} />
-        </WorkLogDetails>
+      </div>
+      {failed ? (
+        <EditFailure reason={failure} error={fileChange?.diffStr} />
+      ) : preview ? (
+        <EditTail text={preview.tail} />
+      ) : running || !near ? null : detail.pending ? (
+        <div className="flex h-20 flex-col gap-2 px-3 py-2" aria-busy>
+          <Skeleton className="h-3 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+      ) : detail.diff?.kind === "too-large" ? (
+        <div className="flex items-center gap-2 px-3 pb-2 text-xs text-muted-foreground">
+          Diff too large to display
+          {openDiff ? (
+            <Button variant="ghost-muted" size="micro" onClick={openDiff}>
+              Open diff
+            </Button>
+          ) : null}
+        </div>
+      ) : diff ? (
+        <InlineEditDiff diff={diff} full={showFull} />
       ) : null}
-    </WorkLogRow>
+      {footer}
+    </div>
   );
 }
 
-/** Inline: code at 12/18, a solid 2px strip instead of Pierre's 4px bars, a thin scrollbar. */
+function diffLineCounts(fileDiff: FileDiffMetadata) {
+  let additions = 0;
+  let deletions = 0;
+  for (const hunk of fileDiff.hunks) {
+    additions += hunk.additionLines;
+    deletions += hunk.deletionLines;
+  }
+  return { additions, deletions };
+}
+
+async function copyPath(path: string) {
+  try {
+    if (await writeTextToClipboard(path, "file path")) {
+      toastManager.add({ type: "success", title: "Path copied", description: path });
+    }
+  } catch {
+    toastManager.add({ type: "error", title: "Failed to copy path", description: path });
+  }
+}
+
+/** The edit's recorded content, fetched once the card nears the viewport, as a renderable diff. */
+function useEditDetail(projectedItem: TimelineWorkEntry["projectedItem"], enabled: boolean) {
+  const ctx = use(TimelineRowCtx);
+  const wireItem = projectedItem?.item;
+  const needsFetch = enabled && wireItem?.type === "file_change" && !wireItem.diffStr;
+  const detail = useTurnItemDetail(
+    needsFetch && projectedItem && wireItem
+      ? {
+          environmentId: ctx.activeThreadEnvironmentId,
+          threadId: projectedItem.sourceThreadId,
+          itemId: projectedItem.sourceItemId,
+          revision: turnItemDetailRevision(wireItem),
+        }
+      : null,
+    ctx.turnItemSource?.detail,
+  );
+  const fetched = detail.data?.item;
+  const item = fetched?.type === "file_change" ? fetched : wireItem;
+  const diff = enabled && item?.type === "file_change" ? toolCallFileDiff(item) : null;
+  return { pending: needsFetch && detail.isPending, diff };
+}
+
+/** What a running edit is writing: the newest lines that fit, pinned to the bottom. */
+function EditTail({ text }: { text: string }) {
+  return (
+    <div
+      aria-live="off"
+      className="flex h-20 flex-col justify-end overflow-hidden px-3 pb-1 font-mono text-xs leading-5 whitespace-pre text-muted-foreground"
+    >
+      {text.split("\n").map((line, index) => (
+        // oxlint-disable-next-line react/no-array-index-key -- lines have no identity; the tail only grows at its end
+        <div key={index} className="min-h-5 truncate">
+          {line}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EditFailure({ reason, error }: { reason: string | undefined; error: string | undefined }) {
+  const [open, setOpen] = useState(false);
+  const raw = error?.trim();
+  if (!reason) return null;
+  return (
+    <div className="px-3 pb-2 text-xs">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="min-w-0 truncate text-destructive">{reason}</span>
+        {raw && raw !== reason ? (
+          <Button
+            variant="ghost-muted"
+            size="micro"
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+          >
+            {open ? "Hide error" : "Show error"}
+          </Button>
+        ) : null}
+      </div>
+      {open && raw ? (
+        <pre className="mt-1 max-h-40 overflow-auto rounded-field bg-background/40 px-2 py-1.5 font-mono whitespace-pre-wrap text-muted-foreground select-text [scrollbar-width:thin]">
+          {raw}
+        </pre>
+      ) : null}
+    </div>
+  );
+}
+
+/** Inline: code at 12/20, a solid 2px strip instead of Pierre's 4px bars, a thin scrollbar. */
 const INLINE_DIFF_UNSAFE_CSS = `${DIFF_VIEW_UNSAFE_CSS}
 :host {
   --diffs-font-size: 12px;
-  --diffs-line-height: 18px;
+  --diffs-line-height: 20px;
 }
 [data-indicators="bars"] [data-column-number]::before {
   width: 2px !important;
@@ -273,62 +475,42 @@ const INLINE_DIFF_UNSAFE_CSS = `${DIFF_VIEW_UNSAFE_CSS}
 }
 `;
 
-const inlineDiffClassName =
-  "diff-render-surface max-h-60 overflow-y-auto overscroll-contain rounded-field bg-muted [--code-background:var(--muted)]";
+let measuredCharWidth: number | undefined;
+
+function codeCharWidth(code: HTMLElement): number {
+  if (measuredCharWidth !== undefined) return measuredCharWidth;
+  const context = document.createElement("canvas").getContext("2d");
+  if (context === null) return 7.2;
+  context.font = getComputedStyle(code).font;
+  measuredCharWidth = context.measureText("0").width || 7.2;
+  return measuredCharWidth;
+}
 
 function InlineEditDiff({
-  projectedItem,
-  failed,
+  diff,
+  full,
 }: {
-  projectedItem: NonNullable<TimelineWorkEntry["projectedItem"]>;
-  failed: boolean;
+  diff: Extract<ToolCallFileDiff, { kind: "diff" }>;
+  full: boolean;
 }) {
-  const ctx = use(TimelineRowCtx);
   const theme = useRenderedAppearance();
   const wordWrap = useClientSettings((settings) => settings.wordWrap);
-  const wireItem = projectedItem.item;
-  const needsFetch = !failed && wireItem.type === "file_change" && !wireItem.diffStr;
-  const detail = useTurnItemDetail(
-    needsFetch
-      ? {
-          environmentId: ctx.activeThreadEnvironmentId,
-          threadId: projectedItem.sourceThreadId,
-          itemId: projectedItem.sourceItemId,
-          revision: turnItemDetailRevision(wireItem),
-        }
-      : null,
-    ctx.turnItemSource?.detail,
-  );
-  const fetched = detail.data?.item;
-  const item = fetched?.type === wireItem.type ? fetched : wireItem;
-  if (item.type !== "file_change") return null;
-  if (failed) {
-    return item.diffStr?.trim() ? (
-      <div
-        className={cn(
-          inlineDiffClassName,
-          "whitespace-pre-wrap px-3 py-2 font-mono text-destructive select-text",
-        )}
-      >
-        {item.diffStr.trim()}
-      </div>
-    ) : null;
-  }
-  if (needsFetch && detail.isPending) {
-    return (
-      <div className={cn(inlineDiffClassName, "flex flex-col gap-2 px-3 py-2.5")} aria-busy>
-        <Skeleton className="h-3 w-3/4" />
-        <Skeleton className="h-3 w-1/2" />
-        <Skeleton className="h-3 w-2/3" />
-      </div>
-    );
-  }
-  const diff = toolCallFileDiff(item);
-  if (!diff) {
-    return <div className="text-xs text-muted-foreground">No line changes to show.</div>;
-  }
+  // Deeply indented changes open scrolled past their empty margin; wrapped code has nothing to skip.
+  const alignChangedLines = (node: HTMLElement) => {
+    if (wordWrap) return;
+    const codes = (node.shadowRoot ?? node).querySelectorAll<HTMLElement>("[data-code]");
+    const first = codes[0];
+    if (first === undefined) return;
+    const scrollLeft = full ? changedLinesScrollLeft(diff.fileDiff, codeCharWidth(first)) : 0;
+    for (const code of codes) code.scrollLeft = scrollLeft;
+  };
   return (
-    <div className={inlineDiffClassName}>
+    <div
+      className={cn(
+        "diff-render-surface overscroll-contain bg-muted [--code-background:var(--muted)]",
+        full ? "max-h-100 overflow-y-auto" : "max-h-20 overflow-hidden",
+      )}
+    >
       <DiffWorkerPoolProvider>
         <FileDiff
           fileDiff={diff.fileDiff}
@@ -345,6 +527,9 @@ function InlineEditDiff({
             themeType: theme,
             preferredHighlighter: PREFERRED_HIGHLIGHTER,
             unsafeCSS: INLINE_DIFF_UNSAFE_CSS,
+            onPostRender: (node, _instance, phase) => {
+              if (phase !== "unmount") alignChangedLines(node);
+            },
           }}
         />
       </DiffWorkerPoolProvider>

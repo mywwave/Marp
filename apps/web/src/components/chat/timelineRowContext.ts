@@ -47,6 +47,8 @@ export interface TimelineRowSharedState {
   /** Implement and refine for the thread's actionable plan; null when no plan waits. */
   planActions: { planId: PlanId; onImplement: () => void; onRefine: () => void } | null;
   pendingApprovals: ReadonlyMap<RuntimeRequestId, PendingApproval>;
+  /** A pending file-change approval's edit, shown as the edit card instead of a generic prompt. */
+  approvalEditEntries: ReadonlyMap<RuntimeRequestId, TimelineWorkEntry>;
   respondingRequestIds: ReadonlyArray<RuntimeRequestId>;
   canOperateThread: boolean;
   onRespondToApproval:

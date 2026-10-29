@@ -5,6 +5,7 @@ import * as DateTime from "effect/DateTime";
 
 import {
   WORK_EVENT_VERBS,
+  fileEditFailureReason,
   fileEditSummary,
   thoughtTitle,
   workEventAction,
@@ -112,6 +113,25 @@ describe("workEventAction", () => {
     [list("src/auth"), "Listed auth"],
     [fetchPage("https://docs.example.com/"), "Fetched docs.example.com"],
     [command("pnpm test"), "Ran pnpm test"],
+    [command("sed -n '1,80p' src/auth/session.ts"), "Read session.ts"],
+    [command("rg -n expiresAt src/auth | head"), "Grepped expiresAt in auth"],
+    [command("Get-ChildItem src/auth"), "Listed auth"],
+    [command("sed -i s/a/b/ src/auth/session.ts"), "Ran sed -i s/a/b/ src/auth/session.ts"],
+    [
+      command("bash -lc 'cat a.ts'", {
+        actions: [{ type: "search", query: "token", path: "/w/src" }],
+      }),
+      "Grepped token in src",
+    ],
+    [
+      command("cat a.ts && rg x", {
+        actions: [
+          { type: "read", path: "a.ts" },
+          { type: "search", query: "x" },
+        ],
+      }),
+      "Ran cat a.ts && rg x",
+    ],
     [mcp("mcp__linear__create_issue"), "Ran create_issue"],
     [edit("src/auth/session.ts"), "Edited session.ts"],
     [edit("src/auth/new.ts", "add"), "Wrote new.ts"],
@@ -178,6 +198,13 @@ describe("workRunHeader", () => {
       "explore",
       "Explored 3 files, 1 search, 1 command",
     ],
+    [
+      "read-only commands",
+      [command("cat src/a.ts"), command("rg token src"), command("ls src")],
+      false,
+      "explore",
+      "Explored a.ts, 1 search, 1 folder",
+    ],
     ["live exploration", [read("a.ts"), list("src")], true, "explore", "Exploring…"],
     [
       "mcp with a read",
@@ -211,6 +238,30 @@ describe("fileEditSummary", () => {
     ["an edit", counted(edit("src/a.ts"), { additions: 3, deletions: 1 }), false, "Edited", 3, 1],
     ["a new file", counted(edit("src/new.ts", "add"), { additions: 12 }), false, "Created", 12, 0],
     ["a running new file", edit("src/new.ts", "add"), true, "Creating", 0, 0],
+    [
+      "a new file shows only additions",
+      counted(edit("src/new.ts", "add"), { additions: 5, deletions: 2 }),
+      false,
+      "Created",
+      5,
+      0,
+    ],
+    [
+      "a write over an existing file",
+      counted(edit("src/a.ts"), { title: "Write", additions: 2, deletions: 7 }),
+      false,
+      "Edited",
+      2,
+      7,
+    ],
+    [
+      "a running write of unknown target",
+      counted(edit("src/a.ts"), { title: "Write", changes: [] }),
+      true,
+      "Writing",
+      0,
+      0,
+    ],
     ["a deleted file", counted(edit("old.ts", "delete"), { deletions: 4 }), false, "Deleted", 0, 4],
     [
       "a failed edit",
@@ -231,5 +282,26 @@ describe("fileEditSummary", () => {
 
   it("is only for file changes", () => {
     expect(fileEditSummary(command("ls"))).toBeNull();
+  });
+});
+
+describe("fileEditFailureReason", () => {
+  it.each([
+    [
+      "<tool_use_error>String to replace not found in file.</tool_use_error>",
+      "Text to replace wasn't found",
+    ],
+    [
+      "File has been modified since read, either by the user or by a linter.",
+      "File changed since it was read",
+    ],
+    [
+      "Found 3 matches of the string to replace, but replace_all is false.",
+      "Text to replace matches more than once",
+    ],
+    ["Something odd happened\nstack trace", "Something odd happened"],
+    ["   ", undefined],
+  ])("reads %j", (error, reason) => {
+    expect(fileEditFailureReason(error)).toBe(reason);
   });
 });

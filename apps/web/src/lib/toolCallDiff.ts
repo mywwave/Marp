@@ -77,28 +77,108 @@ export function toolCallDiff(
   };
 }
 
+/** A new file this long, or snippets this long to diff on the main thread, show "too large". */
+const MAX_NEW_FILE_LINES = 20_000;
+const MAX_SNIPPET_DIFF_LINES = 5_000;
+
+function lineCount(text: string | undefined): number {
+  if (!text) return 0;
+  let count = 1;
+  for (let index = text.indexOf("\n"); index >= 0; index = text.indexOf("\n", index + 1)) {
+    count += 1;
+  }
+  return count;
+}
+
+export type ToolCallFileDiff =
+  | { readonly kind: "diff"; readonly fileDiff: FileDiffMetadata; readonly lineNumbers: boolean }
+  | { readonly kind: "too-large" };
+
 /**
  * One edit as a renderable file diff. Recorded before/after snippets are not whole files, so
  * their line numbers would lie; `lineNumbers` is false for them.
  */
 export function toolCallFileDiff(
   item: Pick<FileChange, "diffStr" | "fileName" | "changes" | "oldStr" | "newStr">,
-): { readonly fileDiff: FileDiffMetadata; readonly lineNumbers: boolean } | null {
+): ToolCallFileDiff | null {
   const diff = toolCallDiff(item);
   const parsed = getRenderablePatch(diff.patch, "timeline-edit");
   if (parsed?.kind === "files" && parsed.files[0]) {
-    return { fileDiff: parsed.files[0], lineNumbers: true };
+    const fileDiff = parsed.files[0];
+    const created = fileDiff.type === "new" || item.changes?.[0]?.operation === "add";
+    return created && fileDiff.additionLines.length > MAX_NEW_FILE_LINES
+      ? { kind: "too-large" }
+      : { kind: "diff", fileDiff, lineNumbers: true };
   }
   const [before, after] = [
     diff.content.find((entry) => entry.label === "Recorded content before")?.text,
     diff.content.find((entry) => entry.label === "Recorded content after")?.text,
   ];
   if (before === undefined && after === undefined) return null;
+  // jsdiff cannot be interrupted here, so long snippets are refused up front.
+  if (lineCount(before) + lineCount(after) > MAX_SNIPPET_DIFF_LINES) return { kind: "too-large" };
   return {
+    kind: "diff",
     fileDiff: parseDiffFromFile(
       { name: item.fileName, contents: before ?? "" },
       { name: item.fileName, contents: after ?? "" },
     ),
     lineNumbers: false,
   };
+}
+
+/** The new-file line of the first change; a deletion points at the line that followed it. */
+export function firstChangedLine(fileDiff: FileDiffMetadata): number | undefined {
+  for (const hunk of fileDiff.hunks) {
+    let line = hunk.additionStart;
+    for (const content of hunk.hunkContent) {
+      if (content.type === "change") return Math.max(1, line);
+      line += content.lines;
+    }
+  }
+  return undefined;
+}
+
+const TAB_COLUMNS = 4;
+const SCROLL_INDENT_THRESHOLD = 8;
+const SCROLL_INDENT_KEEP = 2;
+
+function indentColumns(line: string): number | undefined {
+  let columns = 0;
+  for (const character of line) {
+    if (character === " ") columns += 1;
+    else if (character === "\t") columns += TAB_COLUMNS;
+    else return character === "\n" || character === "\r" ? undefined : columns;
+  }
+  return undefined;
+}
+
+/**
+ * Where an unwrapped diff starts scrolled: deeply indented changes skip most of their margin,
+ * keeping two columns of it. Blank lines don't count.
+ */
+export function changedLinesScrollLeft(fileDiff: FileDiffMetadata, charWidth: number): number {
+  let minIndent = Number.POSITIVE_INFINITY;
+  for (const hunk of fileDiff.hunks) {
+    for (const content of hunk.hunkContent) {
+      if (content.type !== "change") continue;
+      const lines = [
+        ...fileDiff.deletionLines.slice(
+          content.deletionLineIndex,
+          content.deletionLineIndex + content.deletions,
+        ),
+        ...fileDiff.additionLines.slice(
+          content.additionLineIndex,
+          content.additionLineIndex + content.additions,
+        ),
+      ];
+      for (const line of lines) {
+        const indent = indentColumns(line);
+        if (indent !== undefined) minIndent = Math.min(minIndent, indent);
+      }
+    }
+  }
+  return Number.isFinite(minIndent) && minIndent > SCROLL_INDENT_THRESHOLD
+    ? (minIndent - SCROLL_INDENT_KEEP) * charWidth
+    : 0;
 }
