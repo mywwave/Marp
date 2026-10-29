@@ -5,7 +5,7 @@ import type {
   DesktopPreviewRecordingInputEvent,
   DesktopPreviewTabState,
   DesktopSnapShotEvent,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import { exposeClerkBridge } from "@clerk/electron/preload";
 import { contextBridge, ipcRenderer, webFrame, webUtils } from "electron";
 
@@ -41,7 +41,7 @@ try {
   }
 } catch {}
 
-// oxlint-disable-next-line t3code/no-global-process-runtime -- Electron exposes the client platform in its sandboxed preload process.
+// oxlint-disable-next-line marp/no-global-process-runtime -- Electron exposes the client platform in its sandboxed preload process.
 const clientPlatform = process.platform;
 
 if (clientPlatform === "darwin") {
@@ -260,6 +260,24 @@ contextBridge.exposeInMainWorld("desktopBridge", {
       ipcRenderer.removeListener(IpcChannels.WINDOW_FULLSCREEN_STATE_CHANNEL, wrappedListener);
     };
   },
+  minimizeWindow: () => ipcRenderer.invoke(IpcChannels.WINDOW_CONTROL_CHANNEL, "minimize"),
+  toggleMaximizeWindow: () =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_CONTROL_CHANNEL, "toggleMaximize"),
+  closeWindow: () => ipcRenderer.invoke(IpcChannels.WINDOW_CONTROL_CHANNEL, "close"),
+  getWindowMaximizedState: () =>
+    ipcRenderer.sendSync(IpcChannels.GET_WINDOW_MAXIMIZED_STATE_CHANNEL) === true,
+  onWindowMaximizedStateChange: (listener) => {
+    const wrappedListener = (_event: Electron.IpcRendererEvent, maximized: unknown) => {
+      if (typeof maximized !== "boolean") return;
+      listener(maximized);
+    };
+
+    ipcRenderer.on(IpcChannels.WINDOW_MAXIMIZED_STATE_CHANNEL, wrappedListener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.WINDOW_MAXIMIZED_STATE_CHANNEL, wrappedListener);
+    };
+  },
+
   getUpdateState: () => ipcRenderer.invoke(IpcChannels.UPDATE_GET_STATE_CHANNEL),
   setUpdateChannel: (channel) =>
     ipcRenderer.invoke(IpcChannels.UPDATE_SET_CHANNEL_CHANNEL, channel),

@@ -25,6 +25,8 @@ export function WorkspaceFileDropOverlay() {
  */
 export function ScrollToEndButton(props: {
   readonly bottom: number;
+  /** While a turn runs, the end holds work the user has not seen yet. */
+  readonly newActivity: boolean;
   readonly summary: string | null;
   readonly onScrollToEnd: () => void;
 }) {
@@ -42,7 +44,7 @@ export function ScrollToEndButton(props: {
         variant="glass"
       >
         <ChevronDownIcon className="size-3.5" />
-        Scroll to end
+        {props.newActivity ? "New activity" : "Scroll to end"}
         {props.summary === null ? null : (
           <span className="text-muted-foreground">
             <span aria-hidden>· </span>

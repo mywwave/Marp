@@ -35,6 +35,9 @@ import {
   resolveSidebarFolderDot,
   resolveSidebarNeedsYouReason,
   resolveSidebarStatusFamily,
+  resolveCollapsedSidebarRail,
+  resolveProjectFolderDropTarget,
+  resolveSidebarRowKeyCommand,
   splitSidebarNeedsYouThreads,
   type SidebarThreadStatus,
   sidebarFolderExpansionKeys,
@@ -1498,6 +1501,42 @@ describe("Needs you", () => {
     expect(family("ready")).toBe("idle");
   });
 
+  it("gives the collapsed rail the needs-you count and per-project dots, without parked threads", () => {
+    const project = ProjectId.make("marp");
+    const other = ProjectId.make("fleet");
+    const shell = (projectId: ProjectId, overrides: object = {}) => ({
+      ...idle,
+      environmentId: localEnvironmentId,
+      projectId,
+      settledOverride: null,
+      snoozedUntil: null,
+      ...overrides,
+    });
+    const groups = [
+      { memberProjectRefs: [{ environmentId: localEnvironmentId, projectId: project }] },
+      { memberProjectRefs: [{ environmentId: localEnvironmentId, projectId: other }] },
+    ];
+    const rail = resolveCollapsedSidebarRail({
+      groups,
+      now: "2026-03-09T11:00:00.000Z",
+      threads: [
+        shell(project, { hasPendingApprovals: true }),
+        shell(project),
+        // Settled and snoozed threads are parked: no dot, no count.
+        shell(other, { hasPendingUserInput: true, settledOverride: "settled" }),
+        shell(other, {
+          runtime: { ...failedRuntime, status: "running" as const, lastError: null },
+          snoozedUntil: "2026-03-09T12:00:00.000Z",
+        }),
+      ],
+    });
+    expect(rail.needsYouCount).toBe(1);
+    expect(rail.projects.map((entry) => [entry.threads.length, entry.dot])).toEqual([
+      [2, "attention"],
+      [0, null],
+    ]);
+  });
+
   it("pulls threads out of their sections in order and keeps untouched lists", () => {
     const pinned = ["p1", "p2!"];
     const active = ["a1"];
@@ -1508,5 +1547,68 @@ describe("Needs you", () => {
     expect(rest[0]).toEqual(["p1"]);
     expect(rest[1]).toBe(active);
     expect(rest[2]).toEqual([]);
+  });
+});
+
+describe("resolveSidebarRowKeyCommand", () => {
+  const press = (
+    key: string,
+    modifiers: Partial<Record<"shift" | "ctrl" | "meta" | "alt", boolean>> = {},
+  ) =>
+    resolveSidebarRowKeyCommand({
+      key,
+      shiftKey: modifiers.shift ?? false,
+      ctrlKey: modifiers.ctrl ?? false,
+      metaKey: modifiers.meta ?? false,
+      altKey: modifiers.alt ?? false,
+      isComposing: false,
+    });
+
+  it("maps single keys to row commands and leaves modified keys alone", () => {
+    expect(press("Enter")).toBe("open");
+    expect(press(" ")).toBe("toggle-select");
+    expect(press("s")).toBe("settle");
+    expect(press("Z")).toBe("snooze");
+    expect(press("p")).toBe("pin");
+    expect(press("F2")).toBe("rename");
+    expect(press("Backspace")).toBe("delete");
+    expect(press("Escape")).toBe("clear-selection");
+    expect(press("ArrowDown", { shift: true })).toBe("extend-down");
+    expect(press("ArrowUp", { shift: true })).toBe("extend-up");
+    // Plain arrows belong to the tree; chords belong to app shortcuts.
+    expect(press("ArrowDown")).toBeNull();
+    expect(press("s", { meta: true })).toBeNull();
+    expect(press("p", { ctrl: true })).toBeNull();
+    expect(press("S", { shift: true })).toBeNull();
+    expect(
+      resolveSidebarRowKeyCommand({
+        key: "s",
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        isComposing: true,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("resolveProjectFolderDropTarget", () => {
+  const order = ["a", "b", "c", "d"];
+  const drop = (draggedKey: string, targetKey: string, placement: "before" | "after") =>
+    resolveProjectFolderDropTarget({ order, draggedKey, targetKey, placement });
+
+  it("names the project whose place the dragged folder takes", () => {
+    expect(drop("a", "c", "before")).toBe("b");
+    expect(drop("a", "c", "after")).toBe("c");
+    expect(drop("d", "b", "before")).toBe("b");
+    expect(drop("d", "b", "after")).toBe("c");
+  });
+
+  it("ignores drops that keep the order", () => {
+    expect(drop("b", "c", "before")).toBeNull();
+    expect(drop("c", "b", "after")).toBeNull();
+    expect(drop("b", "b", "after")).toBeNull();
+    expect(drop("x", "b", "after")).toBeNull();
   });
 });

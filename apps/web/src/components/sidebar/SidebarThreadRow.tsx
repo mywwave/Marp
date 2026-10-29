@@ -66,7 +66,9 @@ import {
   hasUnseenCompletion,
   resolveSidebarRowAccessibility,
   resolveSidebarStatusFamily,
+  resolveSidebarRowKeyCommand,
   type SidebarDropVerb,
+  type SidebarRowKeyCommand,
   type SidebarStatusFamily,
   resolveSidebarThreadStatus,
   resolveThreadLastVisitedAt,
@@ -86,7 +88,7 @@ import {
 import { pickSnoozePreset, resolveSnoozePresets, type SnoozePreset } from "../Sidebar.snooze";
 import { useThreadShell } from "../../state/entities";
 import { ProjectFavicon, type ProjectFaviconProject } from "../ProjectFavicon";
-import { ThreadSearchMatchExcerpt } from "../ThreadSearchMatch";
+import { SearchQueryHighlight, ThreadSearchMatchExcerpt } from "../ThreadSearchMatch";
 import { makeWorkspaceFileDropHandlers } from "../chat/workspaceFileDrop";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
 import { getTriggerDisplayModelName } from "../chat/providerIconUtils";
@@ -502,6 +504,12 @@ type SidebarThreadRowProps = {
   onUnsettle: (threadRef: ScopedThreadRef) => void;
   onSnooze: (threadRef: ScopedThreadRef, preset: Pick<SnoozePreset, "snoozedUntil">) => void;
   onUnsnooze: (threadRef: ScopedThreadRef) => void;
+  /** Row commands the list owns: selection, settle, pin, delete. */
+  onKeyCommand: (
+    threadRef: ScopedThreadRef,
+    command: Exclude<SidebarRowKeyCommand, "open" | "rename" | "snooze">,
+    row: HTMLElement,
+  ) => boolean;
   onFileDropThreads?: ((threadRef: ScopedThreadRef, files: File[]) => void) | undefined;
 };
 
@@ -512,7 +520,7 @@ function ThreadRenameInput(props: {
   onCommit: () => void;
   onCancel: () => void;
 }) {
-  // Enter and Escape blur the input as it unmounts; that blur must not commit again.
+  // Enter and Escape blur the input as it unmounts; that blur must not cancel the commit.
   const settledRef = useRef(false);
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     event.stopPropagation();
@@ -537,7 +545,7 @@ function ThreadRenameInput(props: {
       onFocus={(event) => event.currentTarget.select()}
       onKeyDown={handleKeyDown}
       onBlur={() => {
-        if (!settledRef.current) props.onCommit();
+        if (!settledRef.current) props.onCancel();
       }}
       onClick={(event) => event.stopPropagation()}
       onDoubleClick={(event) => event.stopPropagation()}
@@ -696,21 +704,6 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     event.preventDefault();
     onContextMenu(threadRef, { x: event.clientX, y: event.clientY });
   };
-  const handleKeyDown = (event: ReactKeyboardEvent) => {
-    if (event.target !== event.currentTarget) return;
-    if (
-      event.key === "F2" &&
-      !isRenaming &&
-      readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope)
-    ) {
-      event.preventDefault();
-      onStartRename(threadRef, thread.title);
-      return;
-    }
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    onThreadActivate(threadRef);
-  };
   const handleDoubleClick = (event: ReactMouseEvent) => {
     if (
       !readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope) ||
@@ -791,6 +784,24 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
   // Closing here, not just masking, keeps the menu from reopening when the button returns.
   if (snoozeMenuOpenRaw && !showSnoozeButton) setSnoozeMenuOpen(false);
   const snoozeMenuOpen = snoozeMenuOpenRaw && showSnoozeButton;
+  // Only keys pressed on the row itself: a focused rename field or button keeps its typing.
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget || isRenaming) return;
+    const command = resolveSidebarRowKeyCommand(event.nativeEvent);
+    if (command === null) return;
+    let handled = true;
+    if (command === "open") onThreadActivate(threadRef);
+    else if (command === "rename") {
+      if (readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope)) {
+        onStartRename(threadRef, thread.title);
+      }
+    } else if (command === "snooze") {
+      if (showSnoozeButton) setSnoozeMenuOpen(true);
+    } else handled = props.onKeyCommand(threadRef, command, event.currentTarget);
+    if (!handled) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
   const rowSurfaceClassName = cn(
     "group/sidebar-row relative flex w-full cursor-pointer items-center gap-2 rounded-sm px-3 text-left text-sm outline-none select-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none",
     // --row-bg is the colour the hover actions fade into.
@@ -1091,7 +1102,7 @@ const STATUS_DOT_CLASS_NAME = {
 } as const;
 
 /** The 16px status slot: a spinner, a dot, nothing when idle, or a check while selected. */
-function SidebarStatusIndicator(props: { family: SidebarStatusFamily; selected: boolean }) {
+export function SidebarStatusIndicator(props: { family: SidebarStatusFamily; selected: boolean }) {
   return (
     <span aria-hidden className="flex size-4 shrink-0 items-center justify-center">
       {props.selected ? (
@@ -1277,7 +1288,7 @@ export const SidebarSearchResultRow = memo(function SidebarSearchResultRow(props
                   thread.titleRegeneration != null && "opacity-55",
                 )}
               >
-                {thread.title}
+                <SearchQueryHighlight text={thread.title} query={props.searchQuery} />
               </span>
               <span id={`${props.resultId}-pr`} className="contents">
                 <ThreadSearchPullRequestNumber

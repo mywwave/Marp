@@ -166,16 +166,25 @@ export function SidebarSectionHeader(props: {
 }
 
 /** A section title such as "Pinned"; it lights up while a drag would drop into it. */
-export function SidebarGroupLabel(props: { label: string; isDropTarget: boolean }) {
+export function SidebarGroupLabel(props: {
+  label: string;
+  isDropTarget: boolean;
+  count?: number;
+  className?: string | undefined;
+}) {
   return (
     <li
       aria-hidden
       className={cn(
-        "flex h-7 list-none items-center px-3 text-xs font-medium",
+        "flex h-7 list-none items-center gap-2 px-3 text-xs font-medium",
         props.isDropTarget ? "text-primary" : "text-muted-foreground",
+        props.className,
       )}
     >
-      {props.label}
+      <span className="min-w-0 flex-1 truncate">{props.label}</span>
+      {props.count === undefined ? null : (
+        <span className="shrink-0 font-normal tabular-nums text-placeholder">{props.count}</span>
+      )}
     </li>
   );
 }

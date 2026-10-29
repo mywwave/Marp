@@ -1,4 +1,4 @@
-import { type ResolvedKeybindingsConfig } from "@t3tools/contracts";
+import { type ResolvedKeybindingsConfig } from "@marp/contracts";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { ChevronRightIcon } from "lucide-react";
 import { type ReactNode, type RefObject, useState } from "react";
@@ -112,6 +112,7 @@ export function CommandPaletteVirtualizedResults(props: CommandPaletteVirtualize
   return (
     <CommandListVirtualized>
       <LegendList<CommandPaletteRow>
+        recycleItems={false}
         ref={listRef}
         data={props.rows}
         keyExtractor={(row) => row.key}

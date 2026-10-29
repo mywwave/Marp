@@ -1309,6 +1309,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
               />
             ) : null}
             <LegendList<MessagesTimelineRow>
+              recycleItems={false}
               ref={setTimelineList}
               data={rows}
               extraData={listExtraData}

@@ -100,7 +100,10 @@ import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../termina
 import { isMacPlatform } from "~/lib/utils";
 import { readLocalApi } from "../localApi";
 import { useSidebarPendingFileDropStore } from "../sidebarPendingFileDropStore";
-import { selectProjectGroupingSettings } from "@marp/client-runtime/state/project-grouping";
+import {
+  getProjectOrderKey,
+  selectProjectGroupingSettings,
+} from "@marp/client-runtime/state/project-grouping";
 import {
   projectGroupsSpanEnvironments,
   resolveSidebarProjectScopeKeys,
@@ -119,7 +122,11 @@ import { useTerminalFocus } from "../hooks/useTerminalFocus";
 import { isCommandPaletteOpen, openCommandPalette } from "../commandPaletteBus";
 import { registerSettleAndAdvance } from "../settleAndAdvance";
 import { startNewThreadFromContext } from "../lib/chatThreadActions";
-import { useBoringSidebarEnabled, useClientSettings } from "../hooks/useSettings";
+import {
+  updateClientSettings,
+  useBoringSidebarEnabled,
+  useClientSettings,
+} from "../hooks/useSettings";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useNowMinute } from "../hooks/useNowMinute";
@@ -197,8 +204,10 @@ import {
   type SidebarSection,
   resolveSidebarRowThreadId,
   resolveSidebarNeedsYouReason,
+  resolveProjectFolderDropTarget,
   resolveThreadLastVisitedAt,
   splitSidebarNeedsYouThreads,
+  type SidebarRowKeyCommand,
 } from "./Sidebar.logic";
 import {
   createSidebarCollisionDetection,
@@ -253,6 +262,8 @@ import { SidebarSelectionBar } from "./sidebar/SidebarSelectionBar";
 import {
   SidebarProjectFolderHeader,
   sidebarFolderRowId,
+  type SidebarProjectDropPlacement,
+  type SidebarProjectReorder,
 } from "./sidebar/SidebarProjectFolderHeader";
 import {
   SidebarDragBoundary,
@@ -1246,36 +1257,6 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     if (isMobile) setOpenMobile(false);
     void handleNewThread(scopeProjectRef(group.environmentId, group.id));
   });
-  const handleProjectFolderContextMenu = useStableCallback(
-    (group: SidebarProjectSnapshot, position: { x: number; y: number }) => {
-      const api = readLocalApi();
-      if (!api) return;
-      void (async () => {
-        const clicked = await settlePromise(() =>
-          api.contextMenu.show(
-            [
-              { id: "new-thread", label: "New thread" },
-              { id: "copy-path", label: "Copy path" },
-              { id: "project-settings", label: "Project settings", icon: "settings" },
-            ],
-            position,
-          ),
-        );
-        if (clicked._tag === "Failure") return;
-        switch (clicked.value) {
-          case "new-thread":
-            startThreadInProjectFolder(group);
-            return;
-          case "copy-path":
-            copyPathToClipboard(group.workspaceRoot, { path: group.workspaceRoot });
-            return;
-          case "project-settings":
-            openProjectSettings(group);
-            return;
-        }
-      })();
-    },
-  );
 
   const {
     workingShelfEnabled,
@@ -1331,6 +1312,44 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       : null,
     keepEmptyFolders: scopedProjectGroups.length > 0,
   });
+
+  const handleProjectFolderContextMenu = useStableCallback(
+    (group: SidebarProjectSnapshot, position: { x: number; y: number }) => {
+      const api = readLocalApi();
+      if (!api) return;
+      const collapsed =
+        projectFolders?.find((folder) => folder.group.projectKey === group.projectKey)?.collapsed ??
+        false;
+      void (async () => {
+        const clicked = await settlePromise(() =>
+          api.contextMenu.show(
+            [
+              { id: "new-thread", label: "New thread" },
+              { id: "toggle-collapsed", label: collapsed ? "Expand" : "Collapse" },
+              { id: "copy-path", label: "Copy path" },
+              { id: "project-settings", label: "Project settings", icon: "settings" },
+            ],
+            position,
+          ),
+        );
+        if (clicked._tag === "Failure") return;
+        switch (clicked.value) {
+          case "new-thread":
+            startThreadInProjectFolder(group);
+            return;
+          case "toggle-collapsed":
+            toggleProjectFolder(group);
+            return;
+          case "copy-path":
+            copyPathToClipboard(group.workspaceRoot, { path: group.workspaceRoot });
+            return;
+          case "project-settings":
+            openProjectSettings(group);
+            return;
+        }
+      })();
+    },
+  );
 
   // Ranked across environments as the palette ranks them, so one
   // environment's list does not sit above another's better matches; rows
@@ -1487,6 +1506,16 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       event.preventDefault();
       event.stopPropagation();
       clearThreadSearch();
+      return;
+    }
+    if (!isSearchingThreads && event.key === "ArrowDown") {
+      const list = threadListRef.current;
+      const row =
+        list?.querySelector<HTMLElement>('[data-sidebar-row][tabindex="0"]') ??
+        list?.querySelector<HTMLElement>("[data-sidebar-row]");
+      if (!row) return;
+      event.preventDefault();
+      row.focus();
       return;
     }
     if (threadSearchResults.length === 0) return;
@@ -1862,6 +1891,65 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         );
       }
     })();
+  };
+
+  const [projectDrag, setProjectDrag] = useState<{
+    key: string;
+    target: { key: string; placement: SidebarProjectDropPlacement } | null;
+  } | null>(null);
+  const reorderProjects = useUiStateStore((store) => store.reorderProjects);
+  const projectSortOrder = useClientSettings((settings) => settings.sidebarProjectSortOrder);
+  const dropProjectFolder = () => {
+    const target = projectDrag?.target;
+    setProjectDrag(null);
+    if (!projectDrag || !target) return;
+    const groups = projectGroupsRef.current;
+    const landingKey = resolveProjectFolderDropTarget({
+      order: groups.map((group) => group.projectKey),
+      draggedKey: projectDrag.key,
+      targetKey: target.key,
+      placement: target.placement,
+    });
+    if (landingKey === null) return;
+    const orderKeysOf = (projectKey: string) =>
+      groups
+        .find((group) => group.projectKey === projectKey)
+        ?.memberProjects.map(getProjectOrderKey) ?? [];
+    reorderProjects(
+      groups.flatMap((group) => group.memberProjects.map(getProjectOrderKey)),
+      orderKeysOf(projectDrag.key),
+      orderKeysOf(landingKey),
+    );
+    if (projectSortOrder !== "manual")
+      void updateClientSettings({ sidebarProjectSortOrder: "manual" });
+  };
+  const projectDropMoves =
+    projectDrag?.target != null &&
+    resolveProjectFolderDropTarget({
+      order: projectGroups.map((group) => group.projectKey),
+      draggedKey: projectDrag.key,
+      targetKey: projectDrag.target.key,
+      placement: projectDrag.target.placement,
+    }) !== null;
+  const projectReorder: SidebarProjectReorder = {
+    onStart: (group) => setProjectDrag({ key: group.projectKey, target: null }),
+    onOver: (group, placement) => {
+      // A drop after a folder lands before the next one, so the line never splits a folder from its threads.
+      const folderKeys = projectFolders?.map((folder) => folder.group.projectKey) ?? [];
+      const nextKey = folderKeys[folderKeys.indexOf(group.projectKey) + 1];
+      const target =
+        placement === "after" && nextKey !== undefined
+          ? { key: nextKey, placement: "before" as const }
+          : { key: group.projectKey, placement };
+      setProjectDrag((drag) =>
+        drag === null ||
+        (drag.target?.key === target.key && drag.target.placement === target.placement)
+          ? drag
+          : { ...drag, target },
+      );
+    },
+    onDrop: dropProjectFolder,
+    onEnd: () => setProjectDrag(null),
   };
 
   const handleThreadDragStart = (event: DragStartEvent) => {
@@ -2308,6 +2396,102 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       );
     }
   };
+  const deleteThreadWithConfirmation = async (threadRef: ScopedThreadRef, title: string) => {
+    const api = readLocalApi();
+    if (!api) return;
+    if (confirmThreadDelete) {
+      const confirmed = await settlePromise(() =>
+        api.dialogs.confirm(
+          [
+            `Delete thread "${title}"?`,
+            "This permanently clears conversation history for this thread.",
+          ].join("\n"),
+          { variant: "destructive" },
+        ),
+      );
+      if (confirmed._tag === "Failure" || !confirmed.value) return;
+    }
+    const result = await deleteThread(threadRef);
+    if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+      const error = squashAtomCommandFailure(result);
+      toastManager.add(
+        stackedThreadToast({
+          type: "error",
+          title: "Failed to delete thread",
+          description: error instanceof Error ? error.message : "An error occurred.",
+        }),
+      );
+    }
+  };
+  // Returns whether the key was used, so an unused Escape still reaches the app.
+  const handleRowKeyCommand = useStableCallback(
+    (
+      threadRef: ScopedThreadRef,
+      command: Exclude<SidebarRowKeyCommand, "open" | "rename" | "snooze">,
+      row: HTMLElement,
+    ): boolean => {
+      const threadKey = scopedThreadKey(threadRef);
+      const thread = threadByKeyRef.current.get(threadKey);
+      if (!thread) return false;
+      const selection = useThreadSelectionStore.getState();
+      const select = (key: string) => {
+        if (!useThreadSelectionStore.getState().selectedThreadKeys.has(key)) {
+          toggleThreadSelection(key);
+        }
+      };
+      const operable = () =>
+        serverConfigs.has(thread.environmentId) && checkThreadOperations([thread]);
+      switch (command) {
+        case "toggle-select":
+          toggleThreadSelection(threadKey);
+          return true;
+        case "extend-up":
+        case "extend-down": {
+          const rows = [
+            ...(threadListRef.current?.querySelectorAll<HTMLElement>(
+              "[data-thread-item] [data-sidebar-row]",
+            ) ?? []),
+          ];
+          const index = rows.indexOf(row);
+          const target = rows[index + (command === "extend-down" ? 1 : -1)];
+          if (index < 0 || !target?.dataset.sidebarRow) return true;
+          select(threadKey);
+          select(target.dataset.sidebarRow);
+          target.scrollIntoView({ block: "nearest" });
+          target.focus({ preventScroll: true });
+          return true;
+        }
+        case "clear-selection":
+          if (!selection.hasSelection()) return false;
+          clearSelection();
+          return true;
+        case "settle":
+          if (
+            selection.selectedThreadKeys.size >= 2 &&
+            selection.selectedThreadKeys.has(threadKey)
+          ) {
+            settleSelection();
+            return true;
+          }
+          if (!operable()) return true;
+          if (snoozedThreadKeysRef.current.has(threadKey)) attemptUnsnooze(threadRef);
+          else if (settledThreadKeysRef.current.has(threadKey)) attemptUnsettle(threadRef);
+          else attemptSettle(threadRef);
+          return true;
+        case "pin":
+          if (!operable()) return true;
+          if (thread.pinnedAt != null) attemptUnpin(threadRef);
+          else attemptPin(threadRef);
+          return true;
+        case "delete":
+          if (checkThreadOperations([thread])) {
+            void deleteThreadWithConfirmation(threadRef, thread.title);
+          }
+          return true;
+      }
+    },
+  );
+
   const handleMultiSelectContextMenu = useStableCallback(
     async (position: { x: number; y: number }) => {
       const api = readLocalApi();
@@ -2348,6 +2532,9 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       const unpinMenuItem = buildBulkUnpinContextMenuItem({
         pinnedCount: pinnedSelectedThreads.length,
       });
+      const unpinnedSelectedThreads = selectedThreads.filter(
+        (thread) => serverConfigs.has(thread.environmentId) && thread.pinnedAt == null,
+      );
       // Presets sync across environments, so the first selected thread's stand for all.
       // oxlint-disable-next-line react/purity -- runs in an event handler (oxc#27309)
       const menuOpenedAt = new Date();
@@ -2359,6 +2546,16 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       const clicked = await settlePromise(() =>
         api.contextMenu.show(
           [
+            { id: "selection", label: `${count} threads`, header: true },
+            ...(unpinnedSelectedThreads.length > 0
+              ? [
+                  {
+                    id: "pin",
+                    label: `Pin (${unpinnedSelectedThreads.length})`,
+                    disabled: !canOperateThreads(unpinnedSelectedThreads),
+                  },
+                ]
+              : []),
             ...(unpinMenuItem
               ? [{ ...unpinMenuItem, disabled: !canOperateThreads(pinnedSelectedThreads) }]
               : []),
@@ -2401,6 +2598,11 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
               : []),
             { id: "mark-unread", label: `Mark unread (${count})` },
             {
+              id: "archive",
+              label: `Archive (${count})`,
+              disabled: !canOperateThreads(selectedThreads),
+            },
+            {
               id: "delete",
               label: `Delete (${count})`,
               destructive: true,
@@ -2411,19 +2613,25 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         ),
       );
       if (clicked._tag === "Failure" || clicked.value === null) return;
+      if (clicked.value === "archive") {
+        void archiveSelection();
+        return;
+      }
       const actionTargets =
-        clicked.value === "unpin"
-          ? pinnedSelectedThreads
-          : clicked.value === "regenerate-title"
-            ? regeneratableTitleThreads
-            : clicked.value === "settle"
-              ? settlingThreads.flatMap((thread) => {
-                  const current = threadByKeyRef.current.get(
-                    scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
-                  );
-                  return current && current.settledOverride !== "settled" ? [current] : [];
-                })
-              : selectedThreads;
+        clicked.value === "pin"
+          ? unpinnedSelectedThreads
+          : clicked.value === "unpin"
+            ? pinnedSelectedThreads
+            : clicked.value === "regenerate-title"
+              ? regeneratableTitleThreads
+              : clicked.value === "settle"
+                ? settlingThreads.flatMap((thread) => {
+                    const current = threadByKeyRef.current.get(
+                      scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
+                    );
+                    return current && current.settledOverride !== "settled" ? [current] : [];
+                  })
+                : selectedThreads;
       if (clicked.value === "settle" && actionTargets.length === 0) return;
       if (clicked.value !== "mark-unread" && !checkThreadOperations(actionTargets)) return;
       if (clicked.value?.startsWith("snooze:")) {
@@ -2437,6 +2645,13 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 selectedThreads[0]!.environmentId,
               );
         if (preset) await snoozeThreadsWithPreset(selectedThreads, preset);
+        return;
+      }
+      if (clicked.value === "pin") {
+        for (const thread of unpinnedSelectedThreads) {
+          attemptPin(scopeThreadRef(thread.environmentId, thread.id));
+        }
+        clearSelection();
         return;
       }
       if (clicked.value === "unpin") {
@@ -2847,33 +3062,9 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
             }
             return;
           }
-          case "delete": {
-            if (confirmThreadDelete) {
-              const confirmed = await settlePromise(() =>
-                api.dialogs.confirm(
-                  [
-                    `Delete thread "${thread.title}"?`,
-                    "This permanently clears conversation history for this thread.",
-                  ].join("\n"),
-                  { variant: "destructive" },
-                ),
-              );
-              if (confirmed._tag === "Failure" || !confirmed.value) return;
-            }
-            const result = await deleteThread(threadRef);
-            if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
-              const error = squashAtomCommandFailure(result);
-              toastManager.add(
-                stackedThreadToast({
-                  type: "error",
-                  title: "Failed to delete thread",
-                  description: error instanceof Error ? error.message : "An error occurred.",
-                }),
-              );
-              return;
-            }
+          case "delete":
+            await deleteThreadWithConfirmation(threadRef, thread.title);
             return;
-          }
           default:
             return;
         }
@@ -3189,11 +3380,28 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                   aria-label="Thread search results"
                   className="flex flex-col gap-px"
                 >
-                  {threadSearchResults.map((thread, index) => {
+                  {threadSearchResults.flatMap((thread, index) => {
+                    const groupLabel =
+                      index === 0 && threadTitleResults.length > 0 ? (
+                        <SidebarGroupLabel
+                          key="search-label:threads"
+                          label="Threads"
+                          count={threadTitleResults.length}
+                          isDropTarget={false}
+                        />
+                      ) : index === threadTitleResults.length ? (
+                        <SidebarGroupLabel
+                          key="search-label:messages"
+                          label="Messages"
+                          count={threadContentResults.length}
+                          isDropTarget={false}
+                          className={index > 0 ? "mt-2" : undefined}
+                        />
+                      ) : null;
                     const threadKey = scopedThreadKey(
                       scopeThreadRef(thread.environmentId, thread.id),
                     );
-                    return (
+                    const row = (
                       <SidebarSearchResultRow
                         isSettled={settledThreadKeys.has(threadKey)}
                         key={threadKey}
@@ -3232,6 +3440,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                         onFileDropThreads={handleThreadFileDrop}
                       />
                     );
+                    return groupLabel ? [groupLabel, row] : [row];
                   })}
                 </ul>
               </TooltipProvider>
@@ -3240,7 +3449,9 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 role="status"
                 className="px-2 py-6 text-center text-xs text-sidebar-muted-foreground"
               >
-                {threadSearch.isPending ? "Searching thread messages…" : "No threads found"}
+                {threadSearch.isPending
+                  ? "Searching thread messages…"
+                  : `No threads match “${threadSearchQuery.trim()}”.`}
               </p>
             )
           ) : null}
@@ -3383,6 +3594,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                             onUnsettle={attemptUnsettle}
                             onSnooze={attemptSnooze}
                             onUnsnooze={attemptUnsnooze}
+                            onKeyCommand={handleRowKeyCommand}
                             onFileDropThreads={handleThreadFileDrop}
                           />
                         );
@@ -3433,6 +3645,13 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                                 onToggle={toggleProjectFolder}
                                 onNewThread={startThreadInProjectFolder}
                                 onContextMenu={handleProjectFolderContextMenu}
+                                reorder={projectReorder}
+                                dropIndicator={
+                                  projectDropMoves &&
+                                  projectDrag?.target?.key === folder.group.projectKey
+                                    ? projectDrag.target.placement
+                                    : null
+                                }
                               />,
                             );
                             if (offlineEnvironmentIds.size > 0 && !folder.collapsed) {

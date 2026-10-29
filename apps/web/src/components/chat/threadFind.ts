@@ -1,4 +1,4 @@
-import type { OrchestrationV2SearchThreadInput, RunId } from "@t3tools/contracts";
+import type { OrchestrationV2SearchThreadInput, RunId } from "@marp/contracts";
 
 export type ThreadFindStart = NonNullable<OrchestrationV2SearchThreadInput["start"]>;
 export type ThreadFindPositionReader = (query: string) => ThreadFindStart | undefined;
@@ -21,5 +21,5 @@ export function stepThreadFindIndex(index: number, total: number, delta: number)
 }
 
 export function formatThreadFindCount(index: number, total: number): string {
-  return total <= 0 ? "0/0" : `${clampThreadFindIndex(index, total) + 1}/${total}`;
+  return total <= 0 ? "No matches" : `${clampThreadFindIndex(index, total) + 1} of ${total}`;
 }

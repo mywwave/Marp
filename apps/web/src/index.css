@@ -4,8 +4,9 @@
 
 @custom-variant dark (&:is(.dark, .dark *));
 @custom-variant light (&:not(.dark, .dark *));
-/* Window Controls Overlay: active when Electron exposes native titlebar control geometry. */
-@custom-variant wco (&:is(.wco, .wco *));
+/* Window controls drawn over the page's top-right corner: the Window Controls Overlay API, or
+   WindowControls on Windows and Linux desktop. */
+@custom-variant wco (&:is(.wco, .wco *, .custom-window-controls, .custom-window-controls *));
 
 /* Secondary hovering pointers reveal sidebar actions on touch-primary devices. */
 @custom-variant any-hover {
@@ -121,6 +122,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(marp-mob
   --glass-saturation: 1.14;
   --desktop-window-right-resize-inset: 0px;
   --workspace-topbar-height: 52px;
+  /* Headers inside the inset sheet; see the sheet rule below. */
+  --workspace-sheet-header-height: var(--workspace-topbar-height);
   --workspace-controls-top: 0px;
   --workspace-controls-left: calc(env(safe-area-inset-left) + 0.75rem);
   --workspace-controls-right: calc(env(safe-area-inset-right) + 0.75rem);
@@ -151,6 +154,14 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(marp-mob
   }
 }
 
+/* The sheet sits 0.5rem below the window top. Its headers shrink by that on both sides, so they
+   share the titlebar's centerline with the panel toggles and the native window controls. */
+@media (width >= 48rem) {
+  .peer[data-variant="inset"] ~ [data-slot="sidebar-inset"] {
+    --workspace-sheet-header-height: calc(var(--workspace-topbar-height) - 1rem);
+  }
+}
+
 .wco {
   --native-titlebar-height: env(titlebar-area-height, 0px);
   --workspace-topbar-height: max(40px, env(titlebar-area-height, 52px));
@@ -163,6 +174,25 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(marp-mob
   --workspace-native-controls-inset: calc(
     100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) + 1rem
   );
+}
+
+/* WindowControls sits in the sheet's top-right corner, on the header centerline; headers and the
+   panel toggles stay 1rem clear of it. Below 48rem there is no sheet margin to absorb. */
+.custom-window-controls {
+  --native-titlebar-height: var(--workspace-topbar-height);
+  --window-control-width: 46px;
+  --window-controls-width: calc(3 * var(--window-control-width));
+  --window-controls-top: 0.5rem;
+  --window-controls-height: calc(var(--workspace-topbar-height) - 1rem);
+  --window-controls-end: calc(var(--desktop-window-right-resize-inset) + 0.5rem);
+  --workspace-controls-right: calc(
+    var(--window-controls-end) + var(--window-controls-width) + 1rem
+  );
+  --workspace-native-controls-inset: calc(0.5rem + var(--window-controls-width) + 1rem);
+
+  @media (width >= 48rem) {
+    --workspace-native-controls-inset: calc(var(--window-controls-width) + 1rem);
+  }
 }
 
 /* The font tokens are declared outside the inline theme so utilities reference

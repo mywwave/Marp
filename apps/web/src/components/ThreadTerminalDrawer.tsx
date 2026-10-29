@@ -3,15 +3,16 @@ import { useAtomMount, useAtomValue } from "@effect/atom-react";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@marp/client-runtime/state/runtime";
 import {
   INITIAL_TERMINAL_OUTPUT_CURSOR,
   readTerminalOutputUpdate,
   type TerminalOutputCursor,
   type TerminalOutputUpdate,
   type TerminalSessionState,
-} from "@t3tools/client-runtime/state/terminal";
+} from "@marp/client-runtime/state/terminal";
 import {
+  CircleStop,
   Plus,
   Square,
   SquareSplitHorizontal,
@@ -28,8 +29,8 @@ import {
   type ResolvedKeybindingsConfig,
   type ScopedThreadRef,
   type ThreadId,
-} from "@t3tools/contracts";
-import { getTerminalLabel } from "@t3tools/shared/terminalLabels";
+} from "@marp/contracts";
+import { getTerminalLabel } from "@marp/shared/terminalLabels";
 import * as Schema from "effect/Schema";
 import {
   type PointerEvent as ReactPointerEvent,
@@ -58,7 +59,7 @@ import {
 } from "~/terminal/ghostty/surface";
 import { type GhosttyColor, type GhosttyTheme } from "~/terminal/ghostty/core";
 import { useOpenInPreferredEditor } from "../editorPreferences";
-import { resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
+import { resolvePathLinkTarget } from "@marp/shared/fileLinks";
 import { isTerminalUrl } from "../terminal-links";
 import {
   isDiffToggleShortcut,
@@ -79,7 +80,10 @@ import { readLocalApi } from "~/localApi";
 import { confirmTerminalClose } from "~/lib/terminalCloseConfirm";
 import { useClientSettings } from "../hooks/useSettings";
 import { useLocalStorage } from "../hooks/useLocalStorage";
-import { attachedTerminalSessionAtom } from "../state/terminalSessions";
+import {
+  attachedTerminalSessionAtom,
+  useThreadRunningTerminalIds,
+} from "../state/terminalSessions";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { serverEnvironment } from "../state/server";
 import { previewEnvironment } from "../state/preview";
@@ -617,7 +621,7 @@ function TerminalSessionViewport({
       openTerminalLinkInPreview({ url, threadRef, openPreview, fallbackToBrowser, forceBrowser }),
   );
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- sets the terminal input's readOnly from the operate grant and consumes a pending focus request
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- sets the terminal input's readOnly from the operate grant and consumes a pending focus request
   useLayoutEffect(() => {
     if (terminalRef.current) terminalRef.current.input.readOnly = !canOperateTerminal;
     if (canOperateTerminal && visibleRef.current)
@@ -626,14 +630,14 @@ function TerminalSessionViewport({
 
   // Links re-read the grant on activation; only the hovered link's styling needs a nudge.
   const linkActivationScopeRef = useRef(canOpenHostEditor);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- refreshes link activation styling on the imperative terminal surface when the editor grant changes
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- refreshes link activation styling on the imperative terminal surface when the editor grant changes
   useEffect(() => {
     if (linkActivationScopeRef.current === canOpenHostEditor) return;
     linkActivationScopeRef.current = canOpenHostEditor;
     terminalRef.current?.refreshLinkActivation();
   }, [canOpenHostEditor]);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- pushes visibility into the terminal surface before paint and consumes focus requests made while hidden
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- pushes visibility into the terminal surface before paint and consumes focus requests made while hidden
   useLayoutEffect(() => {
     visibleRef.current = visible;
     terminalRef.current?.setVisible(visible);
@@ -641,7 +645,7 @@ function TerminalSessionViewport({
     if (visible) consumePendingTerminalFocus(threadRef, terminalId);
   }, [terminalId, threadRef, visible]);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- applies font family and size changes to the live Ghostty terminal surface
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- applies font family and size changes to the live Ghostty terminal surface
   useEffect(() => {
     const current = terminalFontRef.current;
     if (current.family === terminalFontFamily && current.size === terminalFontSize) return;
@@ -649,7 +653,7 @@ function TerminalSessionViewport({
     void terminalRef.current?.setFont(terminalFontOptions(terminalFontFamily, terminalFontSize));
   }, [terminalFontFamily, terminalFontSize]);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- creates the Ghostty terminal in the mount node and subscribes it to the terminal session
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- creates the Ghostty terminal in the mount node and subscribes it to the terminal session
   useEffect(() => {
     const mount = containerRef.current;
     if (!mount) return;
@@ -1322,6 +1326,7 @@ function TerminalSidebarGroup({
   terminalLabelById,
   closeShortcutLabel,
   canOperateTerminal,
+  runningTerminalIds,
   onActiveTerminalChange,
   onCloseTerminal,
 }: {
@@ -1331,6 +1336,7 @@ function TerminalSidebarGroup({
   terminalLabelById: ReadonlyMap<string, string>;
   closeShortcutLabel: string | undefined;
   canOperateTerminal: boolean;
+  runningTerminalIds: ReadonlyArray<string>;
   onActiveTerminalChange: (terminalId: string) => void;
   onCloseTerminal: (terminalId: string) => void;
 }) {
@@ -1403,6 +1409,12 @@ function TerminalSidebarGroup({
                 onClick={() => onActiveTerminalChange(terminalId)}
               >
                 <span className="truncate">{terminalLabel}</span>
+                {runningTerminalIds.includes(terminalId) ? (
+                  <>
+                    <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-success" />
+                    <span className="sr-only">Process running</span>
+                  </>
+                ) : null}
               </button>
             </div>
           );
@@ -1442,6 +1454,11 @@ export default function ThreadTerminalDrawer({
   terminalLaunchLocationsById,
 }: ThreadTerminalDrawerProps) {
   const canOperateTerminal = useEnvironmentScope(threadRef.environmentId, AuthTerminalOperateScope);
+  const runningTerminalIds = useThreadRunningTerminalIds({
+    environmentId: threadRef.environmentId,
+    threadId,
+  });
+  const writeToTerminal = useAtomCommand(terminalEnvironment.write, { reportFailure: false });
   const terminalArea = workspaceAreaProps("terminal", 5, "Terminal");
   const isPanel = mode === "panel";
   const [advancedTypography] = useLocalStorage(
@@ -1621,6 +1638,23 @@ export default function ThreadTerminalDrawer({
     if (!canOperateTerminal) return;
     onNewTerminal();
   };
+  const activeTerminalRunning = runningTerminalIds.includes(resolvedActiveTerminalId);
+  // No signal RPC exists, so Stop types Ctrl+C into the terminal like the user would.
+  const stopActiveTerminalProcess = () => {
+    if (!canOperateTerminal || !activeTerminalRunning) return;
+    const terminalId = resolvedActiveTerminalId;
+    const label = terminalLabelById.get(terminalId) ?? getTerminalLabel(terminalId);
+    void writeToTerminal({
+      environmentId: threadRef.environmentId,
+      input: { threadId, terminalId, data: "\x03" },
+    }).then((result) => {
+      toastManager.add(
+        result._tag === "Success"
+          ? { type: "success", title: `Sent Ctrl+C to ${label}` }
+          : { type: "error", title: `Could not stop ${label}` },
+      );
+    });
+  };
   const confirmCloseTerminal = (terminalId: string) => {
     if (!canOperateTerminal) return;
     const label = terminalLabelById.get(terminalId) ?? getTerminalLabel(terminalId);
@@ -1700,7 +1734,7 @@ export default function ThreadTerminalDrawer({
       if (heightBudgetChanged) setDrawerLayout(layout);
     },
   );
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- measures the drawer before visible paint and observes window and chat column resizes while visible
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- measures the drawer before visible paint and observes window and chat column resizes while visible
   useLayoutEffect(() => {
     if (!visible) {
       return;
@@ -1787,6 +1821,19 @@ export default function ThreadTerminalDrawer({
       {!hasTerminalSidebar && (
         <div className="pointer-events-none absolute right-2 top-2 z-20">
           <div className="pointer-events-auto inline-flex items-center overflow-hidden rounded-md border border-border/80 bg-background shadow-xs">
+            {activeTerminalRunning ? (
+              <>
+                <TerminalActionButton
+                  disabled={!canOperateTerminal}
+                  className="p-1 text-foreground/90 transition-colors hover:bg-accent"
+                  onClick={stopActiveTerminalProcess}
+                  label="Stop process (Ctrl+C)"
+                >
+                  <CircleStop className="size-3.25" />
+                </TerminalActionButton>
+                <div className="h-4 w-px bg-border/80" />
+              </>
+            ) : null}
             <TerminalActionButton
               disabled={!canOperateTerminal}
               className={`p-1 text-foreground/90 transition-colors ${
@@ -1863,6 +1910,16 @@ export default function ThreadTerminalDrawer({
             <aside className="flex w-36 min-w-36 flex-col border border-border/70 bg-muted/10">
               <div className="flex h-[22px] items-stretch justify-end border-b border-border/70">
                 <div className="inline-flex h-full items-stretch">
+                  {activeTerminalRunning ? (
+                    <TerminalActionButton
+                      disabled={!canOperateTerminal}
+                      className="inline-flex h-full items-center px-1 text-foreground/90 transition-colors hover:bg-accent/70"
+                      onClick={stopActiveTerminalProcess}
+                      label="Stop process (Ctrl+C)"
+                    >
+                      <CircleStop className="size-3.25" />
+                    </TerminalActionButton>
+                  ) : null}
                   <TerminalActionButton
                     disabled={!canOperateTerminal}
                     className={`inline-flex h-full items-center px-1 text-foreground/90 transition-colors ${
@@ -1916,6 +1973,7 @@ export default function ThreadTerminalDrawer({
                     terminalLabelById={terminalLabelById}
                     closeShortcutLabel={closeShortcutLabel}
                     canOperateTerminal={canOperateTerminal}
+                    runningTerminalIds={runningTerminalIds}
                     onActiveTerminalChange={onActiveTerminalChange}
                     onCloseTerminal={confirmCloseTerminal}
                   />

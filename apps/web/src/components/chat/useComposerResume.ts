@@ -3,13 +3,13 @@ import {
   type ProviderInteractionMode,
   type RunId,
   type RuntimeMode,
-} from "@t3tools/contracts";
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
+} from "@marp/contracts";
+import type { EnvironmentThreadShell } from "@marp/client-runtime/state/shell";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@marp/client-runtime/state/runtime";
 import { useState } from "react";
 import { newMessageId } from "~/lib/utils";
 import type { ComposerHandleRef } from "../../composerHandleContext";
@@ -20,12 +20,16 @@ import { draftSendState } from "./chatViewSend";
 import type { useTimelineFollow } from "./useTimelineFollow";
 import type { useUsageLimitsPanel } from "./useUsageLimitsPanel";
 
+const RESUME_PROMPT = "Continue where you left off.";
+
 interface ComposerResumeInput {
   readonly environmentId: EnvironmentId;
   readonly routeThreadKey: string;
   readonly currentRouteThreadKeyRef: { readonly current: string | null };
   readonly activeThread: EnvironmentThreadShell | undefined;
   readonly resumableRunId: RunId | null;
+  /** The failed turn's prompt, when the server cannot resume it but a resend is safe. */
+  readonly retryPrompt: string | null;
   readonly hasHeldQueuedRuns: boolean;
   readonly isSendBusy: boolean;
   readonly isRevertingCheckpoint: boolean;
@@ -49,7 +53,8 @@ interface ComposerResumeInput {
 
 /**
  * Resumes an interrupted run ("Continue where you left off.") and/or releases the turns held
- * in its queue. Shares the per-route send lock with the composer's send paths.
+ * in its queue, or retries a failed turn by sending its prompt again. Shares the per-route send
+ * lock with the composer's send paths.
  */
 export function useComposerResume(input: ComposerResumeInput) {
   const {
@@ -58,6 +63,7 @@ export function useComposerResume(input: ComposerResumeInput) {
     currentRouteThreadKeyRef,
     activeThread,
     resumableRunId,
+    retryPrompt,
     hasHeldQueuedRuns,
     isSendBusy,
     isRevertingCheckpoint,
@@ -84,10 +90,10 @@ export function useComposerResume(input: ComposerResumeInput) {
   const isResuming = resumingThreadKeys.has(routeThreadKey);
   const { sendInFlight: sendInFlightRef } = draftSendState(routeThreadKey);
 
-  const onResume = async () => {
+  const run = async (mode: "resume" | "retry") => {
     if (
       !activeThread ||
-      (resumableRunId === null && !hasHeldQueuedRuns) ||
+      (mode === "resume" ? resumableRunId === null && !hasHeldQueuedRuns : retryPrompt === null) ||
       isSendBusy ||
       isResuming ||
       isRevertingCheckpoint ||
@@ -103,7 +109,7 @@ export function useComposerResume(input: ComposerResumeInput) {
     setThreadError(threadId, null);
     // Commands settle into a result, so this always runs.
     const resume = async () => {
-      if (resumableRunId === null) {
+      if (mode === "resume" && resumableRunId === null) {
         return resumeThreadQueue({ environmentId, input: { threadId } });
       }
       const createdAt = new Date().toISOString();
@@ -122,12 +128,14 @@ export function useComposerResume(input: ComposerResumeInput) {
         environmentId,
         input: {
           threadId,
-          manualContinuationOfRunId: resumableRunId,
+          ...(mode === "resume" && resumableRunId !== null
+            ? { manualContinuationOfRunId: resumableRunId }
+            : {}),
           ...(modelSelection ? { modelSelection } : {}),
           message: {
             messageId: newMessageId(),
             role: "user",
-            text: "Continue where you left off.",
+            text: mode === "retry" && retryPrompt !== null ? retryPrompt : RESUME_PROMPT,
             attachments: [],
           },
           runtimeMode,
@@ -135,7 +143,9 @@ export function useComposerResume(input: ComposerResumeInput) {
           dispatchMode: "start",
         },
       });
-      if (turnResult._tag === "Failure" || !hasHeldQueuedRuns) return turnResult;
+      if (turnResult._tag === "Failure" || mode === "retry" || !hasHeldQueuedRuns) {
+        return turnResult;
+      }
       clearUsageLimitsFor(routeThreadKey);
       return resumeThreadQueue({ environmentId, input: { threadId } });
     };
@@ -145,7 +155,11 @@ export function useComposerResume(input: ComposerResumeInput) {
         const error = squashAtomCommandFailure(result);
         setThreadError(
           threadId,
-          error instanceof Error ? error.message : "Could not resume thread.",
+          error instanceof Error
+            ? error.message
+            : mode === "retry"
+              ? "Could not retry the turn."
+              : "Could not resume thread.",
         );
       }
     } else {
@@ -160,5 +174,9 @@ export function useComposerResume(input: ComposerResumeInput) {
     });
   };
 
-  return { onResume, isResuming };
+  return {
+    onResume: () => run("resume"),
+    onRetryFailedTurn: () => run("retry"),
+    isResuming,
+  };
 }

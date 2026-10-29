@@ -1417,3 +1417,105 @@ export function sortScopedProjectsForSidebar<
       left.id.localeCompare(right.id),
   );
 }
+
+export type SidebarRowKeyCommand =
+  | "open"
+  | "toggle-select"
+  | "extend-up"
+  | "extend-down"
+  | "settle"
+  | "snooze"
+  | "pin"
+  | "rename"
+  | "delete"
+  | "clear-selection";
+
+/** Single-key commands on a focused thread row. Ctrl, Alt and Meta leave every key to others. */
+export function resolveSidebarRowKeyCommand(
+  event: Pick<KeyboardEvent, "key" | "shiftKey" | "altKey" | "ctrlKey" | "metaKey" | "isComposing">,
+): SidebarRowKeyCommand | null {
+  if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return null;
+  if (event.shiftKey) {
+    if (event.key === "ArrowUp") return "extend-up";
+    if (event.key === "ArrowDown") return "extend-down";
+    return null;
+  }
+  switch (event.key) {
+    case "Enter":
+      return "open";
+    case " ":
+      return "toggle-select";
+    case "s":
+    case "S":
+      return "settle";
+    case "z":
+    case "Z":
+      return "snooze";
+    case "p":
+    case "P":
+      return "pin";
+    case "F2":
+      return "rename";
+    case "Backspace":
+    case "Delete":
+      return "delete";
+    case "Escape":
+      return "clear-selection";
+    default:
+      return null;
+  }
+}
+
+/**
+ * The project whose place a dragged folder takes when dropped before or after
+ * `targetKey`, which is the target `reorderProjects` expects; null when the drop
+ * would leave the order as it is.
+ */
+export function resolveProjectFolderDropTarget(input: {
+  readonly order: readonly string[];
+  readonly draggedKey: string;
+  readonly targetKey: string;
+  readonly placement: "before" | "after";
+}): string | null {
+  const from = input.order.indexOf(input.draggedKey);
+  const to = input.order.indexOf(input.targetKey);
+  if (from < 0 || to < 0 || from === to) return null;
+  const landing =
+    input.placement === "before" ? (from < to ? to - 1 : to) : from < to ? to : to + 1;
+  if (landing === from) return null;
+  return input.order[landing] ?? null;
+}
+
+/**
+ * What the collapsed rail shows: how many threads need the user, and per
+ * project its open threads with the dot a closed folder would carry. Settled
+ * and snoozed threads stay out, as they stay out of the inbox.
+ */
+export function resolveCollapsedSidebarRail<
+  TGroup extends {
+    readonly memberProjectRefs: ReadonlyArray<{
+      readonly environmentId: EnvironmentId;
+      readonly projectId: string;
+    }>;
+  },
+  TThread extends ThreadStatusInput &
+    SidebarThreadStatusInput &
+    ThreadSnoozeShell &
+    Pick<SidebarThreadSummary, "environmentId" | "projectId" | "settledOverride">,
+>(input: {
+  readonly groups: readonly TGroup[];
+  readonly threads: readonly TThread[];
+  now: string;
+}) {
+  const open = input.threads.filter(
+    (thread) =>
+      thread.settledOverride !== "settled" && !effectiveSnoozed(thread, { now: input.now }),
+  );
+  return {
+    needsYouCount: open.filter((thread) => resolveSidebarNeedsYouReason(thread) !== null).length,
+    projects: groupSidebarThreadsByProject(input.groups, open, true).map((folder) => ({
+      ...folder,
+      dot: resolveSidebarFolderDot(folder.threads),
+    })),
+  };
+}

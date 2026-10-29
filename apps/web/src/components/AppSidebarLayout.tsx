@@ -39,6 +39,7 @@ import {
 import { BackgroundThreadAnnouncer } from "./BackgroundThreadAnnouncer";
 import ThreadSidebar from "./Sidebar";
 import { SidebarBrandWidthProbe } from "./sidebar/SidebarChrome";
+import { SidebarCollapsedRail } from "./sidebar/SidebarCollapsedRail";
 import { isAppModalPage } from "./sidebar/mainAppLocation";
 import type { SidebarRouteReveal } from "./sidebar/routeReveal";
 import {
@@ -313,11 +314,10 @@ function SidebarControl() {
   const router = useRouter();
   const usagePageOpen = useLocation({ select: (location) => location.pathname === "/usage" });
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
-  const { toggleSidebar, isMobile, mobileSheetMounted, open } = useSidebar();
-  // An open desktop sidebar carries its own collapse button in its header, so this
-  // floating one is only the way back. It stays mounted (just transparent) because
-  // collapsing moves focus to the trigger outside the sidebar.
-  const showsFloatingTrigger = isMobile ? !mobileSheetMounted : !open;
+  const { toggleSidebar, isMobile, mobileSheetMounted } = useSidebar();
+  // On desktop the sidebar header and the collapsed rail carry the toggle, so this
+  // floating one only opens the mobile sheet. It stays mounted for the shell commands.
+  const showsFloatingTrigger = isMobile && !mobileSheetMounted;
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle", {
     context: { usagePageOpen },
   });
@@ -399,6 +399,26 @@ function SidebarControl() {
   );
 }
 
+/**
+ * A collapsed desktop sidebar shows the 56px rail. The full list stays mounted but
+ * hidden, so its shortcuts (next thread, jump, settle and advance) keep working.
+ */
+function ThreadSidebarBody(props: {
+  routeReveal: SidebarRouteReveal;
+  underWindowControls: boolean;
+}) {
+  const { isMobile, open } = useSidebar();
+  const railShown = !isMobile && !open;
+  return (
+    <>
+      {railShown ? <SidebarCollapsedRail underWindowControls={props.underWindowControls} /> : null}
+      <div className="flex min-h-0 w-full flex-1 flex-col" hidden={railShown} inert={railShown}>
+        <ThreadSidebar routeReveal={props.routeReveal} />
+      </div>
+    </>
+  );
+}
+
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const sidebarArea = workspaceAreaProps("sidebar", 0, "Threads");
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
@@ -436,6 +456,8 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   ) as CSSProperties;
   const sidebarProviderStyle = {
     "--sidebar-width": `${clampThreadSidebarWidth(sidebarWidth, sidebarMinimumWidth, sidebarMaximumWidth)}px`,
+    // The inset sidebar adds its padding, which makes the collapsed rail 56px wide.
+    "--sidebar-width-icon": "2.5rem",
     "--panel-animation-duration": `${panelAnimationDurationMs}ms`,
     ...windowControlsInsetStyle,
   } as CSSProperties;
@@ -452,7 +474,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
         <Sidebar
           side="left"
           variant="inset"
-          collapsible="offcanvas"
+          collapsible="icon"
           data-app-sidebar=""
           {...sidebarArea}
           role="navigation"
@@ -468,7 +490,10 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           }}
           style={windowControlsInsetStyle}
         >
-          <ThreadSidebar routeReveal={sidebarRouteReveal} />
+          <ThreadSidebarBody
+            routeReveal={sidebarRouteReveal}
+            underWindowControls={isMacosDesktop && !isWindowFullscreen}
+          />
           <SidebarRail onDoubleClick={resetSidebarWidth} />
         </Sidebar>
         {children}

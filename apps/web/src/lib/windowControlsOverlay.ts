@@ -7,8 +7,13 @@ import { isMacPlatform, isWindowsPlatform } from "./utils";
 const WCO_CLASS_NAME = "wco";
 const ELECTRON_CLASS_NAME = "electron";
 const ELECTRON_WINDOWS_CLASS_NAME = "electron-windows";
-// macOS has no overlay API; traffic lights stay inside this topbar at every zoom level.
-const MACOS_TITLEBAR_HEIGHT = 52;
+const CUSTOM_WINDOW_CONTROLS_CLASS_NAME = "custom-window-controls";
+// The desktop window controls (macOS traffic lights, WindowControls elsewhere) stay inside this
+// topbar at every zoom level, drawn over the page like a native caption strip.
+const DESKTOP_TITLEBAR_HEIGHT = 52;
+
+/** Windows and Linux desktop windows have no native caption buttons; WindowControls draws them. */
+export const hasCustomWindowControls = isElectron && !isMacPlatform(navigator.platform);
 
 interface WindowControlsOverlayLike {
   readonly visible: boolean;
@@ -29,8 +34,9 @@ function getWindowControlsOverlay(): WindowControlsOverlayLike | null {
   return (navigator as NavigatorWithWindowControlsOverlay).windowControlsOverlay ?? null;
 }
 
-/** Height of the native caption strip drawn over the page, or 0 when the window has none. */
+/** Height of the window-controls strip drawn over the page, or 0 when the window has none. */
 export function windowControlsOverlayHeight(): number {
+  if (hasCustomWindowControls) return DESKTOP_TITLEBAR_HEIGHT;
   const overlay = getWindowControlsOverlay();
   return overlay?.visible ? overlay.getTitlebarAreaRect().height : 0;
 }
@@ -68,7 +74,7 @@ function subscribeTitlebarArea(listener: () => void): () => void {
 }
 
 function getNativeTitlebarHeight(): number {
-  if (isElectron && isMacPlatform(navigator.platform)) return MACOS_TITLEBAR_HEIGHT;
+  if (isElectron) return DESKTOP_TITLEBAR_HEIGHT;
   const overlay = getWindowControlsOverlay();
   return overlay?.visible ? overlay.getTitlebarAreaRect().bottom : 0;
 }
@@ -77,14 +83,12 @@ export function useNativeTitlebarHeight(): number {
   return useSyncExternalStore(subscribeTitlebarArea, getNativeTitlebarHeight, () => 0);
 }
 
-function getElectronPlatformClassNames(
-  platform: string,
-):
-  | readonly [typeof ELECTRON_CLASS_NAME]
-  | readonly [typeof ELECTRON_CLASS_NAME, typeof ELECTRON_WINDOWS_CLASS_NAME] {
-  return isWindowsPlatform(platform)
-    ? [ELECTRON_CLASS_NAME, ELECTRON_WINDOWS_CLASS_NAME]
-    : [ELECTRON_CLASS_NAME];
+function getElectronPlatformClassNames(platform: string): readonly string[] {
+  return [
+    ELECTRON_CLASS_NAME,
+    ...(isWindowsPlatform(platform) ? [ELECTRON_WINDOWS_CLASS_NAME] : []),
+    ...(isMacPlatform(platform) ? [] : [CUSTOM_WINDOW_CONTROLS_CLASS_NAME]),
+  ];
 }
 
 export function syncDocumentElectronPlatformClasses(platform: string): () => void {

@@ -3,13 +3,16 @@ import {
   fullAccessOverrideExplanation,
 } from "@marp/client-runtime/state/thread-requests";
 import { HandIcon } from "lucide-react";
-import { memo, use } from "react";
+import { memo, use, useEffect, useEffectEvent } from "react";
 import { type PendingApproval } from "../../session-logic";
 import { Badge } from "../ui/badge";
+import { Kbd } from "../ui/kbd";
 import { InlineButton } from "../ui/button";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { ComposerPendingApprovalActions } from "./ComposerPendingApprovalActions";
 import { ToolActivityIconView, type WorkEntryIconName } from "./TimelineToolActivityIcon";
+import { BackgroundThreadContext } from "./backgroundThread";
+import { approvalShortcutDecision, approvalShortcuts } from "./decisionCardKeys";
 import { TimelineRowCtx } from "./timelineRowContext";
 
 const APPROVAL_PRESENTATION = {
@@ -45,9 +48,35 @@ export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalR
 }: {
   approval: PendingApproval;
 }) {
-  const { respondingRequestIds, canOperateThread, onRespondToApproval } = use(TimelineRowCtx);
+  const { pendingApprovals, respondingRequestIds, canOperateThread, onRespondToApproval } =
+    use(TimelineRowCtx);
+  const backgroundThread = use(BackgroundThreadContext);
   const presentation = APPROVAL_PRESENTATION[approval.requestKind];
   const canRespond = approval.responseCapability === "live";
+  const isResponding = respondingRequestIds.includes(approval.requestId);
+  // Only the oldest waiting approval answers to Enter and Esc.
+  const shortcuts = approvalShortcuts(approval.options);
+  const ownsShortcuts =
+    (shortcuts.approve || shortcuts.decline) &&
+    canRespond &&
+    canOperateThread &&
+    onRespondToApproval !== undefined &&
+    !backgroundThread &&
+    !isResponding &&
+    pendingApprovals.keys().next().value === approval.requestId;
+  const respondFromShortcut = useEffectEvent((event: KeyboardEvent) => {
+    const decision = approvalShortcutDecision(event, approval.options);
+    if (decision === null || onRespondToApproval === undefined) return;
+    event.preventDefault();
+    void onRespondToApproval(approval.requestId, decision);
+  });
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- listens on the document for Enter and Esc while this card owns the decision keys
+  useEffect(() => {
+    if (!ownsShortcuts) return;
+    const handler = (event: KeyboardEvent) => respondFromShortcut(event);
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [ownsShortcuts]);
   return (
     <div
       role="group"
@@ -88,6 +117,21 @@ export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalR
           {approval.reason ? (
             <span className="select-text wrap-anywhere">{approval.reason}</span>
           ) : null}
+          {ownsShortcuts ? (
+            <span className="flex items-center gap-1.5">
+              {shortcuts.approve ? (
+                <span>
+                  <Kbd>Enter</Kbd> approves
+                </span>
+              ) : null}
+              {shortcuts.approve && shortcuts.decline ? <span aria-hidden>·</span> : null}
+              {shortcuts.decline ? (
+                <span>
+                  <Kbd>Esc</Kbd> declines
+                </span>
+              ) : null}
+            </span>
+          ) : null}
           {canRespond ? null : (
             <span className="text-warning-foreground">
               Provider process is gone. Interrupt or restart the run to respond.
@@ -114,7 +158,7 @@ export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalR
             <ComposerPendingApprovalActions
               requestId={approval.requestId}
               disabled={!canOperateThread}
-              isResponding={respondingRequestIds.includes(approval.requestId)}
+              isResponding={isResponding}
               canRespond={canRespond}
               options={approval.options}
               onRespondToApproval={onRespondToApproval}

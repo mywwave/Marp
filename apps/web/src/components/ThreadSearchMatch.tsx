@@ -3,7 +3,7 @@ import {
   splitSearchText,
   type SearchMatchHint,
   type SearchRange,
-} from "@t3tools/shared/paletteSearch";
+} from "@marp/shared/paletteSearch";
 
 /** `text` with each range in semibold foreground. */
 function HighlightedSearchText(props: { text: string; ranges: ReadonlyArray<SearchRange> }) {
@@ -16,6 +16,16 @@ function HighlightedSearchText(props: { text: string; ranges: ReadonlyArray<Sear
     ) : (
       part.text
     ),
+  );
+}
+
+/** `text` with the words of `query` it contains highlighted, such as a matched thread title. */
+export function SearchQueryHighlight(props: { text: string; query: string }) {
+  return (
+    <HighlightedSearchText
+      text={props.text}
+      ranges={findSearchTokenRanges(props.text, props.query)}
+    />
   );
 }
 

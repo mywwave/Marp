@@ -1,6 +1,6 @@
 import { assert, describe, it } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@marp/shared/HostProcess";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Effect from "effect/Effect";
@@ -8,12 +8,13 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import { vi } from "vite-plus/test";
 
-const { focusedWebContents, ownerWindow } = vi.hoisted(() => ({
+const { focusedWebContents, ownerWindow, webContentsById } = vi.hoisted(() => ({
   focusedWebContents: vi.fn(),
   ownerWindow: vi.fn(),
+  webContentsById: vi.fn(),
 }));
 vi.mock("electron", () => ({
-  webContents: { getFocusedWebContents: focusedWebContents },
+  webContents: { getFocusedWebContents: focusedWebContents, fromId: webContentsById },
   BrowserWindow: { fromWebContents: ownerWindow },
 }));
 
@@ -24,6 +25,7 @@ import * as DesktopAppSettings from "../../settings/DesktopAppSettings.ts";
 import * as ElectronDialog from "../../electron/ElectronDialog.ts";
 import * as ElectronWindow from "../../electron/ElectronWindow.ts";
 import {
+  controlWindow,
   getLocalEnvironmentBootstraps,
   getRelayTelemetryEnabled,
   pickProjectFavicon,
@@ -183,7 +185,7 @@ describe("getRelayTelemetryEnabled", () => {
       assert.isFalse(
         yield* getRelayTelemetryEnabled.handler().pipe(
           Effect.provideService(HostProcess.Environment, {
-            T3CODE_TELEMETRY_ENABLED: "false",
+            MARP_TELEMETRY_ENABLED: "false",
           }),
         ),
       );
@@ -192,6 +194,56 @@ describe("getRelayTelemetryEnabled", () => {
           .handler()
           .pipe(Effect.provideService(HostProcess.Environment, {})),
       );
+    }),
+  );
+});
+
+describe("controlWindow", () => {
+  const makeWindow = (state: { maximized?: boolean; fullScreen?: boolean } = {}) => ({
+    isDestroyed: () => false,
+    isMaximized: () => state.maximized ?? false,
+    isFullScreen: () => state.fullScreen ?? false,
+    minimize: vi.fn(),
+    maximize: vi.fn(),
+    unmaximize: vi.fn(),
+    setFullScreen: vi.fn(),
+    close: vi.fn(),
+  });
+  const control = (window: ReturnType<typeof makeWindow>, action: string) => {
+    const sender = { id: 7 };
+    webContentsById.mockImplementation((id: number) => (id === 7 ? sender : undefined));
+    ownerWindow.mockImplementation((contents: unknown) => (contents === sender ? window : null));
+    return controlWindow.handler(action, { sender });
+  };
+
+  it.effect("toggles maximize, leaving fullscreen before unmaximizing", () =>
+    Effect.gen(function* () {
+      const normal = makeWindow();
+      yield* control(normal, "toggleMaximize");
+      assert.equal(normal.maximize.mock.calls.length, 1);
+
+      const maximized = makeWindow({ maximized: true });
+      yield* control(maximized, "toggleMaximize");
+      assert.equal(maximized.unmaximize.mock.calls.length, 1);
+
+      const fullScreen = makeWindow({ maximized: true, fullScreen: true });
+      yield* control(fullScreen, "toggleMaximize");
+      assert.deepEqual(fullScreen.setFullScreen.mock.calls, [[false]]);
+      assert.equal(fullScreen.unmaximize.mock.calls.length, 0);
+    }),
+  );
+
+  it.effect("minimizes and closes only the calling window", () =>
+    Effect.gen(function* () {
+      const window = makeWindow();
+      yield* control(window, "minimize");
+      yield* control(window, "close");
+      assert.equal(window.minimize.mock.calls.length, 1);
+      assert.equal(window.close.mock.calls.length, 1);
+
+      webContentsById.mockReturnValue(undefined);
+      yield* controlWindow.handler("close", { sender: { id: 8 } });
+      assert.equal(window.close.mock.calls.length, 1);
     }),
   );
 });
@@ -274,7 +326,7 @@ it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-remote-editors-" });
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "marp-remote-editors-" });
       for (const app of ["Cursor", "Visual Studio Code", "WebStorm"]) {
         const executable = path.join(
           home,

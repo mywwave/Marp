@@ -123,7 +123,19 @@ async function persistSidebarOpen(open: boolean) {
 }
 
 // An offcanvas sidebar turns inert once collapsed, which drops focus to the body.
+// An icon sidebar swaps its content for a rail, whose trigger takes the focus.
 function moveFocusOutOfCollapsingSidebar() {
+  const iconSidebar = document.activeElement?.closest<HTMLElement>(
+    '[data-slot="sidebar"][data-collapsible-mode="icon"]',
+  );
+  if (iconSidebar) {
+    requestAnimationFrame(() =>
+      iconSidebar
+        .querySelector<HTMLElement>('[data-sidebar="trigger"]')
+        ?.focus({ preventScroll: true }),
+    );
+    return;
+  }
   const sidebar = document.activeElement?.closest<HTMLElement>(
     '[data-slot="sidebar"][data-collapsible-mode="offcanvas"]',
   );

@@ -1,4 +1,4 @@
-import { PanelBottomIcon, PanelRightIcon, SquareMenuIcon } from "lucide-react";
+import { InfoIcon, PanelBottomIcon, PanelRightIcon } from "lucide-react";
 import { Maximize2, Minimize2 } from "lucide";
 import { MorphIcon } from "~/components/MorphIcon";
 import { memo, type ReactNode } from "react";
@@ -54,11 +54,11 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
       className="relative shrink-0 [-webkit-app-region:no-drag]"
       pressed={threadPanelOpen}
       onPressedChange={threadPanelPresentation === "popover" ? undefined : onToggleThreadPanel}
-      aria-label="Toggle thread details panel"
+      aria-label="Thread details"
       variant="toolbar"
       size="sm"
     >
-      <SquareMenuIcon className="size-4" />
+      <InfoIcon className="size-4" />
     </Toggle>
   );
   const threadPanelControl = (
@@ -71,7 +71,7 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
         )}
       </TooltipTrigger>
       <TooltipPopup side="bottom">
-        Toggle thread details
+        Thread details
         {threadPanelShortcutLabel ? ` (${threadPanelShortcutLabel})` : ""}
       </TooltipPopup>
     </Tooltip>
@@ -134,9 +134,11 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
 
 export const RightPanelMaximizeControl = memo(function RightPanelMaximizeControl({
   maximized,
+  shortcutLabel,
   onToggle,
 }: {
   maximized: boolean;
+  shortcutLabel: string | null;
   onToggle: () => void;
 }) {
   const label = maximized ? "Restore panel size" : "Maximize panel";
@@ -156,7 +158,10 @@ export const RightPanelMaximizeControl = memo(function RightPanelMaximizeControl
           </Toggle>
         }
       />
-      <TooltipPopup side="bottom">{label}</TooltipPopup>
+      <TooltipPopup side="bottom">
+        {label}
+        {shortcutLabel ? ` (${shortcutLabel})` : ""}
+      </TooltipPopup>
     </Tooltip>
   );
 });
@@ -165,7 +170,7 @@ export const RightPanelMaximizeControl = memo(function RightPanelMaximizeControl
 export function ThreadPanelHeaderControl(props: PanelLayoutControlsProps) {
   return (
     <div
-      className="absolute top-[var(--workspace-controls-top)] right-[calc(env(safe-area-inset-right)+0.75rem)] z-50 flex h-[var(--workspace-topbar-height)] items-center [-webkit-app-region:no-drag]"
+      className="absolute inset-y-0 right-[calc(env(safe-area-inset-right)+0.75rem)] z-50 flex items-center [-webkit-app-region:no-drag]"
       data-workspace-titlebar-controls
     >
       <PanelLayoutControls {...props} showTerminalControl={false} showRightPanelControl={false} />
@@ -179,6 +184,7 @@ export function WorkspaceTitlebarControls(props: {
   readonly rightPanelOpen: boolean;
   readonly animationsActive: boolean;
   readonly maximized: boolean;
+  readonly maximizeShortcutLabel: string | null;
   readonly onToggleMaximized: () => void;
   readonly children: ReactNode;
 }) {
@@ -202,6 +208,7 @@ export function WorkspaceTitlebarControls(props: {
         >
           <RightPanelMaximizeControl
             maximized={props.maximized}
+            shortcutLabel={props.maximizeShortcutLabel}
             onToggle={props.onToggleMaximized}
           />
         </span>

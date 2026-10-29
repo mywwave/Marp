@@ -295,7 +295,7 @@ const compactDiffCountFormat = new Intl.NumberFormat("en", {
   maximumFractionDigits: 1,
 });
 
-/** Header totals stay one short token each: 47,996 reads as 48K. */
+/** Header and details totals stay one short token each: 47,996 reads as 48K. */
 function formatCompactDiffCount(count: number): string {
   return count < 1000 ? String(count) : compactDiffCountFormat.format(count);
 }
@@ -312,10 +312,9 @@ function GitQuickActionIcon({
   if (quickAction.kind === "open_publish") return <CloudUploadIcon className={className} />;
   if (quickAction.kind === "run_pull") return <CloudDownloadIcon className={className} />;
   if (quickAction.kind === "run_action") {
-    if (quickAction.action === "commit") return <GitCommitIcon className={className} />;
-    if (quickAction.action === "push" || quickAction.action === "commit_push") {
-      return <CloudUploadIcon className={className} />;
-    }
+    // Named by the first step, like the header's Git button.
+    if (quickAction.action?.startsWith("commit")) return <GitCommitIcon className={className} />;
+    if (quickAction.action === "push") return <CloudUploadIcon className={className} />;
     return <SourceControlIcon className={className} />;
   }
   if (quickAction.label === "Commit") return <GitCommitIcon className={className} />;
@@ -1747,14 +1746,14 @@ export default function GitActionsControl({
                   : "text-muted-foreground"
               }
             >
-              +{formatDiffCount(changesTotals?.insertions ?? 0)}
+              +{formatCompactDiffCount(changesTotals?.insertions ?? 0)}
             </span>
             <span
               className={
                 changesTotals?.deletions ? "text-diff-deletion-foreground" : "text-muted-foreground"
               }
             >
-              -{formatDiffCount(changesTotals?.deletions ?? 0)}
+              −{formatCompactDiffCount(changesTotals?.deletions ?? 0)}
             </span>
           </span>
         </ThreadDetailsControl>

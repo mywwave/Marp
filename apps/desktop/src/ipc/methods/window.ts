@@ -12,11 +12,11 @@ import {
   SystemSettingsPaneSchema,
   type DesktopEnvironmentBootstrap,
   type PickedThemeFile,
-} from "@t3tools/contracts";
-import { PROJECT_FAVICON_EXTENSIONS } from "@t3tools/shared/projectFavicon";
-import { resolveEditorCommand } from "@t3tools/shared/editor";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { isRelayTracingEnabled } from "@t3tools/shared/otelEnvironment";
+} from "@marp/contracts";
+import { PROJECT_FAVICON_EXTENSIONS } from "@marp/shared/projectFavicon";
+import { resolveEditorCommand } from "@marp/shared/editor";
+import * as HostProcess from "@marp/shared/HostProcess";
+import { isRelayTracingEnabled } from "@marp/shared/otelEnvironment";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Effect from "effect/Effect";
@@ -96,6 +96,16 @@ export const getWindowFullscreenState = DesktopIpc.makeSyncIpcMethod({
     const electronWindow = yield* ElectronWindow.ElectronWindow;
     const window = yield* electronWindow.currentMainOrFirst;
     return Option.isSome(window) && window.value.isFullScreen();
+  }),
+});
+
+export const getWindowMaximizedState = DesktopIpc.makeSyncIpcMethod({
+  channel: IpcChannels.GET_WINDOW_MAXIMIZED_STATE_CHANNEL,
+  result: Schema.Boolean,
+  handler: Effect.fn("desktop.ipc.window.getWindowMaximizedState")(function* () {
+    const electronWindow = yield* ElectronWindow.ElectronWindow;
+    const window = yield* electronWindow.currentMainOrFirst;
+    return Option.isSome(window) && (window.value.isMaximized() || window.value.isFullScreen());
   }),
 });
 
@@ -373,6 +383,24 @@ export const revealWindow = DesktopIpc.makeIpcMethod({
     }
     yield* electronWindow.reveal(window.value);
   }),
+});
+
+// The renderer draws its own window controls on Windows and Linux.
+export const controlWindow = DesktopIpc.makeIpcMethod({
+  channel: IpcChannels.WINDOW_CONTROL_CHANNEL,
+  payload: Schema.Literals(["minimize", "toggleMaximize", "close"]),
+  result: Schema.Void,
+  handler: (action, event) =>
+    Effect.sync(() => {
+      const sender = event === undefined ? undefined : Electron.webContents.fromId(event.sender.id);
+      const window = sender === undefined ? null : Electron.BrowserWindow.fromWebContents(sender);
+      if (window === null || window.isDestroyed()) return;
+      if (action === "minimize") window.minimize();
+      else if (action === "close") window.close();
+      else if (window.isFullScreen()) window.setFullScreen(false);
+      else if (window.isMaximized()) window.unmaximize();
+      else window.maximize();
+    }),
 });
 
 const PICKED_THEME_FILE_MAX_BYTES = 256 * 1024;

@@ -27,6 +27,7 @@ import { useRightPanelActions } from "./chat/useRightPanelActions";
 import { type TerminalLaunchContext, useChatTerminalActions } from "./chat/useChatTerminalActions";
 import { useComposerSend } from "./chat/useComposerSend";
 import { useComposerResume } from "./chat/useComposerResume";
+import { retryablePromptForFailedTurn } from "./chat/retryFailedTurn";
 import { useImplementPlanInNewThread } from "./chat/useProposedPlanSend";
 import { ThreadFind, ThreadFindCanvas } from "./chat/ThreadFindProvider";
 import { closeThreadFind, openThreadFind, useThreadFindOpen } from "./chat/threadFindStore";
@@ -827,6 +828,10 @@ export default function ChatView(props: ChatViewProps) {
       ? run.id
       : null;
   })();
+  const failedTurnRetryPrompt =
+    isServerThread && serverProjection !== null && resumableRunId === null
+      ? retryablePromptForFailedTurn(serverProjection)
+      : null;
   const parentSubagentThreadId =
     activeThread?.lineage.relationshipToParent === "subagent"
       ? activeThread.lineage.parentThreadId
@@ -2759,12 +2764,13 @@ export default function ChatView(props: ChatViewProps) {
     setPendingServerThreadStartFromOriginByThreadId,
     scheduleComposerFocus,
   });
-  const { onResume, isResuming } = useComposerResume({
+  const { onResume, onRetryFailedTurn, isResuming } = useComposerResume({
     environmentId,
     routeThreadKey,
     currentRouteThreadKeyRef,
     activeThread,
     resumableRunId,
+    retryPrompt: failedTurnRetryPrompt,
     hasHeldQueuedRuns,
     isSendBusy,
     isRevertingCheckpoint,
@@ -2889,6 +2895,7 @@ export default function ChatView(props: ChatViewProps) {
   };
   const sendPreviewAnnotationStable = useStableCallback(sendPreviewAnnotation);
   const onComposerResumeStable = useStableCallback(onResume);
+  const onRetryFailedTurnStable = useStableCallback(onRetryFailedTurn);
   const onComposerCompactContextStable = useStableCallback(onCompactContext);
   // Read from the projection the footer renders, so the scroll below sees the new message.
   const pendingGuestMessageIds =
@@ -3190,12 +3197,14 @@ export default function ChatView(props: ChatViewProps) {
     />
   );
   const threadPanelHeaderControl = <ThreadPanelHeaderControl {...panelToggleControlProps} />;
+  const maximizeShortcutLabel = shortcutLabelForCommand(keybindings, "rightPanel.toggleMaximized");
   const panelLayoutControls = (
     <WorkspaceTitlebarControls
       showMaximizeControl={!shouldUsePlanSidebarSheet}
       rightPanelOpen={rightPanelOpen}
       animationsActive={panelAnimationsActive}
       maximized={rightPanelMaximized}
+      maximizeShortcutLabel={maximizeShortcutLabel}
       onToggleMaximized={toggleRightPanelMaximizedStable}
     >
       {panelToggleControls}
@@ -3234,12 +3243,12 @@ export default function ChatView(props: ChatViewProps) {
             "relative bg-background [[data-panel-animations=true]_&]:motion-safe:transition-[padding-left] [[data-panel-animations=true]_&]:motion-safe:duration-(--panel-animation-duration) [[data-panel-animations=true]_&]:motion-safe:ease-out",
             isElectron
               ? cn(
-                  "drag-region flex h-[var(--workspace-topbar-height)] min-h-[var(--workspace-topbar-height)] shrink-0 items-center px-3 sm:px-5",
+                  "drag-region flex h-(--workspace-sheet-header-height) min-h-(--workspace-sheet-header-height) shrink-0 items-center px-3 sm:px-5",
                   reserveTitleBarControlInset &&
                     !inlineRightPanelOwnsTitleBar &&
                     "wco:pr-(--workspace-native-controls-inset)",
                 )
-              : "flex h-[var(--workspace-topbar-height)] min-h-[var(--workspace-topbar-height)] shrink-0 items-center pl-(--workspace-gutter-start) pr-(--workspace-gutter-end)",
+              : "flex h-(--workspace-sheet-header-height) min-h-(--workspace-sheet-header-height) shrink-0 items-center pl-(--workspace-gutter-start) pr-(--workspace-gutter-end)",
             COLLAPSED_SIDEBAR_TITLEBAR_INSET_CLASS,
           )}
         >
@@ -3342,8 +3351,12 @@ export default function ChatView(props: ChatViewProps) {
               threadErrorBannerKey={threadErrorBannerKey}
               setThreadError={setThreadError}
               setThreadErrorBannerDismissTick={setThreadErrorBannerDismissTick}
-              {...(threadErrorIsServerRuntimeError && resumableRunId !== null && canOperateThread
-                ? { onRetryFailedTurn: onComposerResumeStable }
+              {...(threadErrorIsServerRuntimeError && canOperateThread
+                ? resumableRunId !== null
+                  ? { onRetryFailedTurn: onComposerResumeStable }
+                  : failedTurnRetryPrompt !== null
+                    ? { onRetryFailedTurn: onRetryFailedTurnStable }
+                    : {}
                 : {})}
             />
             <div
@@ -3449,6 +3462,7 @@ export default function ChatView(props: ChatViewProps) {
               {showScrollToBottom && !isThreadFindActive && (
                 <ScrollToEndButton
                   bottom={scrollToEndClearance + 4}
+                  newActivity={isWorking}
                   summary={scrollToEndSummary}
                   onScrollToEnd={() => scrollToEnd(true)}
                 />
@@ -3883,6 +3897,7 @@ export default function ChatView(props: ChatViewProps) {
               <div className="mr-px flex items-center gap-1">
                 <RightPanelMaximizeControl
                   maximized={rightPanelMaximized}
+                  shortcutLabel={maximizeShortcutLabel}
                   onToggle={toggleRightPanelMaximizedStable}
                 />
                 {panelToggleControls}
@@ -3897,6 +3912,7 @@ export default function ChatView(props: ChatViewProps) {
           desktopByTabId={activePreviewState.desktopByTabId}
           previewRuntimeTabId={resolvePreviewRuntimeTabId}
           terminalLabelsById={activeTerminalLabelsById}
+          runningTerminalIds={runningTerminalIds}
           onActivate={activateRightPanelSurfaceStable}
           onCloseSurface={closeRightPanelSurfaceStable}
           onRenameDevice={(surfaceId, title) => {

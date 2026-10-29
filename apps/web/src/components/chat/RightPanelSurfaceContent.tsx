@@ -7,8 +7,8 @@ import type {
   ScopedThreadRef,
   ThreadLinkedPullRequest,
   ThreadPullRequestLink,
-} from "@t3tools/contracts";
-import { scopedThreadKey } from "@t3tools/client-runtime/environment";
+} from "@marp/contracts";
+import { scopedThreadKey } from "@marp/client-runtime/environment";
 import { lazy, Suspense } from "react";
 import type { ComposerImageAttachment, DraftId } from "../../composerDraftStore";
 import type { ShortcutMatchContext } from "../../keybindings";
@@ -22,6 +22,7 @@ import { PullRequestDetailPanel } from "../pullRequest/PullRequestDetailPanel";
 import { PullRequestDetailGhost } from "../pullRequest/PullRequestGhosts";
 import { PullRequestsUnavailableState } from "../pullRequest/PullRequestsUnavailableState";
 import { ThreadPullRequestsPanel } from "../pullRequest/ThreadPullRequestsPanel";
+import { RightPanelSkeleton } from "./RightPanelSkeleton";
 
 const PreviewPanel = lazy(() =>
   import("../preview/PreviewPanel").then((module) => ({ default: module.PreviewPanel })),
@@ -81,7 +82,7 @@ export function RightPanelSurfaceContent(props: {
   switch (surface.kind) {
     case "preview":
       return (
-        <Suspense fallback={null}>
+        <Suspense fallback={<RightPanelSkeleton kind="preview" />}>
           <PreviewPanel
             mode="embedded"
             threadRef={threadRef}
@@ -103,7 +104,7 @@ export function RightPanelSurfaceContent(props: {
       );
     case "diff":
       return (
-        <Suspense fallback={null}>
+        <Suspense fallback={<RightPanelSkeleton kind="diff" />}>
           <DiffPanel
             key={scopedThreadKey(threadRef)}
             mode="embedded"
@@ -120,7 +121,7 @@ export function RightPanelSurfaceContent(props: {
         return (
           <PullRequestsUnavailableState
             title="Pull requests unavailable"
-            error="Update this environment's T3 Code server to browse pull requests."
+            error="Update this environment's Marp server to browse pull requests."
           />
         );
       }
@@ -167,7 +168,7 @@ export function RightPanelSurfaceContent(props: {
       return <ThreadPullRequestsPanel threadRef={threadRef} />;
     case "device":
       return (
-        <Suspense fallback={null}>
+        <Suspense fallback={<RightPanelSkeleton kind="device" />}>
           <DevicePanel
             mode="embedded"
             threadRef={threadRef}
@@ -187,7 +188,7 @@ export function RightPanelSurfaceContent(props: {
       const attachment = surface.kind === "file" ? surface.attachment : undefined;
       if (!attachment && (files.projectName === null || !files.workspaceRoot)) return null;
       return (
-        <Suspense fallback={null}>
+        <Suspense fallback={<RightPanelSkeleton kind="files" />}>
           <FilePreviewPanel
             key={`${props.environmentId}:${
               attachment ? `attachment:${attachment.id}` : files.workspaceRoot

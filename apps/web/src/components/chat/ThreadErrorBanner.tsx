@@ -26,6 +26,13 @@ function copyAdminRequest() {
   );
 }
 
+function copyErrorDetails(error: string) {
+  void writeTextToClipboard(error, "error details").then(
+    () => toastManager.add({ type: "success", title: "Details copied" }),
+    () => toastManager.add({ type: "error", title: "Could not copy the details" }),
+  );
+}
+
 export function getThreadErrorBannerMessage(error: string): string {
   let payload: unknown;
   try {
@@ -98,7 +105,7 @@ export const ThreadErrorBanner = memo(function ThreadErrorBanner({
   errorClass?: OrchestrationV2ProviderFailureClass | null;
   errorCode?: string | null;
   onDismiss?: () => void;
-  /** Continues the failed turn where it stopped. */
+  /** Continues the failed turn where it stopped, or sends its prompt again. */
   onRetry?: (() => void) | undefined;
 }) {
   if (!error) return null;
@@ -132,8 +139,13 @@ export const ThreadErrorBanner = memo(function ThreadErrorBanner({
             <ExpandableText text={error} collapsedText={getThreadErrorBannerMessage(error)} />
           )}
         </AlertDescription>
-        {(chatGptLimit || onDismiss || onRetry) && (
+        {(chatGptLimit || onDismiss || onRetry || errorClass) && (
           <AlertAction>
+            {errorClass && !chatGptLimit ? (
+              <Button variant="ghost" size="sm" onClick={() => copyErrorDetails(error)}>
+                Copy details
+              </Button>
+            ) : null}
             {onRetry && !chatGptLimit ? (
               <Button variant="outline" size="sm" onClick={onRetry}>
                 <RotateCcwIcon aria-hidden />

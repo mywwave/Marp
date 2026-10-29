@@ -24,6 +24,18 @@ const FOLDER_DOT_LABEL = {
   working: ", working",
 } as const;
 
+const PROJECT_DRAG_TYPE = "application/x-marp-project";
+
+export type SidebarProjectDropPlacement = "before" | "after";
+
+/** Drag a folder by its header to reorder projects; drops land before or after a header. */
+export interface SidebarProjectReorder {
+  onStart: (group: SidebarProjectSnapshot) => void;
+  onOver: (group: SidebarProjectSnapshot, placement: SidebarProjectDropPlacement) => void;
+  onDrop: () => void;
+  onEnd: () => void;
+}
+
 /** The folder's sidebar tree row; its thread rows name it as their parent. */
 export function sidebarFolderRowId(projectKey: string) {
   return `folder:${projectKey}`;
@@ -42,7 +54,10 @@ export const SidebarProjectFolderHeader = memo(function SidebarProjectFolderHead
   onToggle: (group: SidebarProjectSnapshot) => void;
   onNewThread: (group: SidebarProjectSnapshot) => void;
   onContextMenu: (group: SidebarProjectSnapshot, position: { x: number; y: number }) => void;
+  reorder?: SidebarProjectReorder | undefined;
+  dropIndicator?: SidebarProjectDropPlacement | null | undefined;
 }) {
+  const { reorder } = props;
   const { group, collapsed, hiddenThreads } = props;
   const rowId = sidebarFolderRowId(group.projectKey);
   const localLastVisitedAtById = useUiStateStore((state) => state.threadLastVisitedAtById);
@@ -70,6 +85,26 @@ export const SidebarProjectFolderHeader = memo(function SidebarProjectFolderHead
         tabIndex={-1}
         data-sidebar-row={rowId}
         aria-expanded={!collapsed}
+        draggable={reorder !== undefined}
+        onDragStart={(event) => {
+          if (!reorder) return;
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData(PROJECT_DRAG_TYPE, group.projectKey);
+          reorder.onStart(group);
+        }}
+        onDragOver={(event) => {
+          if (!reorder || !event.dataTransfer.types.includes(PROJECT_DRAG_TYPE)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+          const rect = event.currentTarget.getBoundingClientRect();
+          reorder.onOver(group, event.clientY < rect.top + rect.height / 2 ? "before" : "after");
+        }}
+        onDrop={(event) => {
+          if (!reorder || !event.dataTransfer.types.includes(PROJECT_DRAG_TYPE)) return;
+          event.preventDefault();
+          reorder.onDrop();
+        }}
+        onDragEnd={() => reorder?.onEnd()}
         onClick={() => props.onToggle(group)}
         onContextMenu={(event) => {
           event.preventDefault();
@@ -124,6 +159,16 @@ export const SidebarProjectFolderHeader = memo(function SidebarProjectFolderHead
           <EllipsisIcon aria-hidden />
         </Button>
       </span>
+      {props.dropIndicator ? (
+        // The insertion line starts where the project name does.
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute right-2 left-9 h-0.5 rounded-full bg-primary",
+            props.dropIndicator === "before" ? "-top-1.5" : "-bottom-px",
+          )}
+        />
+      ) : null}
     </li>
   );
 });
