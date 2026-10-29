@@ -335,6 +335,18 @@ describe("orchestration V2 wire projection", () => {
         newStr: "a\nnew\nnewer\nz",
       }),
     ).toMatchObject({ additions: 2, deletions: 1 });
+    // A subagent's runless edit whose result is prose, not a patch, still counts its snippets.
+    expect(
+      projectTurnItemForWire({
+        ...base,
+        runId: null,
+        type: "file_change" as const,
+        fileName: "src/main.ts",
+        diffStr: "The file src/main.ts has been updated successfully.",
+        oldStr: "a\nold\nz",
+        newStr: "a\nnew\nnewer\nz",
+      }),
+    ).toMatchObject({ additions: 2, deletions: 1 });
   });
 
   it("retains only result identities and failure metadata in live tool events", () => {

@@ -6,7 +6,11 @@ import {
   type WorkEventAction,
 } from "@marp/client-runtime/work-log/event-presentation";
 import { turnItemDetailRevision } from "@marp/client-runtime/work-log/item-detail";
-import { commandDisplayText } from "@marp/client-runtime/work-log/command-label";
+import {
+  commandDisplayText,
+  commandIntent,
+  commandSummary,
+} from "@marp/client-runtime/work-log/command-label";
 import type { FileDiffMetadata } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import { CheckIcon, ChevronRightIcon, TerminalIcon } from "lucide-react";
@@ -354,7 +358,8 @@ export function FileEditCard({
         {icon}
         <span className="flex min-w-0 items-baseline gap-1.5 text-secondary-label">
           {label}
-          {failed ? null : (
+          {/* A running edit's counts are estimates; a proposal awaiting approval shows them. */}
+          {failed || (running && footer === undefined) ? null : (
             <DiffStatLabel
               additions={counts.additions}
               deletions={created ? 0 : counts.deletions}
@@ -632,11 +637,37 @@ export function CommandCard({
         threadId={projectedItem.sourceThreadId}
         itemId={projectedItem.sourceItemId}
         source={ctx.turnItemSource?.commandOutput}
+        // Under the label column, past the icon slot, in the row or in the open card.
+        className={compact && !open ? "ms-6 mt-0.5 mb-1" : "mx-3 mb-1.5"}
+        onOpen={() => {
+          setRevealed(true);
+          onToggleExpanded();
+        }}
       />
     ) : null;
   const description = commandItem?.description?.trim();
+  // Never the raw command on the line: its description, else a few words for what it runs.
+  const intent = command ? commandIntent(command) : null;
+  const intentVerb = intent?.verbs[running ? "loading" : failed ? "error" : "completed"];
+  const summary = !command
+    ? null
+    : intentVerb === undefined
+      ? commandSummary(command)
+      : intent?.object
+        ? `${intentVerb} ${intent.object}`
+        : intentVerb;
   const header =
-    description || (running ? "Running command" : failed ? "Run command" : "Ran command");
+    description ||
+    summary ||
+    (running ? "Running command" : failed ? "Run command" : "Ran command");
+  const headerLabel = (
+    <>
+      <span className="truncate">{header}</span>
+      {description && summary ? (
+        <span className="shrink-0 text-muted-foreground">{summary}</span>
+      ) : null}
+    </>
+  );
   const exitCode = commandItem?.exitCode;
   const icon = (
     <span
@@ -682,15 +713,7 @@ export function CommandCard({
         setOpen((value) => !value);
       }}
       icon={icon}
-      label={
-        <Shimmering active={shimmer && running}>
-          {description || !command ? (
-            <span className="truncate">{header}</span>
-          ) : (
-            <span className="truncate font-mono text-xs">{command}</span>
-          )}
-        </Shimmering>
-      }
+      label={<Shimmering active={shimmer && running}>{headerLabel}</Shimmering>}
       trailing={<span className="flex shrink-0 pe-1">{status}</span>}
     />
   ) : null;
@@ -708,9 +731,7 @@ export function CommandCard({
     <>
       {icon}
       <span className="min-w-0 flex-1 truncate text-secondary-label">
-        <Shimmering active={shimmer && running}>
-          <span className="truncate">{header}</span>
-        </Shimmering>
+        <Shimmering active={shimmer && running}>{headerLabel}</Shimmering>
       </span>
       {status}
     </>

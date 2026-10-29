@@ -20,7 +20,8 @@ import { tickTextContent } from "../../lib/tickTextContent";
 import { memo, use, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { workEntryDisplayIndicatesToolFailure } from "../../session-logic";
-import { ChevronRightIcon, HourglassIcon, Minimize2Icon, XIcon } from "lucide-react";
+import { ChevronRightIcon, Minimize2Icon, XIcon } from "lucide-react";
+import { DiffStatLabel } from "./DiffStatLabel";
 import { Button } from "../ui/button";
 import { getVirtualizedScrollFadeClassName } from "../ui/scroll-area";
 import {
@@ -400,15 +401,6 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
   }
   // A failed group keeps this disclosure while an approval waits, but nothing is thinking then.
   const live = ctx.pendingApprovals.size === 0;
-  // Waiting is not work: a muted row with no spinner or sweep.
-  if (row.waitingForSubagent && live && row.groupId === undefined) {
-    return (
-      <WorkLogRow
-        icon={<HourglassIcon aria-hidden className="size-3.5 text-icon-muted" />}
-        label="Waiting for subagent"
-      />
-    );
-  }
   const lastActivityAt = row.lastActivityAt ?? null;
   const label =
     live && lastActivityAt !== null ? (
@@ -783,6 +775,7 @@ export function WorkGroupToggleTimelineRow({
       }
       toolIcon={row.toolIcon}
       failed={row.hasFailure}
+      stats={row.summaryStats}
       expanded={row.expanded}
       onToggle={() => ctx.onToggleWorkGroup(row.groupId, row.id)}
     />
@@ -794,6 +787,7 @@ function WorkGroupHeader(props: {
   iconName: WorkEntryIconName;
   toolIcon?: ToolActivityIcon | undefined;
   failed?: boolean | undefined;
+  stats?: { readonly additions: number; readonly deletions: number } | undefined;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -813,6 +807,15 @@ function WorkGroupHeader(props: {
       label={
         <span className="flex min-w-0 items-center gap-1">
           <span className="truncate">{props.label}</span>
+          {props.stats ? (
+            <DiffStatLabel
+              additions={props.stats.additions}
+              deletions={props.stats.deletions}
+              layout="inline"
+              hideZero
+              className="ms-1 shrink-0 text-xs"
+            />
+          ) : null}
           <WorkGroupChevron expanded={props.expanded} />
         </span>
       }

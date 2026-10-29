@@ -8,7 +8,8 @@ import { collectToolFilePaths } from "@marp/shared/toolActivity";
 import * as DateTime from "effect/DateTime";
 
 import {
-  commandDisplayText,
+  commandIntent,
+  commandSummary,
   readOnlyCommandActions,
 } from "@marp/client-runtime/work-log/command-label";
 import {
@@ -206,10 +207,17 @@ function commandExecutionKind(entry: WorkLogPresentationEntry): WorkEventKind {
   const item = entry.structuredPayload;
   if (item?.type === "command_execution" && item.monitor) return "await";
   const actions = commandActions(entry);
+  // A chain of reads and searches is named by its first step; the rest count as "+N".
   const type = actions?.[0]?.type;
-  return type && actions.every((action) => action.type === type)
-    ? COMMAND_ACTION_KINDS[type]
-    : "shell";
+  return type ? COMMAND_ACTION_KINDS[type] : "shell";
+}
+
+/** Steps of a read-only chain its label leaves unnamed: `grep x a.ts; sed -n 1,9p b.ts` is +1. */
+function otherCommandSteps(entry: WorkLogPresentationEntry, kind: WorkEventKind): number {
+  const actions = commandActions(entry);
+  if (actions === null || actions.length < 2) return 0;
+  const named = kind === "read" ? actions.filter((action) => action.type === "read").length : 1;
+  return actions.length - named;
 }
 
 export function workEventKind(entry: WorkLogPresentationEntry): WorkEventKind | null {
@@ -303,6 +311,14 @@ function lineRange(input: Record<string, unknown> | undefined): string | undefin
   return ` L${start}-${start + limit - 1}`;
 }
 
+/** The lines a parsed command printed (`sed -n 1,10p`), when it read one file. */
+function commandLines(entry: WorkLogPresentationEntry): string | undefined {
+  const actions = commandActions(entry);
+  const [read] = actions?.length === 1 ? actions : [];
+  const lines = read?.type === "read" && "lines" in read ? read.lines : undefined;
+  return typeof lines === "string" ? ` ${lines}` : undefined;
+}
+
 function moreSuffix(count: number): string | undefined {
   return count > 0 ? ` +${count} more` : undefined;
 }
@@ -361,7 +377,7 @@ function workEventTarget(
 ): WorkEventTarget | null {
   switch (kind) {
     case "read":
-      return pathTarget(entryPaths(entry), lineRange(entryToolInput(entry)));
+      return pathTarget(entryPaths(entry), lineRange(entryToolInput(entry)) ?? commandLines(entry));
     case "edit":
     case "write":
     case "delete":
@@ -385,7 +401,7 @@ function workEventTarget(
       return webSearchTarget(entry);
     case "shell": {
       const command = entry.command?.trim();
-      return command ? { text: commandDisplayText(command), path: false, mono: true } : null;
+      return command ? { text: commandSummary(command), path: false, mono: false } : null;
     }
     case "mcp": {
       const name = entryToolName(entry);
@@ -407,13 +423,44 @@ export function workEventAction(
   const kind = workEventKind(entry);
   if (kind === null) return null;
   const phase = workEventPhase(entry, live);
-  return { kind, phase, verb: WORK_EVENT_VERBS[kind][phase], target: workEventTarget(entry, kind) };
+  const command = kind === "shell" ? entry.command?.trim() : undefined;
+  const intent = command ? commandIntent(command) : null;
+  if (intent !== null) {
+    const target = intent.object ? { text: intent.object, path: false, mono: true } : null;
+    return { kind, phase, verb: intent.verbs[phase], target };
+  }
+  const target = workEventTarget(entry, kind);
+  const others = otherCommandSteps(entry, kind);
+  return {
+    kind,
+    phase,
+    verb: WORK_EVENT_VERBS[kind][phase],
+    target:
+      target === null || others === 0
+        ? target
+        : { ...target, suffix: `${target.suffix ?? ""} +${others}` },
+  };
 }
 
 export function workEventActionText(action: WorkEventAction): string {
   if (!action.target) return action.verb;
   const text = action.target.path ? pathBaseName(action.target.text) : action.target.text;
   return `${action.verb} ${text}${action.target.suffix ?? ""}`;
+}
+
+/**
+ * A step's one-line label: a command by its description, else its summary (never its raw text);
+ * a read, search or listing by what it touched.
+ */
+export function workEventStepText(entry: WorkLogPresentationEntry, live = false): string | null {
+  const action = workEventAction(entry, live);
+  if (action === null) return null;
+  const item = entry.structuredPayload;
+  const description =
+    action.kind === "shell" && item?.type === "command_execution"
+      ? item.description?.trim()
+      : undefined;
+  return description ? clampPreview(description) : workEventActionText(action);
 }
 
 const PREVIEW_MAX_CHARS = 100;
@@ -495,6 +542,31 @@ export type WorkRunHeaderRule =
 interface WorkRunHeader {
   readonly rule: WorkRunHeaderRule;
   readonly title: string;
+  /** Lines its edits added and removed; absent when the run edited nothing. */
+  readonly diffStats?: { readonly additions: number; readonly deletions: number };
+}
+
+function runDiffStats(entries: ReadonlyArray<WorkLogPresentationEntry>) {
+  let additions = 0;
+  let deletions = 0;
+  let edited = false;
+  for (const entry of entries) {
+    const summary = fileEditSummary(entry);
+    // An edit still being written has no real counts yet.
+    if (summary === null || summary.action.phase !== "completed") continue;
+    edited = true;
+    additions += summary.additions;
+    deletions += summary.deletions;
+  }
+  return edited && additions + deletions > 0 ? { additions, deletions } : undefined;
+}
+
+function withDiffStats(
+  header: WorkRunHeader,
+  entries: ReadonlyArray<WorkLogPresentationEntry>,
+): WorkRunHeader {
+  const diffStats = runDiffStats(entries);
+  return diffStats === undefined ? header : { ...header, diffStats };
 }
 
 function plural(count: number, one: string, many = `${one}s`): string {
@@ -535,27 +607,33 @@ function shellHeader(entries: ReadonlyArray<WorkLogPresentationEntry>, live: boo
   const description = item?.type === "command_execution" ? item.description?.trim() : undefined;
   if (description) return clampPreview(description);
   const command = entry?.command?.trim();
-  return command ? `${verb} ${clampPreview(commandDisplayText(command))}` : `${verb} command`;
+  if (!command) return `${verb} command`;
+  const intent = commandIntent(command);
+  if (intent === null) return `${verb} ${commandSummary(command)}`;
+  const intentVerb = intent.verbs[live ? "loading" : "completed"];
+  return intent.object ? `${intentVerb} ${intent.object}` : intentVerb;
 }
 
 function explorationParts(
   entries: ReadonlyArray<WorkLogPresentationEntry>,
   kinds: ReadonlyArray<WorkEventKind | null>,
+  namedFiles: ReadonlySet<string> = new Set(),
 ): string[] {
   const files = new Set<string>();
   let unnamedFiles = 0;
-  const counts = { search: 0, list: 0, fetch: 0, command: 0, edit: 0, tool: 0 };
+  const counts = { search: 0, list: 0, fetch: 0, command: 0, edit: 0, agent: 0, tool: 0 };
   for (const [index, entry] of entries.entries()) {
     const kind = kinds[index] ?? null;
     if (kind === "read") {
       const paths = entryPaths(entry);
       if (paths.length === 0) unnamedFiles += 1;
-      for (const path of paths) files.add(path);
+      for (const path of paths) if (!namedFiles.has(path)) files.add(path);
     } else if (kind !== null && SEARCH_KINDS.has(kind)) counts.search += 1;
     else if (kind === "list") counts.list += 1;
     else if (kind === "fetch") counts.fetch += 1;
     else if (kind === "shell" || kind === "await") counts.command += 1;
     else if (workEventIsFileChange(kind)) counts.edit += 1;
+    else if (kind === "task") counts.agent += 1;
     else counts.tool += 1;
   }
   const fileCount = files.size + unnamedFiles;
@@ -570,6 +648,7 @@ function explorationParts(
     counts.fetch > 0 ? plural(counts.fetch, "page") : null,
     counts.command > 0 ? plural(counts.command, "command") : null,
     counts.edit > 0 ? plural(counts.edit, "edit") : null,
+    counts.agent > 0 ? plural(counts.agent, "agent") : null,
     counts.tool > 0 ? plural(counts.tool, "tool") : null,
   ].filter((part): part is string => part !== null);
 }
@@ -597,7 +676,8 @@ export function workRunHeader(
     return { rule: "background", title: `${live ? "Monitoring" : "Monitored"} ${tasks}` };
   }
   if (kinds.every(workEventIsFileChange)) {
-    return { rule: "edit", title: fileChangeHeader(tools, kinds, live) };
+    const header = { rule: "edit", title: fileChangeHeader(tools, kinds, live) } as const;
+    return live ? header : withDiffStats(header, tools);
   }
   if (kinds.every((kind) => kind === "shell")) {
     return { rule: "shell", title: shellHeader(tools, live) };
@@ -633,18 +713,21 @@ export function workRunHeader(
     const restIndexes = kinds.flatMap((kind, index) =>
       workEventIsFileChange(kind) || kind === "shell" || kind === "await" ? [] : [index],
     );
+    // A file the run edited is already named by the lead, so reading it adds nothing.
+    const editedFiles = new Set(pick(editIndexes).flatMap((entry) => entryPaths(entry)));
     const rest = explorationParts(
       pick(restIndexes),
       restIndexes.map((index) => kinds[index]!),
+      editedFiles,
     );
     const title = [
       lead,
+      ...rest,
       ...(leadsWithEdits && commandIndexes.length > 0
         ? [`ran ${plural(commandIndexes.length, "command")}`]
         : []),
-      ...(rest.length > 0 ? [`explored ${rest.join(", ")}`] : []),
-    ].join(" · ");
-    return { rule, title };
+    ].join(", ");
+    return withDiffStats({ rule, title }, tools);
   }
   // A live run's counts would tick up under the reader; it names only the activity.
   if (live) return { rule: "explore", title: "Exploring…" };

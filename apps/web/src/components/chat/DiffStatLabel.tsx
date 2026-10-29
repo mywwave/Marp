@@ -42,7 +42,8 @@ export const DiffStatLabel = memo(function DiffStatLabel(props: {
       )}
       {hideZero && deletions === 0 ? null : (
         <span aria-hidden="true" className="font-mono text-diff-deletion-foreground">
-          -{formatCompactDiffCount(deletions)}
+          {"−"}
+          {formatCompactDiffCount(deletions)}
         </span>
       )}
     </span>

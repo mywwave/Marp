@@ -19,10 +19,10 @@ import {
   presentPlanProgress,
   responseStalled,
   subagentCurrentStep,
-  subagentKind,
   summarizeBackgroundTasks,
   supersededTodoListIds,
 } from "./liveCards.js";
+import { workEventStepText } from "./eventPresentation.js";
 
 const at = (iso: string) => DateTime.makeUnsafe(iso);
 
@@ -100,16 +100,6 @@ describe("plan progress", () => {
 });
 
 describe("subagent card", () => {
-  it.each([
-    ["Explore timeline code", "explore"],
-    ["Review the auth diff", "review"],
-    ["Run tests in apps/web", "shell"],
-    ["Take a screenshot of the browser", "browser"],
-    ["Write the migration", "custom"],
-  ] as const)("reads %s as %s", (title, kind) => {
-    expect(subagentKind(title)).toBe(kind);
-  });
-
   it("prefers a blocking child request, then provider progress, then the child's reply", () => {
     const child = {
       pendingRuntimeRequest: null,
@@ -141,6 +131,40 @@ describe("subagent card", () => {
       }),
     ).toBe("Waiting for approval");
     expect(subagentCurrentStep({ status: "completed", progress: "Reading", child })).toBeNull();
+  });
+
+  it("labels a provider's command step like its work-log row, never as the raw command", () => {
+    const step = (progress: string) => subagentCurrentStep({ status: "running", progress });
+    const workLog = (command: string, description?: string) =>
+      workEventStepText(
+        {
+          id: "command",
+          createdAt: "",
+          label: "",
+          tone: "tool",
+          itemType: "command_execution",
+          command,
+          ...(description === undefined
+            ? {}
+            : {
+                structuredPayload: {
+                  type: "command_execution",
+                  input: command,
+                  description,
+                } as never,
+              }),
+        },
+        true,
+      );
+    expect(step("Install the web dependencies")).toBe(
+      workLog("pnpm install", "Install the web dependencies"),
+    );
+    expect(step("Running cat apps/web/src/main.tsx")).toBe(workLog("cat apps/web/src/main.tsx"));
+    expect(step("Running cat apps/web/src/main.tsx")).toBe("Reading main.tsx");
+    expect(step('Running grep -rln "orphan" --include=*.go backend/')).toBe(
+      "Grepping orphan in backend",
+    );
+    expect(step("Running cd /c/Users/me/worktrees/t3 && go test ./...")).toBe("Running tests");
   });
 });
 

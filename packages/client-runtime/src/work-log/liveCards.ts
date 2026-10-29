@@ -9,7 +9,7 @@ import type {
 import * as DateTime from "effect/DateTime";
 
 import type { ThreadStructureTurnItem } from "../state/models.ts";
-import { formatSubagentDisplayTitle } from "../state/subagentDisplay.ts";
+import { workEventStepText } from "./eventPresentation.ts";
 import {
   presentPendingBackgroundWork,
   type PendingBackgroundWorkItem,
@@ -102,32 +102,6 @@ export function presentPlanProgress(
   };
 }
 
-export type SubagentKind = "explore" | "shell" | "browser" | "review" | "custom";
-
-export const SUBAGENT_KIND_LABELS: Record<SubagentKind, string> = {
-  explore: "Explore",
-  shell: "Shell",
-  browser: "Browser",
-  review: "Review",
-  custom: "Agent",
-};
-
-// Providers report no agent type on the wire, only the task's short description or role name.
-const SUBAGENT_KIND_PATTERNS: ReadonlyArray<readonly [SubagentKind, RegExp]> = [
-  ["review", /\b(review|audit|critique|verify|check)\w*/iu],
-  ["browser", /\b(browser|browse|web ?page|screenshot|website|ui test)\w*/iu],
-  ["shell", /\b(shell|bash|command|terminal|run(ning)? tests?|build|install)\w*/iu],
-  [
-    "explore",
-    /\b(explor|search|find|investigat|research|look|locat|map|scan|read|understand)\w*/iu,
-  ],
-];
-
-export function subagentKind(title: string | null): SubagentKind {
-  const text = title === null ? "" : formatSubagentDisplayTitle(title);
-  return SUBAGENT_KIND_PATTERNS.find(([, pattern]) => pattern.test(text))?.[0] ?? "custom";
-}
-
 export type SubagentCardState = "running" | "waiting" | "done" | "failed" | "stopped" | "idle";
 
 export function subagentCardState(status: OrchestrationV2TurnItem["status"]): SubagentCardState {
@@ -165,6 +139,30 @@ function firstLine(text: string | null | undefined, maxLength: number): string |
   return line.length > maxLength ? `${line.slice(0, maxLength).trimEnd()}…` : line;
 }
 
+// Claude reports a running shell step as "Running <raw command>".
+const PROGRESS_COMMAND = /^Running (.+)$/u;
+
+/** A provider progress line in work-log terms: a raw command reads as the step it performs. */
+function subagentProgressStep(progress: string | null | undefined): string | null {
+  const line = progress
+    ?.split("\n")
+    .map((candidate) => candidate.trim())
+    .find((candidate) => candidate.length > 0);
+  const command = line === undefined ? undefined : PROGRESS_COMMAND.exec(line)?.[1]?.trim();
+  if (command === undefined || command.length === 0) return firstLine(progress, 160);
+  return workEventStepText(
+    {
+      id: "subagent-progress",
+      createdAt: "",
+      label: "",
+      tone: "tool",
+      itemType: "command_execution",
+      command,
+    },
+    true,
+  );
+}
+
 const GENERIC_CHILD_END = /^Child task ended with status\b/iu;
 
 /**
@@ -185,7 +183,7 @@ export function subagentCurrentStep(input: {
   if (request != null && request.blocking !== false) {
     return request.kind === "user_input" ? "Waiting for your answer" : "Waiting for approval";
   }
-  const progress = firstLine(input.progress, 160);
+  const progress = subagentProgressStep(input.progress);
   if (progress !== null) return progress;
   const message = input.child?.latestVisibleMessage;
   if (message?.role === "assistant") return firstLine(message.text, 160);
@@ -263,7 +261,7 @@ export function summarizeBackgroundTasks(
       childThreadId:
         task.childThreadId ??
         (item?.type === "subagent" ? (item.childThreadId ?? undefined) : undefined),
-      activity: item?.type === "subagent" ? firstLine(item.progress, 160) : null,
+      activity: item?.type === "subagent" ? subagentProgressStep(item.progress) : null,
     };
   });
   const startedAtMs = running.flatMap((row) =>

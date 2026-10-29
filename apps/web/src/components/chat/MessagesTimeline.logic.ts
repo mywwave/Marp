@@ -550,8 +550,6 @@ type MessagesTimelineRowContent =
       expanded?: boolean;
       /** Nothing of the turn is visible yet, so the row says the agent is planning. */
       preActivity?: true;
-      /** The live turn has a running subagent, so the idle row says it waits on it. */
-      waitingForSubagent?: true;
       /** The live turn's last event, so a long silence reads as waiting for the provider. */
       lastActivityAt?: string;
     }
@@ -566,6 +564,8 @@ type MessagesTimelineRowContent =
       summary: string;
       summaryKind: ToolGroupSummaryKind;
       summaryRule: WorkRunHeaderRule;
+      /** Lines the run's finished edits added and removed. */
+      summaryStats?: { readonly additions: number; readonly deletions: number };
       toolSurface?: WorkLogEntry["toolSurface"];
       toolIcon?: WorkLogEntry["toolIcon"];
       hasFailure: boolean;
@@ -1505,14 +1505,15 @@ function runIsBriefExploration(entries: ReadonlyArray<WorkLogEntry>): boolean {
 const RUN_TEXT_MAX_CHARS = 100;
 const RUN_TEXT_MAX_LINES = 2;
 
+// Child threads carry no run ids; a runless entry joins the runless steps beside it.
 function workEntryJoinsRun(
   entry: TimelineEntry | undefined,
-  runId: RunId,
+  runId: RunId | null,
   attemptId: string | undefined,
 ): boolean {
   return (
     entry?.kind === "work" &&
-    entry.entry.runId === runId &&
+    (entry.entry.runId ?? null) === runId &&
     entry.attempt?.id === attemptId &&
     entry.entry.sourceActivityKind !== "context-compaction" &&
     entry.entry.sourceActivityKind !== "runtime.error" &&
@@ -1535,6 +1536,7 @@ const runTextEntries = new WeakMap<TimelineEntry, TimelineEntry>();
 function absorbShortAssistantText(
   entries: ReadonlyArray<TimelineEntry>,
   liveRunId: RunId | null,
+  runlessLive: boolean,
 ): ReadonlyArray<TimelineEntry> {
   const terminalIds = deriveTerminalAssistantMessageIds(entries);
   return entries.map((entry, index) => {
@@ -1545,8 +1547,7 @@ function absorbShortAssistantText(
     if (
       message.role !== "assistant" ||
       message.streaming ||
-      runId === null ||
-      (terminalIds.has(message.id) && runId !== liveRunId) ||
+      (terminalIds.has(message.id) && (runId === null ? !runlessLive : runId !== liveRunId)) ||
       text.length === 0 ||
       text.length > RUN_TEXT_MAX_CHARS ||
       text.split("\n").length > RUN_TEXT_MAX_LINES ||
@@ -1581,7 +1582,7 @@ function absorbShortAssistantText(
 function timelineRowEntries(
   input: Pick<
     MessagesTimelineRowsInput,
-    "timelineEntries" | "latestRun" | "isWorking" | "runningRunId"
+    "timelineEntries" | "latestRun" | "isWorking" | "runningRunId" | "runlessWorkActive"
   >,
 ) {
   const liveRunId = input.isWorking
@@ -1591,6 +1592,7 @@ function timelineRowEntries(
     absorbShortAssistantText(
       settleSupersededReasoning(withLatestTodoLists(input.timelineEntries, liveRunId)),
       liveRunId,
+      input.isWorking && input.runlessWorkActive === true,
     ),
   );
 }
@@ -1898,13 +1900,6 @@ export function deriveMessagesTimelineRows(input: {
   const activeCompactionRunId = compactsOnReturn
     ? runningCompactionRunId
     : (resumeCompactionEntry?.entry.runId ?? null);
-  const idleWait = () => {
-    const wait = activeTurnWait(timelineEntries, unsettledRunId);
-    return {
-      ...(wait.waitingForSubagent ? { waitingForSubagent: true as const } : {}),
-      ...(wait.lastActivityAt === null ? {} : { lastActivityAt: wait.lastActivityAt }),
-    };
-  };
   const appendWorkingRow = () => {
     if (compactionOnlyRunFinished) return;
     if (runningCompactionRunId !== null && activeCompactionRunId === null) return;
@@ -2218,6 +2213,7 @@ export function deriveMessagesTimelineRows(input: {
                 : header.title,
             summaryKind,
             summaryRule: header.rule,
+            ...(header.diffStats ? { summaryStats: header.diffStats } : {}),
             ...(groupToolSurface ? { toolSurface: groupToolSurface } : {}),
             ...(groupToolIcon ? { toolIcon: groupToolIcon } : {}),
             hasFailure:
@@ -2430,15 +2426,18 @@ export function deriveMessagesTimelineRows(input: {
         );
       }
     } else {
+      const idleWait = activeTurnWait(timelineEntries, unsettledRunId);
       // The working row opens the active turn; with nothing after it the turn has no visible activity.
+      // A live subagent's own row already shows the turn waiting on it, so no idle row repeats that.
       const preActivity = nextRows.at(-1)?.kind === "working";
-      nextRows.push({
-        kind: "thinking",
-        id: LIVE_ACTIVITY_ROW_ID,
-        createdAt: input.activeTurnStartedAt ?? null,
-        ...(preActivity ? { preActivity: true as const } : {}),
-        ...idleWait(),
-      });
+      if (!idleWait.waitingForSubagent)
+        nextRows.push({
+          kind: "thinking",
+          id: LIVE_ACTIVITY_ROW_ID,
+          createdAt: input.activeTurnStartedAt ?? null,
+          ...(preActivity ? { preActivity: true as const } : {}),
+          ...(idleWait.lastActivityAt === null ? {} : { lastActivityAt: idleWait.lastActivityAt }),
+        });
     }
   }
 
@@ -2705,7 +2704,6 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.groupId === bt.groupId &&
         a.expanded === bt.expanded &&
         a.preActivity === bt.preActivity &&
-        a.waitingForSubagent === bt.waitingForSubagent &&
         a.lastActivityAt === bt.lastActivityAt
       );
     }
@@ -2825,6 +2823,8 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.summary === bw.summary &&
         a.summaryKind === bw.summaryKind &&
         a.summaryRule === bw.summaryRule &&
+        a.summaryStats?.additions === bw.summaryStats?.additions &&
+        a.summaryStats?.deletions === bw.summaryStats?.deletions &&
         a.toolSurface === bw.toolSurface &&
         Equal.equals(a.toolIcon, bw.toolIcon) &&
         a.hasFailure === bw.hasFailure

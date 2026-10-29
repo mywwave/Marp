@@ -1435,7 +1435,7 @@ function isPowerShellScript(command: string): boolean {
 }
 
 type ReadOnlyCommandAction =
-  | { readonly type: "read"; readonly path: string }
+  | { readonly type: "read"; readonly path: string; readonly lines?: string }
   | { readonly type: "list"; readonly path?: string }
   | { readonly type: "search"; readonly query?: string; readonly path?: string };
 
@@ -1662,7 +1662,12 @@ function classifyReadOnlyProgram(
     }
     case "sed": {
       const parsed = parsePosixArguments(args);
-      return sedPrintsOnly(parsed) ? readActions(parsed.positionals.slice(1)) : null;
+      if (!sedPrintsOnly(parsed)) return null;
+      const paths = parsed.positionals.slice(1);
+      const range = /^(\d+),(\d+)p;?$/u.exec(parsed.positionals[0]?.replace(/\s+/gu, "") ?? "");
+      return paths.length === 1 && range
+        ? [{ type: "read", path: paths[0]!, lines: `L${range[1]}-${range[2]}` }]
+        : readActions(paths);
     }
     case "get-content":
     case "gc":
@@ -1737,6 +1742,7 @@ function scriptPayload(command: string): string {
 export function readOnlyCommandActions(command: string): ReadOnlyCommandAction[] | null {
   let rest: string | null = scriptPayload(command).trim();
   let piped = false;
+  let cwd: string | undefined;
   const actions: ReadOnlyCommandAction[] = [];
   for (let segment = 0; rest && segment < MAX_COMMAND_SEGMENTS; segment += 1) {
     const { firstCommand, remainingCommand, separator } = splitFirstShellCommand(rest);
@@ -1749,6 +1755,17 @@ export function readOnlyCommandActions(command: string): ReadOnlyCommandAction[]
       .at(-1)!
       .toLowerCase()
       .replace(/\.exe$/u, "");
+    // A leading `cd dir &&` only sets where the rest runs.
+    if (
+      segment === 0 &&
+      LOCATION_PROGRAMS.has(program) &&
+      args.length === 1 &&
+      (separator === "&&" || separator === ";")
+    ) {
+      cwd = args[0];
+      rest = remainingCommand;
+      continue;
+    }
     if (piped) {
       if (!isReadOnlyPipeFilter(program, args)) return null;
     } else {
@@ -1759,5 +1776,294 @@ export function readOnlyCommandActions(command: string): ReadOnlyCommandAction[]
     piped = separator === "|";
     rest = remainingCommand;
   }
-  return rest || piped || actions.length === 0 ? null : actions;
+  if (rest || piped || actions.length === 0) return null;
+  return cwd === undefined ? actions : actions.map((action) => inDirectory(action, cwd));
+}
+
+const LOCATION_PROGRAMS = new Set(["cd", "pushd", "set-location", "sl", "chdir"]);
+
+function inDirectory(action: ReadOnlyCommandAction, cwd: string): ReadOnlyCommandAction {
+  const resolve = (path: string) =>
+    /^(?:[\\/~]|[A-Za-z]:[\\/])/u.test(path)
+      ? path
+      : `${cwd.replace(/[\\/]+$/u, "")}/${path.replace(/^\.[\\/]/u, "")}`;
+  if (action.type === "read") return { ...action, path: resolve(action.path) };
+  return action.path === undefined ? action : { ...action, path: resolve(action.path) };
+}
+
+// Tools whose first word names what they do: "git status", "pnpm test".
+const SUBCOMMAND_PROGRAMS = new Set([
+  "bun",
+  "cargo",
+  "docker",
+  "gh",
+  "git",
+  "go",
+  "kubectl",
+  "npm",
+  "npx",
+  "pnpm",
+  "vp",
+  "yarn",
+]);
+const SUBCOMMAND = /^[a-z][\w:-]*$/u;
+const FILE_LIKE = /(?:\w\/|\/\w|\w\.[A-Za-z]\w*$)/u;
+const MAX_SUMMARY_PROGRAMS = 3;
+const MAX_SUMMARY_CHARS = 80;
+
+function shortPath(path: string): string {
+  const parts = path.split(/[\\/]/u).filter((part) => part.length > 0 && part !== ".");
+  return parts.slice(-2).join("/") || path;
+}
+
+/**
+ * A raw command in a few words: the programs it runs, then the first one's main target
+ * ("sed, sed · hooks/usePresence.ts"). Setup steps such as `cd dir &&` are left out.
+ */
+export function commandSummary(command: string): string {
+  let rest: string | null = scriptPayload(command).trim();
+  const programs: string[] = [];
+  let target: string | undefined;
+  for (let segment = 0; rest && segment < MAX_COMMAND_SEGMENTS; segment += 1) {
+    const { firstCommand, remainingCommand } = splitFirstShellCommand(rest);
+    rest = remainingCommand;
+    const tokens = tokenizeShellCommand(firstCommand);
+    const program = tokens?.[0]
+      ?.split(/[\\/]/u)
+      .at(-1)
+      ?.replace(/\.exe$/iu, "");
+    if (!tokens || !program || NON_DESCRIPTIVE_SHELL_PROGRAMS.has(program.toLowerCase())) continue;
+    const args = tokens.slice(1).filter((token) => !token.startsWith("-"));
+    const subcommand =
+      SUBCOMMAND_PROGRAMS.has(program.toLowerCase()) && SUBCOMMAND.test(args[0] ?? "")
+        ? args[0]
+        : undefined;
+    programs.push(subcommand === undefined ? program : `${program} ${subcommand}`);
+    if (programs.length === 1) {
+      target = args
+        .slice(subcommand === undefined ? 0 : 1)
+        .findLast((arg) => FILE_LIKE.test(arg) && !/[|<>;&]/u.test(arg));
+    }
+  }
+  if (programs.length === 0) return commandProgramName(command) ?? "command";
+  const shown = programs.slice(0, MAX_SUMMARY_PROGRAMS);
+  const more = programs.length - shown.length;
+  const summary = [
+    `${shown.join(", ")}${more > 0 ? ` +${more}` : ""}`,
+    ...(target === undefined ? [] : [shortPath(target)]),
+  ].join(" · ");
+  return summary.length <= MAX_SUMMARY_CHARS
+    ? summary
+    : `${summary.slice(0, MAX_SUMMARY_CHARS - 1).trimEnd()}…`;
+}
+
+type IntentPhase = "loading" | "completed" | "error";
+
+export interface CommandIntent {
+  readonly verbs: Readonly<Record<IntentPhase, string>>;
+  /** What it acted on: a test file, a branch, a package, a path. */
+  readonly object?: string;
+}
+
+const verbs = (loading: string, completed: string, error: string) => ({
+  loading,
+  completed,
+  error,
+});
+const TESTS = verbs("Running tests", "Ran tests", "Run tests");
+const TYPECHECK = verbs("Typechecking", "Typechecked", "Typecheck");
+const LINT = verbs("Linting", "Linted", "Lint");
+const FORMAT = verbs("Formatting", "Formatted", "Format");
+const BUILD = verbs("Building", "Built", "Build");
+const INSTALL = verbs("Installing dependencies", "Installed dependencies", "Install dependencies");
+const ADD = verbs("Adding", "Added", "Add");
+const DEV = verbs("Starting dev server", "Started dev server", "Start dev server");
+const LOOKUP = verbs("Looking up", "Looked up", "Look up");
+
+const PACKAGE_MANAGERS = new Set(["npm", "pnpm", "yarn", "bun", "vp"]);
+const TEST_RUNNERS = new Set(["vitest", "jest", "pytest", "mocha", "playwright"]);
+const SCRIPT_INTENTS: Readonly<Record<string, CommandIntent["verbs"]>> = {
+  test: TESTS,
+  typecheck: TYPECHECK,
+  "type-check": TYPECHECK,
+  lint: LINT,
+  fmt: FORMAT,
+  format: FORMAT,
+  build: BUILD,
+  dev: DEV,
+};
+const PROGRAM_INTENTS: Readonly<Record<string, CommandIntent["verbs"]>> = {
+  tsc: TYPECHECK,
+  mypy: TYPECHECK,
+  pyright: TYPECHECK,
+  eslint: LINT,
+  oxlint: LINT,
+  ruff: LINT,
+  biome: LINT,
+  prettier: FORMAT,
+  oxfmt: FORMAT,
+};
+const GIT_INTENTS: Readonly<Record<string, CommandIntent["verbs"]>> = {
+  status: verbs("Viewing git status", "Viewed git status", "View git status"),
+  diff: verbs("Viewing git diff", "Viewed git diff", "View git diff"),
+  log: verbs("Viewing git log", "Viewed git log", "View git log"),
+  show: verbs("Viewing commit", "Viewed commit", "View commit"),
+  blame: verbs("Viewing git blame", "Viewed git blame", "View git blame"),
+  add: verbs("Staging changes", "Staged changes", "Stage changes"),
+  commit: verbs("Committing", "Committed", "Commit"),
+  push: verbs("Pushing", "Pushed", "Push"),
+  pull: verbs("Pulling", "Pulled", "Pull"),
+  fetch: verbs("Fetching", "Fetched", "Fetch"),
+  checkout: verbs("Switching to", "Switched to", "Switch to"),
+  switch: verbs("Switching to", "Switched to", "Switch to"),
+  merge: verbs("Merging", "Merged", "Merge"),
+  rebase: verbs("Rebasing", "Rebased", "Rebase"),
+  stash: verbs("Stashing changes", "Stashed changes", "Stash changes"),
+  clone: verbs("Cloning", "Cloned", "Clone"),
+};
+const GIT_OBJECT_INTENTS = new Set(["checkout", "switch", "merge", "clone"]);
+const CREATE = verbs("Creating", "Created", "Create");
+const REMOVE = verbs("Removing", "Removed", "Remove");
+const MOVE = verbs("Moving", "Moved", "Move");
+const COPY = verbs("Copying", "Copied", "Copy");
+const FILE_INTENTS: Readonly<Record<string, CommandIntent["verbs"]>> = {
+  mkdir: CREATE,
+  touch: CREATE,
+  "new-item": CREATE,
+  ni: CREATE,
+  rm: REMOVE,
+  rmdir: REMOVE,
+  "remove-item": REMOVE,
+  del: REMOVE,
+  mv: MOVE,
+  "move-item": MOVE,
+  cp: COPY,
+  "copy-item": COPY,
+};
+const LOOKUP_PROGRAMS = new Set(["which", "where", "get-command", "gcm"]);
+const VERSION_FLAGS = new Set(["-v", "--version", "-version", "version"]);
+const ENV_ASSIGNMENT = /^[A-Za-z_]\w*=/u;
+const RUNNER_WRAPPERS: Readonly<Record<string, number>> = { npx: 1, bunx: 1, time: 1, sudo: 1 };
+
+function baseProgram(token: string | undefined): string | undefined {
+  return token
+    ?.split(/[\\/]/u)
+    .at(-1)
+    ?.toLowerCase()
+    .replace(/\.(exe|cmd)$/u, "");
+}
+
+function intentObject(args: ReadonlyArray<string>): string | undefined {
+  const positional = args.find((arg) => !arg.startsWith("-"));
+  return positional === undefined ? undefined : shortPath(positional);
+}
+
+function withObject(
+  intentVerbs: CommandIntent["verbs"],
+  object: string | undefined,
+): CommandIntent {
+  return object === undefined ? { verbs: intentVerbs } : { verbs: intentVerbs, object };
+}
+
+function packageManagerIntent(program: string, args: ReadonlyArray<string>): CommandIntent | null {
+  const [first, second] = args;
+  if (first === undefined) return null;
+  if (["install", "i", "ci"].includes(first) && args.slice(1).every((arg) => arg.startsWith("-"))) {
+    return { verbs: INSTALL };
+  }
+  if (first === "add" || (first === "install" && program !== "vp")) {
+    return withObject(
+      ADD,
+      args.slice(1).find((arg) => !arg.startsWith("-")),
+    );
+  }
+  const script = first === "run" ? second : first;
+  const scriptVerbs = script === undefined ? undefined : SCRIPT_INTENTS[script];
+  if (scriptVerbs === undefined) return null;
+  const rest = args.slice(first === "run" ? 2 : 1).filter((arg) => arg !== "run");
+  return withObject(scriptVerbs, scriptVerbs === TESTS ? intentObject(rest) : undefined);
+}
+
+function gitIntent(args: ReadonlyArray<string>): CommandIntent | null {
+  const [first, second] = args;
+  if (first === undefined) return null;
+  if (first === "stash" && (second === "list" || second === "show")) {
+    return { verbs: verbs("Viewing stashes", "Viewed stashes", "View stashes") };
+  }
+  if (first === "branch") {
+    return args.some((arg) => /^-[dDmM]$|^--(?:delete|move)$/u.test(arg))
+      ? { verbs: verbs("Changing branches", "Changed branches", "Change branches") }
+      : { verbs: verbs("Listing branches", "Listed branches", "List branches") };
+  }
+  const gitVerbs = GIT_INTENTS[first];
+  if (gitVerbs === undefined) return null;
+  return withObject(
+    gitVerbs,
+    GIT_OBJECT_INTENTS.has(first) ? intentObject(args.slice(1)) : undefined,
+  );
+}
+
+function segmentIntent(tokens: ReadonlyArray<string>): CommandIntent | null {
+  let words = tokens.filter((token) => !HARMLESS_REDIRECTIONS.has(token.toLowerCase()));
+  while (words.length > 0 && ENV_ASSIGNMENT.test(words[0]!)) words = words.slice(1);
+  for (;;) {
+    const head = baseProgram(words[0]);
+    const skip = head === undefined ? undefined : RUNNER_WRAPPERS[head];
+    if (skip !== undefined) words = words.slice(skip);
+    else if ((head === "pnpm" || head === "yarn") && ["exec", "dlx"].includes(words[1] ?? "")) {
+      words = words.slice(2);
+    } else break;
+  }
+  const program = baseProgram(words[0]);
+  if (program === undefined) return null;
+  const args = words.slice(1);
+  const [first] = args;
+  if (TEST_RUNNERS.has(program)) {
+    return withObject(TESTS, intentObject(args.filter((arg) => arg !== "run")));
+  }
+  const fixed = PROGRAM_INTENTS[program];
+  if (fixed !== undefined) return { verbs: fixed };
+  if (PACKAGE_MANAGERS.has(program)) return packageManagerIntent(program, args);
+  if (program === "go" || program === "cargo" || program === "dotnet") {
+    if (first === "test") return { verbs: TESTS };
+    if (first === "build") return { verbs: BUILD };
+  }
+  if (program === "vite" && first === "build") return { verbs: BUILD };
+  if (program === "pip" && first === "install") {
+    const target = args.slice(1).find((arg) => !arg.startsWith("-"));
+    return args.includes("-r") || target === undefined
+      ? { verbs: INSTALL }
+      : withObject(ADD, target);
+  }
+  if (program === "git") return gitIntent(args);
+  const fileVerbs = FILE_INTENTS[program];
+  if (fileVerbs !== undefined) return withObject(fileVerbs, intentObject(args));
+  if (LOOKUP_PROGRAMS.has(program) && first !== undefined) return withObject(LOOKUP, first);
+  if (program === "pwd" || program === "get-location") {
+    return { verbs: verbs("Checking directory", "Checked directory", "Check directory") };
+  }
+  if (args.length === 1 && VERSION_FLAGS.has(first!)) {
+    return {
+      verbs: verbs(`Checking ${program} version`, `Checked ${program} version`, "Check version"),
+    };
+  }
+  return null;
+}
+
+/**
+ * What a command is for, when it is a well-known step: tests, a typecheck, an install, a git
+ * write. In a chain the first such part names it; filters and `cd` around it change nothing.
+ */
+export function commandIntent(command: string): CommandIntent | null {
+  let rest: string | null = scriptPayload(command).trim();
+  for (let segment = 0; rest && segment < MAX_COMMAND_SEGMENTS; segment += 1) {
+    const { firstCommand, remainingCommand } = splitFirstShellCommand(rest);
+    rest = remainingCommand;
+    const tokens = tokenizeShellCommand(firstCommand);
+    if (!tokens || tokens.length === 0) return null;
+    if (LOCATION_PROGRAMS.has(tokens[0]!.toLowerCase()) || /^\$env:/iu.test(tokens[0]!)) continue;
+    const intent = segmentIntent(tokens);
+    if (intent !== null) return intent;
+  }
+  return null;
 }

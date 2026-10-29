@@ -505,7 +505,7 @@ function SubagentTimelineLink(props: {
   );
 }
 
-export function SubagentTimelineTooltip(props: {
+function SubagentTimelineTooltip(props: {
   readonly parentRef: ScopedThreadRef;
   readonly threadId: ThreadId | null;
   readonly title: string;

@@ -91,17 +91,15 @@ function fileChangeOperation(item: FileChangeItem): string | undefined {
 function fileChangeLineCounts(
   item: FileChangeItem,
 ): { additions: number; deletions: number } | undefined {
-  if (item.diffStr?.trim()) {
-    const hunk = patchHunkLines(item.diffStr);
-    if (hunk === undefined) {
-      const count = contentLines(item.diffStr).length;
-      const operation = fileChangeOperation(item);
-      return operation === "add"
-        ? { additions: count, deletions: 0 }
-        : operation === "delete"
-          ? { additions: 0, deletions: count }
-          : undefined;
-    }
+  const hunk = item.diffStr?.trim() ? patchHunkLines(item.diffStr) : undefined;
+  if (item.diffStr?.trim() && hunk === undefined) {
+    const count = contentLines(item.diffStr).length;
+    const operation = fileChangeOperation(item);
+    if (operation === "add") return { additions: count, deletions: 0 };
+    if (operation === "delete") return { additions: 0, deletions: count };
+    // Not a patch, e.g. a subagent edit's "has been updated" result; the snippets still count.
+  }
+  if (hunk !== undefined) {
     let additions = 0;
     let deletions = 0;
     for (const line of hunk) {

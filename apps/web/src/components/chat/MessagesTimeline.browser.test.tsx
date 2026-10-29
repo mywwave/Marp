@@ -1250,6 +1250,52 @@ it("shows a file-change approval as the edit card with its decision", async () =
   expect(onRespondToApproval).toHaveBeenLastCalledWith(requestId, "accept");
 });
 
+it("shows an edit's line counts only once it is written", async () => {
+  setup();
+  const fixture = makeStreamingTimelineFixture();
+  const source = fixture.visibleTurnItems[4]!;
+  if (source.item.type !== "dynamic_tool") throw new Error("Expected fixture tool");
+  const { toolName: _toolName, input: _input, ...sourceItem } = source.item;
+  const entries = (status: "running" | "completed") =>
+    deriveTimelineEntriesFromVisibleTurnItems({
+      visibleTurnItems: [
+        {
+          ...source,
+          item: {
+            ...sourceItem,
+            type: "file_change" as const,
+            status,
+            title: "Edit",
+            fileName: "src/session.ts",
+            additions: 2,
+            deletions: 1,
+          },
+        },
+      ],
+      optimisticMessages: [],
+    });
+  const counts = () => screen.container.querySelector('[aria-label="2 additions, 1 deletions"]');
+  await using screen = await renderElement(
+    <MessagesTimeline
+      {...baseProps()}
+      timelineEntries={entries("running")}
+      isWorking
+      runningRunId={fixture.runId}
+    />,
+  );
+  await vi.waitFor(() =>
+    expect(screen.container.querySelector('[data-v2-item-type="file_change"]')).not.toBeNull(),
+  );
+  expect(counts()).toBeNull();
+
+  await screen.rerender(
+    <MessagesTimeline {...baseProps()} timelineEntries={entries("completed")} />,
+  );
+  // The settled turn folds; opening it shows the written edit.
+  await userEvent.click(screen.getByRole("button", { name: /^Edited session.ts/ }));
+  await vi.waitFor(() => expect(counts()).not.toBeNull());
+});
+
 function checkpointedConversation(userText: string) {
   const runId = RunId.make("run-edit");
   return {

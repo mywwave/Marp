@@ -1210,6 +1210,28 @@ describe("deriveMessagesTimelineRows", () => {
       expect(rows.some((row) => row.id === "final-entry" && row.kind === "message")).toBe(true);
     });
 
+    it("lets short text join a child thread's runless steps", () => {
+      const runless = (entry: TimelineEntry): TimelineEntry =>
+        entry.kind === "work"
+          ? { ...entry, entry: { ...entry.entry, runId: null } }
+          : entry.kind === "message"
+            ? { ...entry, message: { ...entry.message, runId: null } }
+            : entry;
+      const rows = derive(
+        [
+          command("test", 1),
+          assistant("between", 2, "Now the lint."),
+          command("lint", 3),
+          assistant("final", 5, "Both pass."),
+        ].map(runless),
+      );
+      // One run of three steps, not two runs split by the note.
+      expect(rows.map((row) => [row.kind, row.kind === "work-toggle" && row.hiddenCount])).toEqual([
+        ["work-toggle", 3],
+        ["message", false],
+      ]);
+    });
+
     it("keeps a short final answer out of the run, even with work after it", () => {
       const rows = derive([command("test", 1), assistant("final", 2, "Done."), command("lint", 3)]);
       expect(rows.some((row) => row.id === "final-entry" && row.kind === "message")).toBe(true);
@@ -1851,6 +1873,45 @@ describe("deriveMessagesTimelineRows", () => {
       expect.objectContaining({ entry: expect.objectContaining({ id: "new-work" }) }),
     ]);
     expect(rows.some((row) => row.kind === "thinking")).toBe(false);
+  });
+
+  it("lets a live subagent's own row say the turn waits on it, with no idle row", () => {
+    const runId = "turn-subagent" as never;
+    const derive = (status: string) =>
+      deriveMessagesTimelineRows({
+        timelineEntries: [
+          {
+            id: "subagent-entry",
+            kind: "event",
+            createdAt: "2026-01-01T00:00:05Z",
+            projectedItem: {
+              item: {
+                id: "subagent-item",
+                type: "subagent",
+                runId,
+                providerTurnId: null,
+                status,
+                updatedAt: null,
+              },
+            },
+          } as unknown as TimelineEntry,
+        ],
+        latestRun: {
+          runId,
+          status: "running",
+          startedAt: "2026-01-01T00:00:00Z",
+          completedAt: null,
+        },
+        isWorking: true,
+        activeTurnStartedAt: "2026-01-01T00:00:00Z",
+        turnDiffSummaries: [],
+        supportsConversationRollback: false,
+      });
+
+    const waiting = derive("running");
+    expect(waiting.some((row) => row.id === "subagent-entry")).toBe(true);
+    expect(waiting.some((row) => row.kind === "thinking")).toBe(false);
+    expect(derive("completed").some((row) => row.kind === "thinking")).toBe(true);
   });
 
   it("keeps an actually running tool in the shared activity row", () => {

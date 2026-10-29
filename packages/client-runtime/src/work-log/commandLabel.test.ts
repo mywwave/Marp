@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { commandDisplayText, commandProgramName, readOnlyCommandActions } from "./commandLabel.ts";
+import {
+  commandDisplayText,
+  commandProgramName,
+  commandIntent,
+  commandSummary,
+  readOnlyCommandActions,
+} from "./commandLabel.ts";
 
 describe("commandProgramName", () => {
   it.each([
@@ -182,7 +188,7 @@ describe("readOnlyCommandActions", () => {
         { type: "read", path: "b.ts" },
       ],
     ],
-    ["sed -n '1,80p' src/a.ts", [{ type: "read", path: "src/a.ts" }]],
+    ["sed -n '1,80p' src/a.ts", [{ type: "read", path: "src/a.ts", lines: "L1-80" }]],
     ["head -n 40 README.md 2>/dev/null", [{ type: "read", path: "README.md" }]],
     ["Get-Content -Path a.ts | Select-Object -First 50", [{ type: "read", path: "a.ts" }]],
     ["/bin/zsh -lc 'ls -la src'", [{ type: "list", path: "src" }]],
@@ -194,6 +200,24 @@ describe("readOnlyCommandActions", () => {
       [
         { type: "read", path: "a.ts" },
         { type: "search", query: "foo" },
+      ],
+    ],
+    [
+      'cd D:/w/Adapters && grep -n "old_string" ClaudeAdapterV2.test.ts | head -20',
+      [{ type: "search", query: "old_string", path: "D:/w/Adapters/ClaudeAdapterV2.test.ts" }],
+    ],
+    [
+      "cd /w/web && sed -n 1,10p hooks/usePresence.ts",
+      [{ type: "read", path: "/w/web/hooks/usePresence.ts", lines: "L1-10" }],
+    ],
+    ["pushd src && cat ./a.ts", [{ type: "read", path: "src/a.ts" }]],
+    ["Set-Location src; Get-Content a.ts", [{ type: "read", path: "src/a.ts" }]],
+    ["cd src && cat /etc/hosts", [{ type: "read", path: "/etc/hosts" }]],
+    [
+      "sed -n 1,10p a.ts; sed -n 20,40p b.ts",
+      [
+        { type: "read", path: "a.ts", lines: "L1-10" },
+        { type: "read", path: "b.ts", lines: "L20-40" },
       ],
     ],
   ])("classifies %s", (command, actions) => {
@@ -221,7 +245,108 @@ describe("readOnlyCommandActions", () => {
     "Set-Content a.ts x",
     "perl -pi -e s/a/b/ a.ts",
     "cat a &",
+    "cd X && rm f",
+    "cd X && grep a f > out",
+    "cd X",
+    "cd X && cd Y && cat a",
   ])("leaves %s as a command", (command) => {
     expect(readOnlyCommandActions(command)).toBeNull();
   });
+});
+
+describe("commandSummary", () => {
+  it.each([
+    [
+      "cd D:/VSProjects/Marp/apps/web/src && sed -n 1,10p hooks/usePresence.ts",
+      "sed · hooks/usePresence.ts",
+    ],
+    ['grep -rln "orphan" --include=*.go backend/ | head -20', "grep, head · backend"],
+    ["pnpm test", "pnpm test"],
+    ["ls", "ls"],
+  ])("names the programs and their target: %s", (command, summary) => {
+    expect(commandSummary(command)).toBe(summary);
+  });
+
+  it("clamps a very long command", () => {
+    const summary = commandSummary(`cd /w && ${"x".repeat(300)} file.ts`);
+    expect(summary.length).toBeLessThanOrEqual(80);
+    expect(summary.endsWith("…")).toBe(true);
+  });
+});
+
+describe("commandIntent", () => {
+  const label = (command: string) => {
+    const intent = commandIntent(command);
+    if (intent === null) return null;
+    return intent.object ? `${intent.verbs.completed} ${intent.object}` : intent.verbs.completed;
+  };
+
+  it.each([
+    ["pnpm test", "Ran tests"],
+    ["npm run test -- src/a.test.ts", "Ran tests src/a.test.ts"],
+    ["yarn test", "Ran tests"],
+    ["bun run test", "Ran tests"],
+    ["vp test run apps/web/src/a.test.ts", "Ran tests src/a.test.ts"],
+    ["vitest run src/a.test.ts", "Ran tests src/a.test.ts"],
+    ["npx vitest", "Ran tests"],
+    ["pytest tests/test_api.py", "Ran tests tests/test_api.py"],
+    ["go test ./...", "Ran tests"],
+    ["cargo test", "Ran tests"],
+    ["dotnet test", "Ran tests"],
+    ["cd apps/web && pnpm test 2>&1 | tail -20", "Ran tests"],
+    ["CI=1 pnpm test", "Ran tests"],
+    ["time pnpm test", "Ran tests"],
+    ["bash -lc 'pnpm test'", "Ran tests"],
+    ['powershell -NoProfile -Command "pnpm test"', "Ran tests"],
+    ["tsc --noEmit", "Typechecked"],
+    ["vp run typecheck", "Typechecked"],
+    ["pnpm exec tsc -p .", "Typechecked"],
+    ["mypy src", "Typechecked"],
+    ["eslint src", "Linted"],
+    ["vp lint src/a.ts", "Linted"],
+    ["ruff check .", "Linted"],
+    ["prettier --write src", "Formatted"],
+    ["vp fmt", "Formatted"],
+    ["pnpm run build", "Built"],
+    ["vite build", "Built"],
+    ["cargo build --release", "Built"],
+    ["pnpm install", "Installed dependencies"],
+    ["npm ci", "Installed dependencies"],
+    ["vp i", "Installed dependencies"],
+    ["pnpm add zod", "Added zod"],
+    ["npm install -D vitest", "Added vitest"],
+    ["pip install -r requirements.txt", "Installed dependencies"],
+    ["pip install requests", "Added requests"],
+    ["pnpm run dev", "Started dev server"],
+    ["vp run dev", "Started dev server"],
+    ["git status", "Viewed git status"],
+    ["git diff --stat", "Viewed git diff"],
+    ["git log --oneline -5", "Viewed git log"],
+    ["git branch", "Listed branches"],
+    ["git branch -D old", "Changed branches"],
+    ["git stash list", "Viewed stashes"],
+    ["git stash", "Stashed changes"],
+    ['git commit -m "fix"', "Committed"],
+    ["git push origin main", "Pushed"],
+    ["git checkout -b feature/x", "Switched to feature/x"],
+    ["git switch main", "Switched to main"],
+    ["mkdir -p src/new", "Created src/new"],
+    ["rm -rf dist", "Removed dist"],
+    ["Remove-Item -Recurse build", "Removed build"],
+    ["New-Item -ItemType File notes.md", "Created File"],
+    ["mv a.ts b.ts", "Moved a.ts"],
+    ["which node", "Looked up node"],
+    ["Get-Command git", "Looked up git"],
+    ["node --version", "Checked node version"],
+    ["pwd", "Checked directory"],
+  ])("labels %s as %s", (command, expected) => {
+    expect(label(command)).toBe(expected);
+  });
+
+  it.each(["node scripts/gen.mjs", "python - <<'X'\nprint(1)\nX", "make", "cat a.ts", "ls"])(
+    "leaves %s to the summary",
+    (command) => {
+      expect(commandIntent(command)).toBeNull();
+    },
+  );
 });

@@ -7,6 +7,7 @@ import { TERMINAL_PALETTES, terminalOutputSpans } from "@marp/shared/terminalOut
 import { useLayoutEffect, useRef } from "react";
 
 import { useTheme } from "../../hooks/useTheme";
+import { cn } from "~/lib/utils";
 import { useServerConfigs } from "../../state/entities";
 import { orchestrationEnvironment } from "../../state/orchestration";
 import { useEnvironmentQuery } from "../../state/query";
@@ -30,6 +31,9 @@ export function CommandOutputTail(props: {
   readonly threadId: ThreadId;
   readonly itemId: TurnItemId;
   readonly source?: TurnItemSource["commandOutput"] | undefined;
+  /** Layout around the box: margins that line it up with the row's label. */
+  readonly className?: string;
+  readonly onOpen?: () => void;
 }) {
   const input = { threadId: props.threadId, itemId: props.itemId };
   const { data } = useEnvironmentQuery<CommandOutputView, unknown>(
@@ -37,14 +41,32 @@ export function CommandOutputTail(props: {
       ? props.source(input)
       : orchestrationEnvironment.v2.commandOutput({ environmentId: props.environmentId, input }),
   );
-  const preview = commandOutputPreview(data?.output.text ?? "");
+  const text = data?.output.text ?? "";
+  const preview = commandOutputPreview(text);
   if (preview.length === 0) return null;
-  return (
-    <div
+  // The preview keeps only the newest lines, so a shorter preview means earlier output is cut.
+  const clipped = preview.length < text.trimEnd().length;
+  const box = cn(
+    "flex max-h-50 w-auto flex-col justify-end overflow-hidden rounded-sm bg-muted px-3 py-2 text-left font-mono text-xs leading-4.5 break-all whitespace-pre-wrap text-muted-foreground",
+    clipped && "mask-t-from-70%",
+    props.className,
+  );
+  return props.onOpen ? (
+    <button
+      type="button"
       aria-live="off"
+      aria-label="Show full command output"
       data-command-output-tail
-      className="flex max-h-[200px] flex-col justify-end overflow-hidden px-3 pb-1.5 font-mono text-xs leading-5 break-all whitespace-pre-wrap text-muted-foreground"
+      onClick={props.onOpen}
+      className={cn(
+        box,
+        "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
+      )}
     >
+      {preview}
+    </button>
+  ) : (
+    <div aria-live="off" data-command-output-tail className={box}>
       {preview}
     </div>
   );

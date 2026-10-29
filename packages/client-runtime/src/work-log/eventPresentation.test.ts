@@ -114,11 +114,18 @@ describe("workEventAction", () => {
     [grep("expiresAt", "src/auth"), "Grepped expiresAt in auth"],
     [list("src/auth"), "Listed auth"],
     [fetchPage("https://docs.example.com/"), "Fetched docs.example.com"],
-    [command("pnpm test"), "Ran pnpm test"],
-    [command("sed -n '1,80p' src/auth/session.ts"), "Read session.ts"],
+    [command("pnpm test"), "Ran tests"],
+    [command("node scripts/gen.mjs"), "Ran node · scripts/gen.mjs"],
+    [
+      command(
+        'cd /w/work-log && grep -n "^export function workEventAction" -A10 eventPresentation.ts; sed -n 8,14p eventPresentation.ts',
+      ),
+      "Grepped ^export function workEventAction in eventPresentation.ts +1",
+    ],
+    [command("sed -n '1,80p' src/auth/session.ts"), "Read session.ts L1-80"],
     [command("rg -n expiresAt src/auth | head"), "Grepped expiresAt in auth"],
     [command("Get-ChildItem src/auth"), "Listed auth"],
-    [command("sed -i s/a/b/ src/auth/session.ts"), "Ran sed -i s/a/b/ src/auth/session.ts"],
+    [command("sed -i s/a/b/ src/auth/session.ts"), "Ran sed · auth/session.ts"],
     [
       command("bash -lc 'cat a.ts'", {
         actions: [{ type: "search", query: "token", path: "/w/src" }],
@@ -132,7 +139,7 @@ describe("workEventAction", () => {
           { type: "search", query: "x" },
         ],
       }),
-      "Ran cat a.ts && rg x",
+      "Read a.ts +1",
     ],
     [mcp("mcp__linear__create_issue"), "Ran create_issue"],
     [edit("src/auth/session.ts"), "Edited session.ts"],
@@ -143,8 +150,9 @@ describe("workEventAction", () => {
   });
 
   it("uses the loading verb while live and the imperative when failed", () => {
-    expect(workEventAction(command("pnpm test"), true)?.verb).toBe("Running");
-    expect(workEventAction(command("pnpm test", { exitCode: 1 }))?.verb).toBe("Run");
+    expect(workEventAction(command("node build.mjs"), true)?.verb).toBe("Running");
+    expect(workEventAction(command("node build.mjs", { exitCode: 1 }))?.verb).toBe("Run");
+    expect(workEventAction(command("pnpm test"), true)?.verb).toBe("Running tests");
   });
 });
 
@@ -194,7 +202,7 @@ describe("workRunHeader", () => {
       "shell",
       "Run unit tests",
     ],
-    ["one bare command", [command("git status")], true, "shell", "Running git status"],
+    ["one bare command", [command("git status")], true, "shell", "Viewing git status"],
     ["commands", [command("git status"), command("pnpm test")], false, "shell", "Ran 2 commands"],
     ["live commands", [command("git status"), command("pnpm test")], true, "shell", "Running…"],
     [
@@ -216,21 +224,21 @@ describe("workRunHeader", () => {
       [read("a.ts"), read("b.ts"), read("a.ts"), read("c.ts"), grep("x"), command("pnpm test")],
       false,
       "shell",
-      "Ran pnpm test · explored 3 files, 1 search",
+      "Ran tests, 3 files, 1 search",
     ],
     [
       "edits, commands and reads",
       [edit("src/a.ts"), command("pnpm test"), command("git status"), read("b.ts"), edit("c.ts")],
       false,
       "edit",
-      "Edited 2 files · ran 2 commands · explored b.ts",
+      "Edited 2 files, b.ts, ran 2 commands",
     ],
     [
       "an edit and a command",
       [command("git status"), edit("a.ts")],
       false,
       "edit",
-      "Edited a.ts · ran 1 command",
+      "Edited a.ts, ran 1 command",
     ],
     ["live edits and reads", [read("b.ts"), edit("src/a.ts")], true, "edit", "Editing a.ts"],
     [
@@ -253,10 +261,38 @@ describe("workRunHeader", () => {
   });
 
   it("never heads a run with edits as exploration", () => {
-    expect(workRunHeader([edit("a.ts"), command("ls")]).title).toBe(
-      "Edited a.ts · explored 1 folder",
-    );
+    expect(workRunHeader([edit("a.ts"), command("ls")]).title).toBe("Edited a.ts, 1 folder");
     expect(workRunHeader([edit("a.ts"), thought("ok")]).rule).toBe("edit");
+  });
+
+  it("names an edited file once and sums the run's line counts", () => {
+    const counted = (path: string, additions: number, deletions: number) => {
+      const step = edit(path);
+      return {
+        ...step,
+        structuredPayload: {
+          ...step.structuredPayload,
+          additions,
+          deletions,
+        } as OrchestrationV2TurnItem,
+      };
+    };
+    expect(
+      workRunHeader([
+        read("src/a.ts"),
+        counted("src/a.ts", 10, 2),
+        read("b.ts"),
+        command("pnpm test"),
+        counted("src/a.ts", 2, 1),
+      ]),
+    ).toEqual({
+      rule: "edit",
+      title: "Edited a.ts, b.ts, ran 1 command",
+      diffStats: { additions: 12, deletions: 3 },
+    });
+    const writing = { ...counted("src/a.ts", 4, 4), toolLifecycleStatus: "inProgress" as const };
+    expect(workRunHeader([writing, command("pnpm test")]).diffStats).toBeUndefined();
+    expect(workRunHeader([counted("src/a.ts", 4, 4)], true).diffStats).toBeUndefined();
   });
 });
 
