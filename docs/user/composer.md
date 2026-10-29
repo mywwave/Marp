@@ -114,6 +114,11 @@ returns to the remembered selection.
 
 Leaving reasoning level or service tier unset uses the provider's own configuration.
 
+Claude can search and read code in Explore subagents on a faster model while the
+thread keeps its own. Pick one in **Settings → Threads & models → Exploration**;
+the model picker shows it when set. Claude Code takes a model family (Haiku,
+Sonnet, Opus) for these spawns, so each family offers its newest model.
+
 ## Quote an assistant response
 
 On web and desktop, select text within one assistant response and choose

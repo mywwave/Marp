@@ -21,7 +21,15 @@ import {
   XIcon,
 } from "lucide-react";
 import * as DateTime from "effect/DateTime";
-import { useId, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from "react";
+import {
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+  type Ref,
+} from "react";
 
 import { useAssetUrls } from "../../assets/assetUrls";
 import { threadEnvironment } from "../../state/threads";
@@ -61,6 +69,19 @@ export interface QueuedRunsControlHandle {
 type ThreadQueueProjection = Parameters<typeof deriveThreadQueueWorkflowState>[0];
 
 const getQueuedItemKey = (item: { readonly key: string }) => item.key;
+
+/** A focused queued message takes Delete/Backspace and Enter; keys typed into its controls do not. */
+function queuedRunKeyAction(
+  event: Pick<
+    KeyboardEvent,
+    "key" | "target" | "currentTarget" | "altKey" | "ctrlKey" | "metaKey" | "shiftKey"
+  >,
+): "remove" | "edit" | null {
+  if (event.target !== event.currentTarget) return null;
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return null;
+  if (event.key === "Backspace" || event.key === "Delete") return "remove";
+  return event.key === "Enter" ? "edit" : null;
+}
 
 function queuedImageResources(projection: ThreadQueueProjection | undefined) {
   if (!projection) return [];
@@ -250,16 +271,41 @@ export function QueuedRunsControl({
             ),
           ).trim();
           const isEditing = item.runId !== null && item.runId === props.editingRunId;
+          const canEdit =
+            item.runId !== null &&
+            item.messageId !== null &&
+            item.editable &&
+            busyRunId === null &&
+            props.editBlockedReason === null;
+          const edit = () => {
+            if (item.runId === null || item.messageId === null) return;
+            props.onEditQueuedRun({
+              runId: item.runId,
+              messageId: item.messageId,
+              text: item.text,
+              attachments: item.attachments,
+            });
+          };
           return (
             <li
               key={item.key}
+              tabIndex={closing ? undefined : 0}
+              onKeyDown={(event) => {
+                const action = queuedRunKeyAction(event);
+                if (action === null || isEditing) return;
+                event.preventDefault();
+                if (action === "edit" && canEdit) edit();
+                if (action === "remove" && item.runId !== null && busyRunId === null) {
+                  void remove(item.runId);
+                }
+              }}
               aria-label={`Queued message ${position + 1} of ${items.length}, not sent`}
               aria-posinset={position + 1}
               aria-setsize={items.length}
               aria-current={isEditing ? "true" : undefined}
               data-closing={closing || undefined}
               inert={closing}
-              className="group/queued flex w-full flex-col items-end gap-1 transition-opacity duration-fast ease-out starting:opacity-0 data-closing:animate-fade-out motion-reduce:transition-none"
+              className="group/queued flex w-full flex-col items-end gap-1 rounded-2xl transition-opacity duration-fast ease-out outline-none starting:opacity-0 focus-visible:ring-2 focus-visible:ring-ring/70 data-closing:animate-fade-out motion-reduce:transition-none"
             >
               <QueuedMessage
                 environmentId={props.environmentId}
@@ -321,22 +367,8 @@ export function QueuedRunsControl({
                           size="icon-xs"
                           variant="ghost-muted"
                           aria-label="Edit queued message"
-                          disabled={
-                            item.runId === null ||
-                            !item.editable ||
-                            busyRunId !== null ||
-                            props.editBlockedReason !== null
-                          }
-                          onClick={() => {
-                            if (item.runId !== null && item.messageId !== null) {
-                              props.onEditQueuedRun({
-                                runId: item.runId,
-                                messageId: item.messageId,
-                                text: item.text,
-                                attachments: item.attachments,
-                              });
-                            }
-                          }}
+                          disabled={!canEdit}
+                          onClick={edit}
                         >
                           <PencilIcon />
                         </Button>

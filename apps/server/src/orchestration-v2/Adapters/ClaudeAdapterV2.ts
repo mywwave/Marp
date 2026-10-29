@@ -70,6 +70,7 @@ import {
   PROVIDER_SEND_TURN_MAX_FILE_BYTES,
   ClaudeSettings,
   TrimmedNonEmptyString,
+  claudeSubagentModelAlias,
   defaultInstanceIdForDriver,
   isCompactionCommandMessage,
   type ModelSelection,
@@ -121,6 +122,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
+import * as P from "effect/Predicate";
 import * as Queue from "effect/Queue";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
@@ -1447,6 +1449,29 @@ const subagentDeviceInstructions: HookCallback = () =>
     },
   });
 
+// Explore pins `model: "inherit"`, so the default-subagent-model env var cannot reach it; a spawn's
+// own `model` can. Agents with other names keep their definitions.
+function claudeExplorationModelHook(alias: () => string | null): HookCallback {
+  return (hookInput) => {
+    const model = alias();
+    const toolInput = hookInput.hook_event_name === "PreToolUse" ? hookInput.tool_input : null;
+    if (
+      model === null ||
+      !P.isObject(toolInput) ||
+      toolInput.subagent_type !== "Explore" ||
+      toolInput.model !== undefined
+    ) {
+      return Promise.resolve({});
+    }
+    return Promise.resolve({
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        updatedInput: { ...toolInput, model },
+      },
+    });
+  };
+}
+
 export function makeClaudeQueryOptions(input: {
   readonly modelSelection: ModelSelection;
   readonly nativeThreadId: string;
@@ -1472,6 +1497,8 @@ export function makeClaudeQueryOptions(input: {
   readonly modeInstructions?: string;
   // Flag settings, because a user's settings.json env beats the process env in Claude Code.
   readonly toolSearchOverride?: "true";
+  /** Read at each spawn, so a settings change reaches a live process. */
+  readonly explorationModelAlias?: () => string | null;
 }): ClaudeAgentSdkQueryOptions {
   const compiledSelection = compileClaudeModelSelection(input.modelSelection);
   const {
@@ -1587,8 +1614,24 @@ export function makeClaudeQueryOptions(input: {
         ...launchAppendSystemPrompt,
       ].join("\n\n"),
     },
-    ...(deviceInstructions
-      ? { hooks: { SubagentStart: [{ hooks: [subagentDeviceInstructions] }] } }
+    ...(deviceInstructions || input.explorationModelAlias !== undefined
+      ? {
+          hooks: {
+            ...(deviceInstructions
+              ? { SubagentStart: [{ hooks: [subagentDeviceInstructions] }] }
+              : {}),
+            ...(input.explorationModelAlias === undefined
+              ? {}
+              : {
+                  PreToolUse: [
+                    {
+                      matcher: "Agent|Task",
+                      hooks: [claudeExplorationModelHook(input.explorationModelAlias)],
+                    },
+                  ],
+                }),
+          },
+        }
       : {}),
     ...(Object.keys(extraArgs).length === 0 ? {} : { extraArgs }),
   };
@@ -4448,6 +4491,17 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
   const mcpSessions = yield* McpProviderSessions.McpProviderSessions;
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const serverSettings = yield* Effect.serviceOption(ServerSettings.ServerSettingsService);
+  // Refreshed at each turn; the PreToolUse hook reads it when Claude spawns Explore.
+  let explorationModelAlias: string | null = null;
+  const readExplorationModelAlias = Option.isSome(serverSettings)
+    ? serverSettings.value.getSettings.pipe(
+        Effect.map((settings) => {
+          const model = settings.explorationModels[adapterOptions.instanceId];
+          return model ? claudeSubagentModelAlias(model) : null;
+        }),
+        Effect.orElseSucceed(() => null),
+      )
+    : Effect.succeed(null);
   const { attachmentsDir, fileSystem, path, crypto, idAllocator, queryRunner } = adapterOptions;
   const subagentModelCatalog = scopeClaudeModelCatalog(
     BUNDLED_CLAUDE_MODEL_CATALOG,
@@ -9877,6 +9931,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
           turnInput: ProviderAdapter.ProviderAdapterV2TurnInput,
           nativeThreadId: string,
         ) {
+          explorationModelAlias = yield* readExplorationModelAlias;
           const queryPolicy = yield* queryPolicyForTurn(turnInput);
           const mcpSession = yield* mcpSessions.read(turnInput.threadId);
           const mcpOverrides = claudeMcpQueryOverrides({
@@ -10031,6 +10086,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
               ? {}
               : { modeInstructions: queryPolicy.modeInstructions }),
             ...(toolSearchOverride === undefined ? {} : { toolSearchOverride }),
+            explorationModelAlias: () => explorationModelAlias,
           });
           const querySession = yield* queryRunner
             .open({

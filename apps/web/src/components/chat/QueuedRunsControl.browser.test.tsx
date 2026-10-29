@@ -3,11 +3,12 @@ import { serializeAssistantCitation } from "@marp/shared/assistantCitations";
 import * as DateTime from "effect/DateTime";
 import type { ComponentProps } from "react";
 import { expect, it, vi } from "vite-plus/test";
-import { page } from "vite-plus/test/browser";
+import { page, userEvent } from "vite-plus/test/browser";
 
 const state = vi.hoisted(() => ({
   projection: null as unknown,
   workflow: null as unknown,
+  command: (async () => undefined) as (input: unknown) => Promise<unknown>,
 }));
 
 vi.mock(import("@marp/client-runtime/state/thread-workflows"), async (importOriginal) => ({
@@ -31,7 +32,7 @@ vi.mock(import("../../state/query"), async (importOriginal) => ({
 
 vi.mock(import("../../state/use-atom-command"), async (importOriginal) => ({
   ...(await importOriginal()),
-  useAtomCommand: (() => async () => undefined) as never,
+  useAtomCommand: (() => (input: unknown) => state.command(input)) as never,
 }));
 
 vi.mock(import("../../assets/assetUrls"), async (importOriginal) => ({
@@ -47,6 +48,7 @@ import { QueuedRunsControl } from "./QueuedRunsControl";
 function setup() {
   state.projection = null;
   state.workflow = null;
+  state.command = async () => undefined;
 }
 
 const baseProps = {
@@ -202,4 +204,40 @@ it("stays inside the timeline scroller instead of growing the chat column", asyn
   await expect.element(page.getByText("Later", { exact: true })).toBeInTheDocument();
   const column = screen.getByTestId("column").element();
   expect(column.scrollHeight).toBe(column.clientHeight);
+});
+
+it("removes a focused queued message with Delete and edits it with Enter, never from its controls", async () => {
+  setup();
+  const command = vi.fn(async (_input: unknown) => undefined);
+  state.command = command;
+  state.projection = { projection: { messages: [] } };
+  state.workflow = {
+    activeRun: { id: "run:active" },
+    canPromoteToSteer: true,
+    queuedRuns: [
+      {
+        run: { id: "run:queued", userMessageId: "message:queued" },
+        text: "Later",
+        attachments: [],
+      },
+    ],
+  };
+  const onEditQueuedRun = vi.fn();
+  await using screen = await renderQueue({ onEditQueuedRun });
+  const item = screen.getByRole("listitem");
+
+  (screen.getByRole("button", { name: "Edit queued message" }).element() as HTMLElement).focus();
+  await userEvent.keyboard("{Delete}");
+  expect(command).not.toHaveBeenCalled();
+
+  (item.element() as HTMLElement).focus();
+  await userEvent.keyboard("{Enter}");
+  expect(onEditQueuedRun).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ runId: "run:queued", text: "Later" }),
+  );
+
+  await userEvent.keyboard("{Delete}");
+  expect(command).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ input: { threadId: "thread:test", runId: "run:queued" } }),
+  );
 });

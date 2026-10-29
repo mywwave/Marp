@@ -1215,6 +1215,21 @@ export const StorageCleanupSettings = Schema.Struct({
 });
 export type StorageCleanupSettings = typeof StorageCleanupSettings.Type;
 
+const ExplorationModels = Schema.Record(ProviderInstanceId, Schema.NullOr(TrimmedNonEmptyString));
+
+/** Only Claude Code lets the host pick the model for its built-in Explore subagent. */
+export function supportsExplorationModel(driver: ProviderDriverKind): boolean {
+  return driver === "claudeAgent";
+}
+
+const CLAUDE_SUBAGENT_MODEL_ALIASES = ["haiku", "sonnet", "opus", "fable"] as const;
+
+/** Claude Code's Agent tool takes a family alias, not a model ID, as its per-spawn model. */
+export function claudeSubagentModelAlias(model: string) {
+  const parts = model.trim().toLowerCase().split("-");
+  return CLAUDE_SUBAGENT_MODEL_ALIASES.find((alias) => parts.includes(alias)) ?? null;
+}
+
 export const ServerSettings = Schema.Struct({
   // Null means unmigrated; empty is authoritative and must not resurrect cleared preferences.
   favorites: Schema.NullOr(ModelFavorites).pipe(Schema.withDecodingDefault(Effect.succeed(null))),
@@ -1240,6 +1255,8 @@ export const ServerSettings = Schema.Struct({
   ),
   /** Off, turns carry no workspace snapshot (outside edits, project layout, open file). */
   shareWorkspaceContext: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  /** Per provider instance, the model exploration subagents run on. Null or absent follows the thread. */
+  explorationModels: ExplorationModels.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
 
   enableAgentBrowserAccess: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   projectAgentBrowserAccessOverrides: Schema.Record(ProjectId, Schema.Boolean).pipe(
@@ -1609,6 +1626,8 @@ export const ServerSettingsPatch = Schema.Struct({
   enableProviderUpdateChecks: Schema.optionalKey(Schema.Boolean),
   continueThreadsAfterServerUpdate: Schema.optionalKey(Schema.Boolean),
   shareWorkspaceContext: Schema.optionalKey(Schema.Boolean),
+  /** Merged per instance; null returns that instance to the thread's model. */
+  explorationModels: Schema.optionalKey(ExplorationModels),
   enableAgentBrowserAccess: Schema.optionalKey(Schema.Boolean),
   projectAgentBrowserAccessOverrides: Schema.optionalKey(
     Schema.Record(ProjectId, Schema.NullOr(Schema.Boolean)),

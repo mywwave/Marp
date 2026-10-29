@@ -580,6 +580,14 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["agent prompt changed files edits project layout tree open file selection"],
   },
   {
+    id: "exploration-model",
+    title: "Exploration model",
+    to: "/settings/threads",
+    environmentOnly: true,
+    scope: "environment-defaults",
+    searchTerms: ["subagent explore search read fast cheap haiku delegate"],
+  },
+  {
     id: "response-streaming",
     title: "Response streaming",
     to: "/settings/threads",

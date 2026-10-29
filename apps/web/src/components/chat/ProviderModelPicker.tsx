@@ -4,6 +4,7 @@ import {
   type EnvironmentId,
   type ProviderDriverKind,
   type ResolvedKeybindingsConfig,
+  supportsExplorationModel,
 } from "@marp/contracts";
 import { ChevronDownIcon } from "lucide-react";
 import { memo, useRef, useState } from "react";
@@ -13,6 +14,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "~/lib/utils";
 import { ModelPickerContent, resolveModelPickerSelectedModel } from "./ModelPickerContent";
 import { ChatGptSharingControl } from "./ChatGptSharingControl";
+import { ExplorationModelNote } from "./ExplorationModelNote";
 import { ProviderInstanceIcon } from "./ProviderInstanceIcon";
 import { ModelEsque, getDisplayModelName, getTriggerDisplayModelName } from "./providerIconUtils";
 import { shouldShowInstanceBadge, type ProviderInstanceEntry } from "../../providerInstances";
@@ -315,6 +317,16 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
         />
         {props.selectedModels === undefined ? (
           <ChatGptSharingControl provider={activeEntry?.snapshot ?? null} />
+        ) : null}
+        {props.selectedModels === undefined &&
+        props.environmentId !== null &&
+        activeEntry !== null &&
+        supportsExplorationModel(activeEntry.driverKind) ? (
+          <ExplorationModelNote
+            environmentId={props.environmentId}
+            instanceId={activeInstanceId}
+            options={selectedInstanceOptions}
+          />
         ) : null}
       </PopoverPopup>
     </Popover>

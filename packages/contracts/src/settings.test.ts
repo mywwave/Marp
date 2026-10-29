@@ -7,6 +7,7 @@ import {
   ClientSettingsSchema,
   ClientSettingsPatch,
   ClaudeSettings,
+  claudeSubagentModelAlias,
   DEFAULT_SERVER_SETTINGS,
   globalIdleCompaction,
   idleCompactionPatch,
@@ -279,6 +280,22 @@ describe("provider enabled defaults", () => {
     expect(
       resolveProviderInstanceEnabled({ driver: codex, enabled: false, config: { enabled: true } }),
     ).toBe(false);
+  });
+});
+
+describe("ServerSettings exploration models", () => {
+  it("follows the thread model until an instance picks one, and patches can clear it", () => {
+    expect(decodeServerSettings({}).explorationModels).toEqual({});
+    expect(
+      decodeServerSettingsPatch({ explorationModels: { claudeAgent: null } }).explorationModels,
+    ).toEqual({ claudeAgent: null });
+    expect(() => decodeServerSettingsPatch({ explorationModels: { claudeAgent: " " } })).toThrow();
+  });
+
+  it("maps catalog models to the family aliases Claude Code's Agent tool accepts", () => {
+    expect(claudeSubagentModelAlias("claude-haiku-5-5")).toBe("haiku");
+    expect(claudeSubagentModelAlias("claude-sonnet-4-6")).toBe("sonnet");
+    expect(claudeSubagentModelAlias("my-custom-model")).toBeNull();
   });
 });
 

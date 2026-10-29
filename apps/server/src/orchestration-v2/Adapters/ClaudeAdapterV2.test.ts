@@ -754,6 +754,60 @@ describe("ClaudeAdapterV2 device instructions", () => {
   });
 });
 
+describe("ClaudeAdapterV2 exploration model", () => {
+  const spawn = (alias: string | null, toolInput: Record<string, unknown>) => {
+    const options = ClaudeAdapterV2.makeClaudeQueryOptions({
+      modelSelection: {
+        instanceId: ProviderInstanceId.make("claudeAgent"),
+        model: "claude-opus-5-5",
+      },
+      nativeThreadId: "native-thread-claude-explore",
+      resume: false,
+      cwd: "/workspace",
+      environment: {},
+      explorationModelAlias: () => alias,
+    });
+    return Promise.all(
+      (options.hooks?.PreToolUse ?? []).flatMap((matcher) =>
+        matcher.hooks.map((hook) =>
+          hook(
+            {
+              hook_event_name: "PreToolUse",
+              tool_name: "Agent",
+              tool_input: toolInput,
+              tool_use_id: "toolu_1",
+              session_id: "native-thread-claude-explore",
+              transcript_path: "/transcript.jsonl",
+              cwd: "/workspace",
+            },
+            "toolu_1",
+            { signal: new AbortController().signal },
+          ),
+        ),
+      ),
+    );
+  };
+
+  it("runs Explore spawns on the exploration model and leaves everything else alone", async () => {
+    const explore = { subagent_type: "Explore", description: "Find", prompt: "Find it" };
+    assert.deepEqual(await spawn("haiku", explore), [
+      {
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse",
+          updatedInput: { ...explore, model: "haiku" },
+        },
+      },
+    ]);
+    assert.deepEqual(await spawn(null, explore), [{}]);
+    assert.deepEqual(await spawn("haiku", { ...explore, model: "opus" }), [{}]);
+    assert.deepEqual(
+      await spawn("haiku", { subagent_type: "my-reviewer", description: "Review", prompt: "Go" }),
+      [{}],
+    );
+    assert.deepEqual(await spawn("haiku", { description: "Do", prompt: "General work" }), [{}]);
+  });
+});
+
 describe("ClaudeAdapterV2 context usage", () => {
   it("dates cache expiry from the request start, not the response end", () => {
     const usage = ClaudeAdapterV2.claudeProviderTurnTokenUsage(
