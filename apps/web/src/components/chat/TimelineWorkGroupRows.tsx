@@ -279,6 +279,8 @@ export function WorkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: 
     use(TimelineRowActivityCtx);
   const compacting = row.compacting === true || isCompacting;
   const shimmer = isPreparingWorktree || compacting;
+  // A plain "Working" row repeats the header's status pill and timer.
+  if (!shimmer && !backgroundWorktreeSetup) return null;
   const label = isPreparingWorktree ? (
     "Setting up worktree…"
   ) : compacting ? (

@@ -132,6 +132,10 @@ export function workEntryDisplayLabel(entry: WorkLogEntry, workspaceRoot: string
   }
   const toolPresentation = resolveWorkEntryToolPresentation(entry);
   if (toolPresentation) return toolPresentation.displayName;
+  const commandItem = entry.structuredPayload;
+  const commandDescription =
+    commandItem?.type === "command_execution" ? commandItem.description?.trim() : undefined;
+  if (commandDescription) return commandDescription;
   if (entry.command?.trim()) return commandDisplayText(entry.command);
   const action = toolGroupAction(entry);
   if (action === "code-search" || action === "search") {

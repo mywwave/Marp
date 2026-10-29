@@ -134,6 +134,28 @@ describe("deriveMessagesTimelineRows", () => {
     expect(first.kind === "work" && first.entry.toolLifecycleStatus).toBe("inProgress");
   });
 
+  it("labels a command by its description instead of the raw command", () => {
+    const fixture = makeStreamingTimelineFixture();
+    const source = fixture.visibleTurnItems.find((row) => row.item.type === "dynamic_tool")!;
+    if (source.item.type !== "dynamic_tool") throw new Error("Expected tool fixture");
+    const { toolName: _toolName, input: _input, output: _output, ...base } = source.item;
+    const item = {
+      ...base,
+      type: "command_execution",
+      title: null,
+      input: "Get-PSDrive C | Select-Object Used,Free",
+      description: "Measure free space on C:",
+    } as OrchestrationV2TurnItem;
+    const entries = deriveTimelineEntriesFromVisibleTurnItems({
+      visibleTurnItems: [{ ...source, item }],
+      optimisticMessages: [],
+    });
+    const entry = entries.find((row) => row.kind === "work");
+    expect(entry?.kind === "work" && workEntryDisplayLabel(entry.entry, undefined)).toBe(
+      "Measure free space on C:",
+    );
+  });
+
   it("recovers the failed Sky call stored as a generic js integration", () => {
     const fixture = makeStreamingTimelineFixture();
     const source = fixture.visibleTurnItems.find((row) => row.item.type === "dynamic_tool")!;

@@ -49,7 +49,7 @@ import {
   RunAttemptId,
   RunId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import { assert, describe, it } from "@effect/vitest";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
@@ -69,18 +69,18 @@ import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 import { Tool } from "effect/ai";
-import { formatClaudeResumeCompactionQuestion } from "@t3tools/shared/claudeCompaction";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
-import { SpawnExecutableResolution } from "@t3tools/shared/shell";
+import { formatClaudeResumeCompactionQuestion } from "@marp/shared/claudeCompaction";
+import * as HostProcess from "@marp/shared/HostProcess";
+import { getModelSelectionStringOptionValue } from "@marp/shared/model";
+import { SpawnExecutableResolution } from "@marp/shared/shell";
 
 import * as PortScanner from "../../preview/PortScanner.ts";
 import { attachmentRelativePath } from "../../attachmentStore.ts";
 import { WorkflowAgentTranscriptReadObserver } from "../workflowAgentTranscript.ts";
 import * as ServerConfig from "../../config.ts";
-import * as McpProviderSession from "@t3tools/provider-core/server/mcpSession";
-import { T3_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH } from "@t3tools/provider-core/server/orchestrationInstructions";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
+import * as McpProviderSession from "@marp/provider-core/server/mcpSession";
+import { MARP_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH } from "@marp/provider-core/server/orchestrationInstructions";
+import * as McpProviderSessions from "@marp/provider-core/server/McpProviderSessions";
 import { PreviewControlsToolkit } from "../../mcp/toolkits/previewControls/tools.ts";
 import { HtmlToolkit } from "../../mcp/toolkits/html/tools.ts";
 import { EnvironmentToolkit } from "../../mcp/toolkits/environment/tools.ts";
@@ -89,12 +89,12 @@ import { WorktreeToolkit } from "../../mcp/toolkits/worktree/tools.ts";
 import { ThreadToolkit } from "../../mcp/toolkits/thread/tools.ts";
 import { OrchestratorToolkit } from "../../mcp/toolkits/orchestrator/tools.ts";
 import { ClaudeExecutableFileCheck } from "../../provider/Drivers/ClaudeExecutable.ts";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import type * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
+import * as ProviderEventLoggers from "@marp/provider-core/server/ProviderEventLoggers";
+import * as ProviderAdapter from "@marp/provider-core/server/ProviderAdapter";
+import type * as ProviderContinuationRequests from "@marp/provider-core/server/ProviderContinuationRequests";
+import { makeProviderFailure } from "@marp/provider-core/server/failure";
 import * as ClaudeAdapterV2 from "./ClaudeAdapterV2.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as IdAllocator from "@marp/provider-core/server/IdAllocator";
 import { ClaudeOrchestratorReplayHarness } from "./ClaudeAdapterV2.testkit.ts";
 import { provideDeterministicTestRuntime } from "../testkit/DeterministicRuntime.ts";
 import { runOrchestratorV2Scenario } from "../testkit/OrchestratorScenario.ts";
@@ -461,14 +461,14 @@ describe("ClaudeAdapterV2 runtime query policy", () => {
 });
 
 describe("ClaudeAdapterV2 MCP query overrides", () => {
-  const T3_MCP_SERVERS = {
-    "t3-code": {
+  const MARP_MCP_SERVERS = {
+    marp: {
       type: "http",
       url: "http://127.0.0.1:43123/mcp",
       headers: {
         Authorization: "Bearer secret-claude-token",
       },
-      timeout: ClaudeAdapterV2.CLAUDE_T3_MCP_TOOL_TIMEOUT_MS,
+      timeout: ClaudeAdapterV2.CLAUDE_MARP_MCP_TOOL_TIMEOUT_MS,
     },
   } as const;
 
@@ -485,7 +485,7 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
     browserToolsAvailable: true,
   });
 
-  it("pre-approves only read-only t3-code tools in a read-only sandbox", () => {
+  it("pre-approves only read-only marp tools in a read-only sandbox", () => {
     const threadId = ThreadId.make("thread-claude-mcp-read-only");
     const mcpSession = mcpSessionFor(threadId);
     const overrides = ClaudeAdapterV2.claudeMcpQueryOverrides({
@@ -497,11 +497,11 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
     assert.deepEqual(overrides, {
       allowedTools: [
         ...ClaudeAdapterV2.CLAUDE_READ_ONLY_ALLOWED_TOOLS,
-        ...ClaudeAdapterV2.CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS,
+        ...ClaudeAdapterV2.CLAUDE_READ_ONLY_MARP_MCP_ALLOWED_TOOLS,
       ],
-      mcpServers: T3_MCP_SERVERS,
+      mcpServers: MARP_MCP_SERVERS,
     });
-    assert.isFalse(overrides.allowedTools?.includes(ClaudeAdapterV2.CLAUDE_T3_MCP_TOOL_WILDCARD));
+    assert.isFalse(overrides.allowedTools?.includes(ClaudeAdapterV2.CLAUDE_MARP_MCP_TOOL_WILDCARD));
   });
 
   it("invalidates live-query reuse when MCP credentials rotate", () => {
@@ -540,11 +540,11 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
       ...Object.values(HtmlToolkit.tools),
     ]
       .filter((tool) => Context.get(tool.annotations, Tool.Readonly))
-      .map((tool) => `mcp__t3-code__${tool.name}`)
+      .map((tool) => `mcp__marp__${tool.name}`)
       .sort();
 
     assert.deepEqual(
-      [...ClaudeAdapterV2.CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS].sort(),
+      [...ClaudeAdapterV2.CLAUDE_READ_ONLY_MARP_MCP_ALLOWED_TOOLS].sort(),
       readOnlyToolNames,
     );
   });
@@ -569,15 +569,15 @@ describe("ClaudeAdapterV2 native protocol logging", () => {
       allowedTools: ["Read"],
     });
     assert.deepEqual(overrides, {
-      allowedTools: ["Read", "mcp__t3-code__*"],
+      allowedTools: ["Read", "mcp__marp__*"],
       mcpServers: {
-        "t3-code": {
+        marp: {
           type: "http",
           url: "http://127.0.0.1:43123/mcp",
           headers: {
             Authorization: "Bearer secret-claude-token",
           },
-          timeout: ClaudeAdapterV2.CLAUDE_T3_MCP_TOOL_TIMEOUT_MS,
+          timeout: ClaudeAdapterV2.CLAUDE_MARP_MCP_TOOL_TIMEOUT_MS,
         },
       },
     });
@@ -603,8 +603,8 @@ describe("ClaudeAdapterV2 native protocol logging", () => {
     assert.equal(systemPrompt.type, "preset");
     assert.equal(systemPrompt.preset, "claude_code");
     assert.include(systemPrompt.append ?? "", "Use `delegate_task`");
-    assert.include(systemPrompt.append ?? "", "call `t3_background_wait`");
-    assert.notInclude(systemPrompt.append ?? "", "## T3 Code devices");
+    assert.include(systemPrompt.append ?? "", "call `marp_background_wait`");
+    assert.notInclude(systemPrompt.append ?? "", "## Marp devices");
     const logged = ClaudeAdapterV2.loggedClaudeQueryOptions(options);
     assert.equal(logged.hasMcpServers, true);
     assert.notInclude(JSON.stringify(logged), "secret-claude-token");
@@ -635,7 +635,7 @@ describe("ClaudeAdapterV2 device instructions", () => {
       resume: false,
       cwd: "/workspace",
       ...(input.mcp
-        ? { mcpServers: { "t3-code": { type: "http" as const, url: "http://127.0.0.1/mcp" } } }
+        ? { mcpServers: { marp: { type: "http" as const, url: "http://127.0.0.1/mcp" } } }
         : {}),
       deviceToolsAvailable: input.deviceToolsAvailable,
       environment: {},
@@ -645,13 +645,13 @@ describe("ClaudeAdapterV2 device instructions", () => {
 
   it("gives a session with device access the device block and the ToolSearch line to load it", () => {
     const text = append({ mcp: true, deviceToolsAvailable: true });
-    assert.include(text, T3_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH);
+    assert.include(text, MARP_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH);
     assert.include(text, "Use `delegate_task`");
   });
 
-  it("leaves the device block out without device access or without T3 tools", () => {
-    assert.notInclude(append({ mcp: true, deviceToolsAvailable: false }), "## T3 Code devices");
-    assert.notInclude(append({ mcp: false, deviceToolsAvailable: true }), "## T3 Code devices");
+  it("leaves the device block out without device access or without Marp tools", () => {
+    assert.notInclude(append({ mcp: true, deviceToolsAvailable: false }), "## Marp devices");
+    assert.notInclude(append({ mcp: false, deviceToolsAvailable: true }), "## Marp devices");
   });
 
   it("gives native subagents the device block only in a session with device access", async () => {
@@ -682,7 +682,7 @@ describe("ClaudeAdapterV2 device instructions", () => {
       {
         hookSpecificOutput: {
           hookEventName: "SubagentStart",
-          additionalContext: T3_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH,
+          additionalContext: MARP_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH,
         },
       },
     ]);
@@ -797,7 +797,7 @@ describe("ClaudeAdapterV2 session permissions", () => {
 
   it("adds a whole-tool session rule when Claude offers no suggestion", () => {
     const result = ClaudeAdapterV2.permissionResultFromDecision({
-      toolName: "mcp__t3__custom_tool",
+      toolName: "mcp__marp__custom_tool",
       decision: "acceptForSession",
       toolInput: {},
       toolUseID: "tool-2",
@@ -810,7 +810,7 @@ describe("ClaudeAdapterV2 session permissions", () => {
     assert.deepEqual(result.updatedPermissions, [
       {
         type: "addRules",
-        rules: [{ toolName: "mcp__t3__custom_tool" }],
+        rules: [{ toolName: "mcp__marp__custom_tool" }],
         behavior: "allow",
         destination: "session",
       },
@@ -825,7 +825,7 @@ describe("ClaudeAdapterV2 Auto-accept edits", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-accept-edits-",
+          prefix: "marp-claude-accept-edits-",
         });
         let openedOptions: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined;
         const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
@@ -949,7 +949,7 @@ describe("ClaudeAdapterV2 append-system-prompt-file launch argument", () => {
       instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
       settings: { ...DEFAULT_CLAUDE_SETTINGS, launchArgs },
       environment: {},
-      attachmentsDir: yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-append-" }),
+      attachmentsDir: yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-claude-append-" }),
       fileSystem,
       path: yield* Path.Path,
       crypto: yield* Crypto.Crypto,
@@ -1012,11 +1012,13 @@ describe("ClaudeAdapterV2 append-system-prompt-file launch argument", () => {
   const appendSystemPrompt = (options: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined) =>
     (options?.systemPrompt as { readonly append?: string } | undefined)?.append;
 
-  it.effect("sends append launch arguments to Claude after the T3 instructions", () =>
+  it.effect("sends append launch arguments to Claude after the Marp instructions", () =>
     Effect.scoped(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
-        const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-append-cwd-" });
+        const cwd = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "marp-claude-append-cwd-",
+        });
         yield* fileSystem.writeFileString(NodePath.join(cwd, "rules.md"), "File sentinel\n");
         const plain = yield* startTurnWithLaunchArgs("", cwd);
         const { exit, opened } = yield* startTurnWithLaunchArgs(
@@ -1040,15 +1042,15 @@ describe("ClaudeAdapterV2 append-system-prompt-file launch argument", () => {
     ),
   );
 
-  // regression: #15073 the SDK replaced the --settings launch argument with T3's settings
+  // regression: #15073 the SDK replaced the --settings launch argument with Marp's settings
   it.effect.each([
     `--settings '{"skillOverrides":{"lint":"off"},"showThinkingSummaries":false}'`,
     "--settings user-settings.json",
-  ])("merges %s beneath T3's settings", (launchArgs) =>
+  ])("merges %s beneath Marp's settings", (launchArgs) =>
     Effect.scoped(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
-        const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-settings-" });
+        const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-claude-settings-" });
         yield* fileSystem.writeFileString(
           NodePath.join(cwd, "user-settings.json"),
           '{"skillOverrides":{"lint":"off"},"showThinkingSummaries":false}',
@@ -1115,7 +1117,9 @@ describe("ClaudeAdapterV2 append-system-prompt-file launch argument", () => {
     Effect.scoped(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
-        const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-append-cwd-" });
+        const cwd = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "marp-claude-append-cwd-",
+        });
         const { exit, opened } = yield* startTurnWithLaunchArgs(launchArgs, cwd);
         assert.lengthOf(opened, 0);
         assert.isTrue(Exit.isFailure(exit));
@@ -1168,7 +1172,7 @@ const captureSdkExecutablePaths = Effect.fn("captureSdkExecutablePaths")(functio
   ).pipe(
     Effect.provide(
       ServerConfig.layerTest(process.cwd(), {
-        prefix: "t3-claude-binary-path-",
+        prefix: "marp-claude-binary-path-",
       }),
     ),
     Effect.provideService(ClaudeAdapterV2.ClaudeAgentSdkQueryRunner, {
@@ -1248,7 +1252,7 @@ describe("ClaudeAdapterV2 resumeThread", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const configDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-empty-session-",
+          prefix: "marp-claude-empty-session-",
         });
         const projectDir = path.join(configDir, "projects", "-workspace");
         yield* fileSystem.makeDirectory(projectDir, { recursive: true });
@@ -1337,7 +1341,7 @@ describe("ClaudeAdapterV2 resume compaction", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-resume-",
+          prefix: "marp-claude-resume-",
         });
         let openedOptions: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined;
         const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
@@ -1602,7 +1606,7 @@ describe("ClaudeAdapterV2 attachments", () => {
           const idAllocator = yield* IdAllocator.IdAllocatorV2;
           const path = yield* Path.Path;
           const claudeHome = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-v2-skills-home-",
+            prefix: "marp-claude-v2-skills-home-",
           });
           yield* fileSystem.makeDirectory(path.join(claudeHome, "skills", "implement"), {
             recursive: true,
@@ -1616,7 +1620,7 @@ describe("ClaudeAdapterV2 attachments", () => {
             options: ultrathink ? CLAUDE_TEST_MODEL_SELECTION.options : [],
           };
           const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-v2-attachments-",
+            prefix: "marp-claude-v2-attachments-",
           });
           const offeredMessages: Array<SDKUserMessage> = [];
           let failOpen = false;
@@ -2151,7 +2155,7 @@ describe("ClaudeAdapterV2 native fork", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-fork-attachments-",
+          prefix: "marp-claude-v2-fork-attachments-",
         });
         const openedQueries: Array<ClaudeAdapterV2.ClaudeAgentSdkQueryOpenInput> = [];
         const forkCalls: Array<ClaudeAdapterV2.ClaudeAgentSdkSessionForkInput> = [];
@@ -2375,7 +2379,7 @@ function makeFakeClaudeCli(answerSetServers = true) {
 }
 
 describe("ClaudeAdapterV2 MCP credential channel", () => {
-  const t3McpServer = {
+  const marpMcpServer = {
     type: "http" as const,
     url: "http://127.0.0.1:43123/mcp",
     headers: { Authorization: "Bearer dummy-mcp-credential" },
@@ -2396,7 +2400,7 @@ describe("ClaudeAdapterV2 MCP credential channel", () => {
             resume: false,
             cwd: null,
             environment: { PATH: "/usr/bin" },
-            mcpServers: { "t3-code": t3McpServer },
+            mcpServers: { marp: marpMcpServer },
           }),
           pathToClaudeCodeExecutable: "/opt/claude/cli.js",
           spawnClaudeCodeProcess: cli.spawn,
@@ -2445,7 +2449,7 @@ describe("ClaudeAdapterV2 MCP credential channel", () => {
 
       assert.deepInclude(cli.controlRequests, {
         subtype: "mcp_set_servers",
-        servers: { "t3-code": t3McpServer },
+        servers: { marp: marpMcpServer },
       });
       const spawned = JSON.stringify(cli.spawns);
       assert.notInclude(spawned, "--mcp-config");
@@ -2461,7 +2465,7 @@ describe("ClaudeAdapterV2 native session identity", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-session-identity-",
+          prefix: "marp-claude-v2-session-identity-",
         });
         const openedQueries: Array<ClaudeAdapterV2.ClaudeAgentSdkQueryOpenInput> = [];
         const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
@@ -2771,7 +2775,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const idAllocator = yield* IdAllocator.IdAllocatorV2;
       const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-claude-v2-wake-",
+        prefix: "marp-claude-v2-wake-",
       });
       const sdkMessages = yield* Queue.unbounded<SDKMessage>();
       const processQueues: Array<Queue.Queue<SDKMessage>> = [];
@@ -3409,8 +3413,10 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const home = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-remote-" });
-        const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-remote-cwd-" });
+        const home = yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-claude-remote-" });
+        const cwd = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "marp-claude-remote-cwd-",
+        });
         const remoteFile = path.join(home, "remote-settings.json");
         const sdk = yield* Effect.promise(() =>
           vi.importActual<typeof ClaudeSdk>("@anthropic-ai/claude-agent-sdk"),
@@ -3741,7 +3747,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
           const home = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-policy-home-",
+            prefix: "marp-claude-policy-home-",
           });
           yield* fileSystem.makeDirectory(path.join(home, "profile"));
           yield* fileSystem.writeFileString(
@@ -3790,7 +3796,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
           const home = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-policy-failure-",
+            prefix: "marp-claude-policy-failure-",
           });
           const settingsFile = path.join(home, "settings.json");
           const open = Effect.scoped(
@@ -3873,7 +3879,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const home = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-tool-search-",
+          prefix: "marp-claude-tool-search-",
         });
         const openedToolSearch = (
           settingsJson: string,
@@ -3922,8 +3928,8 @@ describe("ClaudeAdapterV2 background wake turns", () => {
 
         // Claude Code keeps the local file at the repository root, the main checkout's root in a
         // worktree, and that file beats the user's settings.
-        const repo = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-repo-" });
-        const worktree = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-wt-" });
+        const repo = yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-claude-repo-" });
+        const worktree = yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-claude-wt-" });
         const worktreeGitDir = path.join(repo, ".git", "worktrees", "wt");
         yield* fileSystem.makeDirectory(worktreeGitDir, { recursive: true });
         yield* fileSystem.writeFileString(path.join(worktreeGitDir, "commondir"), "../..\n");
@@ -3946,7 +3952,9 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         assert.isUndefined(yield* openedToolSearch(userAuto, path.join(repo, "packages", "app")));
 
         // Project settings beat user settings, and the process env applies only when no file sets it.
-        const project = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-project-" });
+        const project = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "marp-claude-project-",
+        });
         yield* fileSystem.makeDirectory(path.join(project, ".claude"));
         yield* fileSystem.writeFileString(
           path.join(project, ".claude", "settings.json"),
@@ -4179,7 +4187,9 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const homePath = yield* fs.makeTempDirectoryScoped({ prefix: "t3-claude-skill-dispatch-" });
+        const homePath = yield* fs.makeTempDirectoryScoped({
+          prefix: "marp-claude-skill-dispatch-",
+        });
         for (const [name, userOnly] of [
           ["interrogate", true],
           ["implement", true],
@@ -6949,7 +6959,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
   const makeTaskToolHarnessWithOptions = (environment: NodeJS.ProcessEnv = {}) =>
     Effect.gen(function* () {
       const configDir = yield* (yield* FileSystem.FileSystem).makeTempDirectoryScoped({
-        prefix: "t3-claude-tasks-",
+        prefix: "marp-claude-tasks-",
       });
       const path = yield* Path.Path;
       const harness = yield* makeWakeHarnessWithOptions({
@@ -8015,7 +8025,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-settled-stop-replaced-",
+          prefix: "marp-claude-v2-settled-stop-replaced-",
         });
         const processQueues: Array<Queue.Queue<SDKMessage>> = [];
         const firstCloseRequested = yield* Deferred.make<void>();
@@ -8199,7 +8209,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           const fileSystem = yield* FileSystem.FileSystem;
           const idAllocator = yield* IdAllocator.IdAllocatorV2;
           const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-v2-sibling-replace-",
+            prefix: "marp-claude-v2-sibling-replace-",
           });
           const nativeIds = ["native-thread-roster-a", "native-thread-roster-b"] as const;
           let allocateIndex = 0;
@@ -8653,91 +8663,93 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       ),
   );
 
-  it.effect("stores a Bash result's stdout and stderr as command output", () =>
-    Effect.scoped(
-      Effect.gen(function* () {
-        const harness = yield* makeWakeHarness;
-        const now = yield* DateTime.now;
-        const attemptId = RunAttemptId.make("attempt-claude-bash-output");
-        const bashToolUseId = "toolu_01BashOutput";
+  it.effect.each([{ toolName: "Bash" }, { toolName: "PowerShell" }])(
+    "stores a $toolName result's stdout, stderr and description as a command",
+    ({ toolName }) =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const harness = yield* makeWakeHarness;
+          const now = yield* DateTime.now;
+          const attemptId = RunAttemptId.make("attempt-claude-bash-output");
+          const bashToolUseId = "toolu_01BashOutput";
 
-        yield* harness.runtime.startTurn(
-          makeClaudeTestTurnInput({
-            threadId: harness.threadId,
-            providerThread: harness.providerThread,
-            now,
-            attemptId,
-            text: "Run it.",
-            attachments: [],
-          }),
-        );
-        yield* Queue.offer(
-          harness.sdkMessages,
-          claudeSdkFrame({
-            type: "assistant",
-            message: {
-              model: "claude-sonnet-4-6",
-              id: "msg_bash_output",
-              type: "message",
-              role: "assistant",
-              content: [
-                {
-                  type: "tool_use",
-                  id: bashToolUseId,
-                  name: "Bash",
-                  input: { command: "git status" },
-                },
-              ],
-            },
-            parent_tool_use_id: null,
-            uuid: "00000000-0000-4000-8000-000000000790",
-            session_id: WAKE_NATIVE_SESSION,
-          }),
-        );
-        yield* Queue.offer(
-          harness.sdkMessages,
-          claudeSdkFrame({
-            type: "user",
-            message: {
-              role: "user",
-              content: [
-                { type: "tool_result", tool_use_id: bashToolUseId, content: "On branch main" },
-              ],
-            },
-            parent_tool_use_id: null,
-            uuid: "00000000-0000-4000-8000-000000000791",
-            session_id: WAKE_NATIVE_SESSION,
-            tool_use_result: {
-              stdout: "On branch main",
-              stderr: "warning: dirty",
-              interrupted: false,
-              isImage: false,
-            },
-          }),
-        );
-        yield* Queue.offer(
-          harness.sdkMessages,
-          makeResultFrame({ uuid: "00000000-0000-4000-8000-000000000792", result: "Done." }),
-        );
-        yield* harness.awaitTerminal(1);
+          yield* harness.runtime.startTurn(
+            makeClaudeTestTurnInput({
+              threadId: harness.threadId,
+              providerThread: harness.providerThread,
+              now,
+              attemptId,
+              text: "Run it.",
+              attachments: [],
+            }),
+          );
+          yield* Queue.offer(
+            harness.sdkMessages,
+            claudeSdkFrame({
+              type: "assistant",
+              message: {
+                model: "claude-sonnet-4-6",
+                id: "msg_bash_output",
+                type: "message",
+                role: "assistant",
+                content: [
+                  {
+                    type: "tool_use",
+                    id: bashToolUseId,
+                    name: toolName,
+                    input: { command: "git status", description: "Show working tree status" },
+                  },
+                ],
+              },
+              parent_tool_use_id: null,
+              uuid: "00000000-0000-4000-8000-000000000790",
+              session_id: WAKE_NATIVE_SESSION,
+            }),
+          );
+          yield* Queue.offer(
+            harness.sdkMessages,
+            claudeSdkFrame({
+              type: "user",
+              message: {
+                role: "user",
+                content: [
+                  { type: "tool_result", tool_use_id: bashToolUseId, content: "On branch main" },
+                ],
+              },
+              parent_tool_use_id: null,
+              uuid: "00000000-0000-4000-8000-000000000791",
+              session_id: WAKE_NATIVE_SESSION,
+              tool_use_result: {
+                stdout: "On branch main",
+                stderr: "warning: dirty",
+                interrupted: false,
+                isImage: false,
+              },
+            }),
+          );
+          yield* Queue.offer(
+            harness.sdkMessages,
+            makeResultFrame({ uuid: "00000000-0000-4000-8000-000000000792", result: "Done." }),
+          );
+          yield* harness.awaitTerminal(1);
 
-        const bash = harness.events.findLast(
-          (event) =>
-            event.type === "turn_item.updated" &&
-            event.turnItem.nativeItemRef?.nativeId === bashToolUseId,
-        );
-        assert.equal(
-          bash?.type === "turn_item.updated" && bash.turnItem.type === "command_execution"
-            ? bash.turnItem.output
-            : undefined,
-          "On branch main\nwarning: dirty",
-        );
-      }).pipe(
-        Effect.provide(
-          Layer.mergeAll(IdAllocator.layer, McpProviderSessions.layer, NodeServices.layer),
+          const bash = harness.events.findLast(
+            (event) =>
+              event.type === "turn_item.updated" &&
+              event.turnItem.nativeItemRef?.nativeId === bashToolUseId,
+          );
+          const command =
+            bash?.type === "turn_item.updated" && bash.turnItem.type === "command_execution"
+              ? bash.turnItem
+              : undefined;
+          assert.equal(command?.output, "On branch main\nwarning: dirty");
+          assert.equal(command?.description, "Show working tree status");
+        }).pipe(
+          Effect.provide(
+            Layer.mergeAll(IdAllocator.layer, McpProviderSessions.layer, NodeServices.layer),
+          ),
         ),
       ),
-    ),
   );
 
   it.effect.each([
@@ -9348,7 +9360,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           );
           assert.lengthOf(harness.continuationRequests, 1);
 
-          // An empty session-task lifecycle result arriving before T3 opens the
+          // An empty session-task lifecycle result arriving before Marp opens the
           // wake run must not replace the root's terminal usage-limit result.
           yield* harness.offerAndWait(wakeTurnInit);
           yield* harness.offerAndWait(
@@ -12113,7 +12125,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-process-reset-",
+          prefix: "marp-claude-v2-process-reset-",
         });
         const processQueues: Array<Queue.Queue<SDKMessage>> = [];
         const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
@@ -12282,7 +12294,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           const fileSystem = yield* FileSystem.FileSystem;
           const idAllocator = yield* IdAllocator.IdAllocatorV2;
           const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-v2-buffer-replace-",
+            prefix: "marp-claude-v2-buffer-replace-",
           });
           const processQueues: Array<Queue.Queue<SDKMessage>> = [];
           const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
@@ -12461,7 +12473,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-model-change-running-subagent-",
+          prefix: "marp-claude-v2-model-change-running-subagent-",
         });
         const processQueues: Array<Queue.Queue<SDKMessage>> = [];
         const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
@@ -12643,7 +12655,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const cwd = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-append-replacement-",
+          prefix: "marp-claude-append-replacement-",
         });
         const appendFile = NodePath.join(cwd, "rules.md");
         yield* fileSystem.writeFileString(appendFile, "File sentinel\n");
@@ -12658,7 +12670,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           },
           environment: {},
           attachmentsDir: yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-append-replacement-attachments-",
+            prefix: "marp-claude-append-replacement-attachments-",
           }),
           fileSystem,
           path: yield* Path.Path,
@@ -12777,7 +12789,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           const fileSystem = yield* FileSystem.FileSystem;
           const idAllocator = yield* IdAllocator.IdAllocatorV2;
           const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-v2-replace-open-fail-",
+            prefix: "marp-claude-v2-replace-open-fail-",
           });
           let openCount = 0;
           const processQueues: Array<Queue.Queue<SDKMessage>> = [];
@@ -12904,7 +12916,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
   ) =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
-      const configDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-wf-" });
+      const configDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "marp-claude-wf-" });
       const transcriptDir = NodePath.join(configDir, "projects", "workflow");
       yield* fileSystem.makeDirectory(transcriptDir, { recursive: true });
       yield* fileSystem.writeFileString(

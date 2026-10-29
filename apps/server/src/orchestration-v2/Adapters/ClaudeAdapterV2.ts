@@ -5,7 +5,7 @@ import {
   dynamicToolTitle,
   formatReadToolLabel,
   formatSearchToolLabel,
-} from "@t3tools/shared/toolActivity";
+} from "@marp/shared/toolActivity";
 import { field, text } from "../unknownField.ts";
 import { mergeWorkflowAgentMetadata, type WorkflowAgentMetadata } from "../workflowAgentAnswers.ts";
 import {
@@ -20,7 +20,7 @@ import {
   parseClaudeWorkflowRunHandles,
 } from "./claudeWorkflowProgress.ts";
 
-import { isWorkspaceImagePreviewPath } from "@t3tools/shared/filePreview";
+import { isWorkspaceImagePreviewPath } from "@marp/shared/filePreview";
 import { normalizeClaudeTurnTokenUsage } from "../../provider/ClaudeTurnTokenUsage.ts";
 import {
   type CanUseTool,
@@ -55,16 +55,16 @@ import type {
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- the SDK takes a Node ChildProcess for the CLI.
 import * as NodeChildProcess from "node:child_process";
 import * as NodeUtil from "node:util";
-import { parseCliArgs } from "@t3tools/shared/cliArgs";
-import { fromLenientJson } from "@t3tools/shared/schemaJson";
-import { AgentScope } from "@t3tools/shared/AgentScope";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { applyClaudePromptEffortPrefix } from "@t3tools/shared/model";
+import { parseCliArgs } from "@marp/shared/cliArgs";
+import { fromLenientJson } from "@marp/shared/schemaJson";
+import { AgentScope } from "@marp/shared/AgentScope";
+import * as HostProcess from "@marp/shared/HostProcess";
+import { applyClaudePromptEffortPrefix } from "@marp/shared/model";
 import {
   CLAUDE_RESUME_COMPACTION_COMPACT_ANSWER,
   CLAUDE_RESUME_COMPACTION_NEVER_ANSWER,
   formatClaudeResumeCompactionQuestion,
-} from "@t3tools/shared/claudeCompaction";
+} from "@marp/shared/claudeCompaction";
 import {
   type ChatAttachment,
   PROVIDER_SEND_TURN_MAX_FILE_BYTES,
@@ -104,7 +104,7 @@ import {
   type RunId,
   type ThreadId,
   resolveIdleCompaction,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 
 import { FILE_HEADERS_ONLY, formatPatch, structuredPatch } from "diff";
 import * as Cause from "effect/Cause";
@@ -143,9 +143,9 @@ import {
 import * as ServerConfig from "../../config.ts";
 import * as PortScanner from "../../preview/PortScanner.ts";
 import * as ServerSettings from "../../serverSettings.ts";
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
-import { spawnAndCollect } from "@t3tools/provider-core/server/snapshotProbe";
-import { signalProcessGroup } from "@t3tools/provider-core/server/processGroup";
+import { expandHomePath } from "@marp/provider-core/server/pathExpansion";
+import { spawnAndCollect } from "@marp/provider-core/server/snapshotProbe";
+import { signalProcessGroup } from "@marp/provider-core/server/processGroup";
 import {
   claudeSignedOutMessage,
   makeClaudeEnvironment,
@@ -163,46 +163,43 @@ import {
   boundProviderEventForLogging,
   shouldPersistProviderEvent,
 } from "../../provider/EventNdjsonLogger.ts";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
+import * as ProviderEventLoggers from "@marp/provider-core/server/ProviderEventLoggers";
 import {
   claudeRateLimitEventToUpdate,
   type ClaudeScopedLimitNames,
 } from "../../provider/claudeUsageLimits.ts";
-import type { ManagedServerProvider } from "@t3tools/provider-core/server/snapshot";
-import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
+import type { ManagedServerProvider } from "@marp/provider-core/server/snapshot";
+import { mergeProviderInstanceEnvironment } from "@marp/provider-core/server/instanceEnvironment";
 import {
-  T3_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH,
-  T3_CODE_ORCHESTRATION_INSTRUCTIONS,
-} from "@t3tools/provider-core/server/orchestrationInstructions";
-import { buildRuntimeInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
+  MARP_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH,
+  MARP_ORCHESTRATION_INSTRUCTIONS,
+} from "@marp/provider-core/server/orchestrationInstructions";
+import { buildRuntimeInstructions } from "@marp/provider-core/server/runtimeInstructions";
 import {
   mcpToolPresentation,
   normalizeMcpText,
-} from "@t3tools/provider-core/server/mcpToolPresentation";
-import * as McpProviderSession from "@t3tools/provider-core/server/mcpSession";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import {
-  makeProviderFailure,
-  makeProviderRetryTurnItem,
-} from "@t3tools/provider-core/server/failure";
-import { turnScopedSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
-import { providerMessageTextWithAttachmentPaths } from "@t3tools/provider-core/server/attachmentPrompt";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+} from "@marp/provider-core/server/mcpToolPresentation";
+import * as McpProviderSession from "@marp/provider-core/server/mcpSession";
+import * as McpProviderSessions from "@marp/provider-core/server/McpProviderSessions";
+import * as IdAllocator from "@marp/provider-core/server/IdAllocator";
+import { makeProviderFailure, makeProviderRetryTurnItem } from "@marp/provider-core/server/failure";
+import { turnScopedSelectionTransition } from "@marp/provider-core/server/selectionTransition";
+import { providerMessageTextWithAttachmentPaths } from "@marp/provider-core/server/attachmentPrompt";
+import * as ProviderAdapter from "@marp/provider-core/server/ProviderAdapter";
 import {
   ProviderAdapterDriverCreateError,
   type ProviderAdapterDriverCreateInput,
-} from "@t3tools/provider-core/server/adapterDriver";
+} from "@marp/provider-core/server/adapterDriver";
 import {
   type BackgroundWorkReport,
   backgroundWorkNotification,
-} from "@t3tools/provider-core/server/notification";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+} from "@marp/provider-core/server/notification";
+import * as ProviderContinuationRequests from "@marp/provider-core/server/ProviderContinuationRequests";
 import {
   makeSubagentChildThread,
   makeSubagentConversationArtifacts,
   subagentThreadTitle,
-} from "@t3tools/provider-core/server/subagentProjection";
+} from "@marp/provider-core/server/subagentProjection";
 
 export const CLAUDE_PROVIDER = ProviderDriverKind.make("claudeAgent");
 const CLAUDE_AGENT_SDK_QUERY_PROTOCOL = "claude-agent-sdk.query" as const;
@@ -336,7 +333,7 @@ export function spawnClaudeProcessGroup(
 ): ClaudeSpawnedProcess {
   const child = NodeChildProcess.spawn(
     "/bin/sh",
-    ["-c", CLAUDE_GROUP_WATCH_SCRIPT, "t3-claude", options.command, ...options.args],
+    ["-c", CLAUDE_GROUP_WATCH_SCRIPT, "marp-claude", options.command, ...options.args],
     {
       cwd: options.cwd,
       env: options.env,
@@ -610,7 +607,7 @@ export interface ClaudeAgentSdkQueryRunnerShape {
 export class ClaudeAgentSdkQueryRunner extends Context.Service<
   ClaudeAgentSdkQueryRunner,
   ClaudeAgentSdkQueryRunnerShape
->()("t3/orchestration-v2/Adapters/ClaudeAdapterV2/ClaudeAgentSdkQueryRunner") {}
+>()("marp/orchestration-v2/Adapters/ClaudeAdapterV2/ClaudeAgentSdkQueryRunner") {}
 
 export interface ClaudeAgentSdkSessionForkInput {
   readonly sessionId: string;
@@ -1400,7 +1397,7 @@ export function claudeQueryEnvironment(
 }
 
 // Claude Code's auto tool search sends every MCP schema in full while they fit under a share of the
-// context window, which T3's tools do on 1M models. auto:0 already means on and auto:100 off.
+// context window, which Marp's tools do on 1M models. auto:0 already means on and auto:100 off.
 export function claudeToolSearchOverride(value: string | undefined): "true" | undefined {
   if (value === undefined) return undefined;
   if (value === "auto") return "true";
@@ -1429,12 +1426,12 @@ function parseClaudeInteger(text: string): number {
 }
 
 // Claude Code defers MCP tools behind ToolSearch, so the agent only finds
-// t3_background_wait when the system prompt says when to reach for it.
+// marp_background_wait when the system prompt says when to reach for it.
 const CLAUDE_BACKGROUND_WAIT_INSTRUCTIONS = `
 
 ### Background work you wait on
 
-To wait for a background command or Monitor you started (tests, a build), call \`t3_background_wait\` with its task ID before you end your turn. Do not mark work you leave running, or PRs. T3 MCP tools are deferred: load one with ToolSearch before you call it.
+To wait for a background command or Monitor you started (tests, a build), call \`marp_background_wait\` with its task ID before you end your turn. Do not mark work you leave running, or PRs. Marp MCP tools are deferred: load one with ToolSearch before you call it.
 `;
 
 // Native subagents start from their task, not this session's system prompt.
@@ -1442,7 +1439,7 @@ const subagentDeviceInstructions: HookCallback = () =>
   Promise.resolve({
     hookSpecificOutput: {
       hookEventName: "SubagentStart",
-      additionalContext: T3_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH,
+      additionalContext: MARP_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH,
     },
   });
 
@@ -1457,7 +1454,7 @@ export function makeClaudeQueryOptions(input: {
   readonly sdkSettings?: string | ClaudeSdkSettings;
   readonly environment?: NodeJS.ProcessEnv;
   readonly mcpServers?: ClaudeQueryOptions["mcpServers"];
-  /** The thread's T3 MCP session holds the `device` capability. */
+  /** The thread's Marp MCP session holds the `device` capability. */
   readonly deviceToolsAvailable?: boolean;
   readonly tools?: ClaudeAgentSdkQueryTools;
   readonly allowedTools?: ReadonlyArray<string>;
@@ -1576,11 +1573,9 @@ export function makeClaudeQueryOptions(input: {
         buildRuntimeInstructions({ harness: "Claude Code" }) +
           (input.mcpServers === undefined
             ? ""
-            : T3_CODE_ORCHESTRATION_INSTRUCTIONS +
+            : MARP_ORCHESTRATION_INSTRUCTIONS +
               CLAUDE_BACKGROUND_WAIT_INSTRUCTIONS +
-              (deviceInstructions
-                ? `\n${T3_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH}\n`
-                : "")),
+              (deviceInstructions ? `\n${MARP_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH}\n` : "")),
         ...launchAppendSystemPrompt,
       ].join("\n\n"),
     },
@@ -1642,7 +1637,7 @@ const decodeClaudeLaunchArgSettings = Schema.decodeUnknownEffect(
 /**
  * Reads the --settings launch argument: a value starting with a brace is inline
  * JSON, anything else is a file path relative to the cwd. makeClaudeQueryOptions
- * merges the result beneath T3's own settings.
+ * merges the result beneath Marp's own settings.
  */
 const readClaudeLaunchArgSettings = Effect.fn("ClaudeAdapterV2.readLaunchArgSettings")(
   function* (input: {
@@ -1671,30 +1666,30 @@ const readClaudeLaunchArgSettings = Effect.fn("ClaudeAdapterV2.readLaunchArgSett
   },
 );
 
-export const CLAUDE_T3_MCP_TOOL_WILDCARD = "mcp__t3-code__*";
+export const CLAUDE_MARP_MCP_TOOL_WILDCARD = "mcp__marp__*";
 
 // Keep in sync with OrchestratorToolkit Tool.Readonly annotations; ClaudeAdapterV2.test.ts checks this.
-export const CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
-  "mcp__t3-code__orchestrator_capabilities",
-  "mcp__t3-code__list_scheduled_tasks",
-  "mcp__t3-code__t3_thread_list",
-  "mcp__t3-code__t3_thread_wait",
-  "mcp__t3-code__t3_worktree_status",
-  "mcp__t3-code__t3_worktree_list",
-  "mcp__t3-code__t3_project_list",
-  "mcp__t3-code__t3_project_read",
-  "mcp__t3-code__t3_thread_search",
-  "mcp__t3-code__t3_preview_list",
-  "mcp__t3-code__t3_environment_read",
-  "mcp__t3-code__t3_environment_links",
-  "mcp__t3-code__html_preview",
-  "mcp__t3-code__html_render",
+export const CLAUDE_READ_ONLY_MARP_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
+  "mcp__marp__orchestrator_capabilities",
+  "mcp__marp__list_scheduled_tasks",
+  "mcp__marp__marp_thread_list",
+  "mcp__marp__marp_thread_wait",
+  "mcp__marp__marp_worktree_status",
+  "mcp__marp__marp_worktree_list",
+  "mcp__marp__marp_project_list",
+  "mcp__marp__marp_project_read",
+  "mcp__marp__marp_thread_search",
+  "mcp__marp__marp_preview_list",
+  "mcp__marp__marp_environment_read",
+  "mcp__marp__marp_environment_links",
+  "mcp__marp__html_preview",
+  "mcp__marp__html_render",
 ];
 
-// T3 waits can block for an hour; exceed Claude's default 60 s timeout.
-export const CLAUDE_T3_MCP_TOOL_TIMEOUT_MS = 65 * 60 * 1_000;
+// Marp waits can block for an hour; exceed Claude's default 60 s timeout.
+export const CLAUDE_MARP_MCP_TOOL_TIMEOUT_MS = 65 * 60 * 1_000;
 
-// allowedTools pre-approves calls; tools controls availability. Pre-approve T3 tools for headless modes,
+// allowedTools pre-approves calls; tools controls availability. Pre-approve Marp tools for headless modes,
 // limited to annotated read-only tools in read-only sandboxes.
 
 export function claudeMcpQueryOverrides(input: {
@@ -1710,18 +1705,18 @@ export function claudeMcpQueryOverrides(input: {
     return input.allowedTools === undefined ? {} : { allowedTools: input.allowedTools };
   }
   const mcpAllowedTools = input.readOnlySandbox
-    ? CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS
-    : [CLAUDE_T3_MCP_TOOL_WILDCARD];
+    ? CLAUDE_READ_ONLY_MARP_MCP_ALLOWED_TOOLS
+    : [CLAUDE_MARP_MCP_TOOL_WILDCARD];
   return {
     allowedTools: Array.from(new Set([...(input.allowedTools ?? []), ...mcpAllowedTools])),
     mcpServers: {
-      "t3-code": {
+      marp: {
         type: "http",
         url: session.endpoint,
         headers: {
           Authorization: session.authorizationHeader,
         },
-        timeout: CLAUDE_T3_MCP_TOOL_TIMEOUT_MS,
+        timeout: CLAUDE_MARP_MCP_TOOL_TIMEOUT_MS,
       },
     },
   };
@@ -2697,6 +2692,7 @@ const CLAUDE_KNOWN_TOOL_CLASSIFICATIONS: Record<
   monitor: { itemType: "dynamic_tool", requestKind: "command" },
   multiedit: { itemType: "file_change", requestKind: "file-change" },
   notebookedit: { itemType: "file_change", requestKind: "file-change" },
+  powershell: { itemType: "command_execution", requestKind: "command" },
   read: { itemType: "dynamic_tool", requestKind: "file-read" },
   sendmessage: { itemType: "dynamic_tool", requestKind: "command" },
   task: { itemType: "dynamic_tool", requestKind: "command" },
@@ -2792,6 +2788,13 @@ function jsonStringifyForTool(value: unknown): string {
     return value;
   }
   return JSON.stringify(value) ?? String(value);
+}
+
+function commandDescriptionFromClaudeTool(input: ClaudeNativeToolInput): {
+  readonly description?: string;
+} {
+  const description = firstStringInputField(input, ["description"])?.trim();
+  return description ? { description } : {};
 }
 
 function commandInputFromClaudeTool(toolName: string, input: ClaudeNativeToolInput): string {
@@ -5546,6 +5549,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
                   ...itemBase,
                   type: "command_execution",
                   input: commandInputFromClaudeTool(input.toolName, input.toolInput),
+                  ...commandDescriptionFromClaudeTool(input.toolInput),
                   ...(outputText.length === 0 ? {} : { output: outputText }),
                 }
               : itemType === "file_change"
@@ -10187,7 +10191,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
                 }
                 const nativeItemId = `bypass-policy-downgrade:${context.providerTurnId}`;
                 const notice =
-                  "T3 could not confirm Claude bypass permissions here, so Full access is running with approval checks.";
+                  "Marp could not confirm Claude bypass permissions here, so Full access is running with approval checks.";
                 yield* emitProviderEvent({
                   type: "turn_item.updated",
                   driver: CLAUDE_PROVIDER,
