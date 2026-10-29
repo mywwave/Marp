@@ -64,12 +64,13 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        margin-top: 2px;
       }
       .thr.two {
-        height: var(--row-md);
+        height: var(--row-lg);
       }
       .thr.two .t {
-        line-height: 18px;
+        line-height: 20px;
       }
       .thr .pr {
         display: inline-flex;
@@ -255,13 +256,15 @@
         border-radius: 0 28px 28px 0;
       }
       .phone .thr {
-        height: var(--row-md);
+        height: var(--row-lg);
       }
       .phone .thr .more {
         display: inline-flex;
+        opacity: 1;
+        pointer-events: auto;
       }
       .phone .thr .when {
-        display: none;
+        opacity: 0;
       }
       .check-row {
         display: grid;
@@ -302,9 +305,12 @@
       }
       /* Two-line rows need air between them, or titles and meta lines read as one block. */
       .thr.two + .thr.two {
-        margin-top: var(--space-4);
+        margin-top: 6px;
       }
       .thr.two + .show-more {
+        margin-top: 6px;
+      }
+      .sb-sec + .proj {
         margin-top: var(--space-4);
       }
     </style>

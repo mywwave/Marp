@@ -1037,12 +1037,16 @@ textarea.input {
   font-weight: 500;
 }
 .chip .x {
-  display: none;
-  color: var(--ink-3);
-}
-.chip:hover .x {
   display: inline-flex;
+  color: var(--ink-3);
+  opacity: 0;
+  transition: opacity var(--dur-fast);
 }
+.chip:hover .x,
+.chip:focus-within .x {
+  opacity: 1;
+}
+
 button.chip:hover {
   background: var(--surface-3);
 }
@@ -1853,19 +1857,23 @@ html.frame .frame {
   border-radius: var(--radius-sm);
   color: var(--ink-2);
   font-weight: 500;
-  margin-top: var(--space-12);
+  margin-top: var(--space-20);
 }
 .proj:first-child {
   margin-top: 0;
 }
 .proj .acts {
   margin-left: auto;
-  display: none;
-  gap: 2px;
-}
-.proj:hover .acts {
   display: inline-flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--dur-fast);
 }
+.proj:hover .acts,
+.proj:focus-within .acts {
+  opacity: 1;
+}
+
 .proj .acts button {
   width: 24px;
   height: 24px;
@@ -1892,6 +1900,7 @@ html.frame .frame {
   transition:
     background var(--dur-fast),
     color var(--dur-fast);
+  position: relative;
 }
 .thr:hover {
   background: var(--surface-3);
@@ -1920,20 +1929,31 @@ html.frame .frame {
   color: var(--ink);
 }
 .thr .more {
-  display: none;
+  display: inline-flex;
   width: 20px;
   height: 20px;
   border-radius: var(--radius-xs);
   color: var(--ink-3);
   align-items: center;
   justify-content: center;
+  position: absolute;
+  right: var(--space-8);
+  top: 50%;
+  translate: 0 -50%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast);
 }
-.thr:hover .more {
-  display: inline-flex;
+.thr:hover .more,
+.thr:focus-within .more {
+  opacity: 1;
+  pointer-events: auto;
 }
-.thr:hover .when {
-  display: none;
+.thr:hover .when,
+.thr:focus-within .when {
+  opacity: 0;
 }
+
 .show-more {
   height: var(--row-xs);
   padding: 0 var(--space-12) 0 36px;
