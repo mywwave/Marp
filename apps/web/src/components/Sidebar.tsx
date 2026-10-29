@@ -261,6 +261,11 @@ import {
 import { SidebarDraftBlock } from "./sidebar/SidebarDraftBlock";
 import { SidebarSelectionBar } from "./sidebar/SidebarSelectionBar";
 import {
+  openStopThreadsDialog,
+  readStopThreadsPlan,
+  useStopThreadsPlan,
+} from "./StopThreadsDialog";
+import {
   SidebarProjectFolderHeader,
   sidebarFolderRowId,
   type SidebarProjectDropPlacement,
@@ -944,6 +949,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     projectScopeItems,
   } = useSidebarLookups();
   const delegatedUnderParent = useDelegatedUnderParent();
+  const stoppableThreadCount = useStopThreadsPlan(null).running.length;
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
@@ -2531,6 +2537,11 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         supportedCount: titleRegenerationThreads.length,
         actionableCount: regeneratableTitleThreads.length,
       });
+      // Covers environments this connection can't operate too; the dialog says what stays running.
+      const stopSelectionPlan = readStopThreadsPlan(new Set(threadKeys));
+      const stopSelectionCount =
+        stopSelectionPlan.running.length +
+        stopSelectionPlan.skipped.reduce((total, entry) => total + entry.count, 0);
       const pinnedSelectedThreads = selectedThreads.filter(
         (thread) => serverConfigs.has(thread.environmentId) && thread.pinnedAt != null,
       );
@@ -2568,6 +2579,16 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                     ...unpinMenuItem,
                     icon: "pin-off",
                     disabled: !canOperateThreads(pinnedSelectedThreads),
+                  },
+                ]
+              : []),
+            ...(stopSelectionCount > 0
+              ? [
+                  {
+                    id: "stop",
+                    label: `Stop (${stopSelectionCount})`,
+                    icon: "circle-stop",
+                    disabled: stopSelectionPlan.running.length === 0,
                   },
                 ]
               : []),
@@ -2634,6 +2655,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       if (clicked._tag === "Failure" || clicked.value === null) return;
       if (clicked.value === "archive") {
         void archiveSelection();
+        return;
+      }
+      if (clicked.value === "stop") {
+        openStopThreadsDialog(new Set(threadKeys));
         return;
       }
       const actionTargets =
@@ -3774,6 +3799,11 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                                   expanded: workingShelfExpanded,
                                   onToggle: toggleWorkingShelf,
                                 }}
+                                action={
+                                  stoppableThreadCount > 0
+                                    ? { label: "Stop all", onClick: () => openStopThreadsDialog() }
+                                    : undefined
+                                }
                               />,
                             );
                             break;

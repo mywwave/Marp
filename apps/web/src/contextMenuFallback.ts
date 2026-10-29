@@ -91,6 +91,10 @@ const ICON_PATHS: Record<string, ReadonlyArray<{ tag: string; attrs: Record<stri
     { tag: "circle", attrs: { cx: "12", cy: "12", r: "10" } },
     { tag: "path", attrs: { d: "m9 12 2 2 4-4" } },
   ],
+  "circle-stop": [
+    { tag: "circle", attrs: { cx: "12", cy: "12", r: "10" } },
+    { tag: "rect", attrs: { x: "9", y: "9", width: "6", height: "6", rx: "1" } },
+  ],
   clock: [
     { tag: "path", attrs: { d: "M12 6v6l4 2" } },
     { tag: "circle", attrs: { cx: "12", cy: "12", r: "10" } },

@@ -52,6 +52,7 @@ import {
   ChartNoAxesColumnIcon,
   CheckIcon,
   ChevronRightIcon,
+  CircleStopIcon,
   CornerLeftUpIcon,
   FileSearchIcon,
   FolderGit2Icon,
@@ -119,6 +120,7 @@ import {
   usePrimaryEnvironmentId,
 } from "../state/environments";
 import { useProjects, useServerConfigs, useThreadShells, waitForProject } from "../state/entities";
+import { openStopThreadsDialog, useStopThreadsPlan } from "./StopThreadsDialog";
 import { resolveThreadActionProjectRef, startNewThreadFromContext } from "../lib/chatThreadActions";
 import {
   appendBrowsePathSegment,
@@ -165,6 +167,7 @@ import {
   buildBrowseGroups,
   buildRootGroups,
   buildLinkedThreadActionItems,
+  buildStopAllThreadsActionItem,
   buildCommandPaletteRows,
   enumerateCommandPaletteItems,
   findHighlightedCommandPaletteItem,
@@ -468,6 +471,7 @@ function OpenCommandPaletteDialog(props: {
     await copyThreadReference(activeThreadReferenceCopyTarget);
   };
   const threads = useThreadShells();
+  const stopThreadsPlan = useStopThreadsPlan(null);
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const providersByEnvironment = useEnvironmentProviders();
   const { changeThemeItem, changeAppearanceItem, themeEditorItem } = useCommandPaletteThemeItems();
@@ -1511,6 +1515,13 @@ function OpenCommandPaletteDialog(props: {
       },
     });
   }
+
+  const stopAllThreadsItem = buildStopAllThreadsActionItem({
+    runningCount: stopThreadsPlan.running.length,
+    icon: <CircleStopIcon className={ITEM_ICON_CLASS} />,
+    run: async () => openStopThreadsDialog(),
+  });
+  if (stopAllThreadsItem !== null) actionItems.push(stopAllThreadsItem);
 
   actionItems.push({
     kind: "action",

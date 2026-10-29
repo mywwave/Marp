@@ -55,6 +55,25 @@ export function buildLinkedThreadActionItems(
   }));
 }
 
+/** Offered only while something is running, so the palette never lists a no-op. */
+export function buildStopAllThreadsActionItem(input: {
+  readonly runningCount: number;
+  readonly icon: ReactNode;
+  readonly run: () => Promise<void>;
+}): CommandPaletteActionItem | null {
+  if (input.runningCount === 0) return null;
+  return {
+    kind: "action",
+    value: "action:stop-all-threads",
+    searchTerms: ["stop", "all", "running", "threads", "interrupt", "cancel", "agents"],
+    title: "Stop all running threads",
+    description: `${input.runningCount} running`,
+    icon: input.icon,
+    shortcutCommand: "threads.stopAll",
+    run: input.run,
+  };
+}
+
 export function browseInputEndPaddingClass(input: {
   readonly willCreateProjectPath: boolean;
   readonly hasHighlightedBrowseItem: boolean;

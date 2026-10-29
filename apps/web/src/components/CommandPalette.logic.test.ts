@@ -6,6 +6,7 @@ import {
   buildNestedSearchItems,
   buildThreadActionItems,
   buildLinkedThreadActionItems,
+  buildStopAllThreadsActionItem,
   filterPinnedBrowseEntries,
   filterCommandPaletteGroups,
   reduceCommandPaletteUiState,
@@ -54,6 +55,18 @@ describe("linked pull request thread navigation", () => {
     expect(items[0]?.description).toBe("Archived thread");
     await items[0]?.run();
     expect(runThread).toHaveBeenCalledWith({ environmentId, id });
+  });
+});
+
+describe("buildStopAllThreadsActionItem", () => {
+  it("is offered only while something is running, with the count", () => {
+    const run = async () => {};
+    expect(buildStopAllThreadsActionItem({ runningCount: 0, icon: null, run })).toBeNull();
+    expect(buildStopAllThreadsActionItem({ runningCount: 3, icon: null, run })).toMatchObject({
+      title: "Stop all running threads",
+      description: "3 running",
+      shortcutCommand: "threads.stopAll",
+    });
   });
 });
 

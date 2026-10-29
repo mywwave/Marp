@@ -12,6 +12,7 @@ import {
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
 import { sidebarFolderRowId } from "./SidebarProjectFolderHeader";
 import { SIDEBAR_SORTABLE_DRAG_DISABLED } from "./SidebarThreadRow";
+import { Button } from "../ui/button";
 
 function SortableSidebarMarker(props: {
   marker: SidebarListMarker;
@@ -119,6 +120,8 @@ export function SidebarSectionHeader(props: {
   dragging?: boolean;
   isDropTarget?: boolean;
   toggle: { expanded: boolean; onToggle: () => void };
+  /** A trailing action that takes the count's slot on hover, focus and touch. */
+  action?: { label: string; onClick: () => void } | undefined;
 }) {
   const shelf =
     props.marker === "working-header"
@@ -130,7 +133,7 @@ export function SidebarSectionHeader(props: {
     <SortableSidebarMarker
       marker={props.marker}
       data-testid={`sidebar-${props.marker}`}
-      className={cn("relative h-8", props.className)}
+      className={cn("group/shelf-row relative h-8", props.className)}
     >
       <button
         type="button"
@@ -157,10 +160,28 @@ export function SidebarSectionHeader(props: {
           )}
         />
         <span className="min-w-0 flex-1 truncate">{props.label}</span>
-        <span className="shrink-0 text-xs font-normal tabular-nums text-placeholder">
+        <span
+          className={cn(
+            "shrink-0 text-xs font-normal tabular-nums text-placeholder",
+            props.action &&
+              "transition-opacity duration-150 group-focus-within/shelf-row:opacity-0 group-hover/shelf-row:opacity-0 pointer-coarse:opacity-0 motion-reduce:transition-none",
+          )}
+        >
           {props.count}
         </span>
       </button>
+      {props.action ? (
+        <span className="absolute inset-y-0 right-1 flex items-center opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/shelf-row:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none">
+          <Button
+            data-sidebar-action-for={`shelf:${shelf}`}
+            size="xs"
+            variant="ghost-destructive"
+            onClick={props.action.onClick}
+          >
+            {props.action.label}
+          </Button>
+        </span>
+      ) : null}
     </SortableSidebarMarker>
   );
 }

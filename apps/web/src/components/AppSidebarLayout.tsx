@@ -37,6 +37,7 @@ import {
   usePanelNavigationSuppression,
 } from "../panelAnimations";
 import { BackgroundThreadAnnouncer } from "./BackgroundThreadAnnouncer";
+import { openStopThreadsDialog, StopThreadsDialog } from "./StopThreadsDialog";
 import ThreadSidebar from "./Sidebar";
 import { SidebarBrandWidthProbe } from "./sidebar/SidebarChrome";
 import { SidebarCollapsedRail } from "./sidebar/SidebarCollapsedRail";
@@ -300,6 +301,17 @@ function registerAppShellCommands(router: AnyRouter, shellElement: Element): () 
     registerNavigationHistoryCommands(router),
     registerWorkspaceFocusCommands(router),
     registerPullRequestsEscapeCommand(router),
+    registerCommands(
+      {
+        "threads.stopAll": (event) => {
+          if (isCommandPaletteOpen()) return false;
+          event.preventDefault();
+          event.stopPropagation();
+          openStopThreadsDialog();
+        },
+      },
+      { when: (event) => !isKeybindingCaptureTarget(event) },
+    ),
     registerMenuAction("open-settings", () => {
       if (!/^\/settings(\/|$)/.test(router.state.location.pathname))
         void router.navigate({ to: "/settings" });
@@ -498,6 +510,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
         </Sidebar>
         {children}
         <BackgroundThreadAnnouncer />
+        <StopThreadsDialog />
         <SidebarControl />
       </SidebarProvider>
     </PanelAnimationSuppressionProvider>
