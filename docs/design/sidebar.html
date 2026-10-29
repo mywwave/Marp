@@ -14,7 +14,7 @@
       .sb-sec {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: var(--space-8);
         height: var(--row-xs);
         padding: 0 var(--space-12);
         margin-top: var(--space-12);
@@ -312,6 +312,25 @@
       }
       .sb-sec + .proj {
         margin-top: var(--space-4);
+      }
+      /* Shelf headers are rows you click: same height and edges as thread rows. */
+      button.sb-sec {
+        height: var(--row-sm);
+        margin-top: 2px;
+      }
+      .shelf-rows + button.sb-sec,
+      .show-more + button.sb-sec,
+      .thr + button.sb-sec {
+        margin-top: var(--space-16);
+      }
+      .shelf-rows + button.sb-sec {
+        margin-top: 2px;
+      }
+      button.sb-sec .chev {
+        color: var(--ink-4);
+      }
+      button.sb-sec:hover .chev {
+        color: var(--ink-2);
       }
     </style>
   </head>
