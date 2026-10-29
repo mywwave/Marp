@@ -1,0 +1,2026 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Marp Design System — reference</title>
+    <link rel="stylesheet" href="assets/reference.css" />
+    <script src="assets/reference.js"></script>
+    <style>
+      /* Только то, чего нет в reference.css. «Сейчас» эталона: 29 Oct 2026, 14:20. */
+      .law {
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: var(--space-20);
+      }
+      .law .n {
+        font: var(--text-caption);
+        color: var(--ink-3);
+        font-weight: 500;
+      }
+      .law h4 {
+        margin: var(--space-4) 0 var(--space-8);
+        font: var(--text-title);
+        color: var(--ink);
+      }
+      .law p {
+        margin: 0;
+        color: var(--ink-2);
+      }
+      .type-row {
+        display: grid;
+        grid-template-columns: 140px 1fr 200px;
+        gap: var(--space-16);
+        align-items: baseline;
+        padding: var(--space-12) 0;
+      }
+      .type-row + .type-row {
+        box-shadow: inset 0 1px 0 var(--line);
+      }
+      .type-row code {
+        font: var(--text-code-sm);
+        color: var(--ink-3);
+      }
+      .scale {
+        display: flex;
+        align-items: flex-end;
+        gap: var(--space-12);
+        flex-wrap: wrap;
+      }
+      .scale div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-8);
+        font: var(--text-code-sm);
+        color: var(--ink-3);
+      }
+      .scale i {
+        display: block;
+        background: var(--accent-soft);
+        border-radius: 3px;
+      }
+      .radius-demo {
+        width: 72px;
+        height: 56px;
+        background: var(--surface-2);
+      }
+      .shadow-demo {
+        height: 88px;
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font: var(--text-code-sm);
+        color: var(--ink-3);
+      }
+      .on-bg {
+        background: var(--bg);
+        border-radius: var(--radius-lg);
+        padding: var(--space-24);
+      }
+      .accent-pick {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-8);
+      }
+      .accent-pick button {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-8);
+        height: var(--control-h);
+        padding: 0 var(--space-16) 0 var(--space-8);
+        border-radius: var(--radius-pill);
+        background: var(--surface-2);
+        color: var(--ink-2);
+        font-weight: 500;
+      }
+      .accent-pick button[aria-pressed="true"] {
+        background: var(--surface);
+        color: var(--ink);
+        box-shadow:
+          var(--shadow-raised),
+          0 0 0 2px var(--accent);
+      }
+      .accent-pick span {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+      }
+
+      /* демо шелла */
+      #shell[data-panel="closed"] .panel {
+        display: none;
+      }
+      #shell[data-status="working"] .st-needs,
+      #shell[data-status="working"] .st-done,
+      #shell[data-status="working"] .st-failed {
+        display: none;
+      }
+      #shell[data-status="needs-you"] .st-working,
+      #shell[data-status="needs-you"] .st-done,
+      #shell[data-status="needs-you"] .st-failed {
+        display: none;
+      }
+      #shell[data-status="done"] .st-working,
+      #shell[data-status="done"] .st-needs,
+      #shell[data-status="done"] .st-failed {
+        display: none;
+      }
+      #shell[data-status="failed"] .st-working,
+      #shell[data-status="failed"] .st-needs,
+      #shell[data-status="failed"] .st-done {
+        display: none;
+      }
+      #shell[data-conn="offline"] .conn-ok {
+        display: none;
+      }
+      #shell:not([data-conn="offline"]) .conn-off {
+        display: none;
+      }
+      #shell[data-drop="on"] .dropzone {
+        display: flex;
+      }
+      #shell:not([data-drop="on"]) .dropzone {
+        display: none;
+      }
+      .conn-banner {
+        margin: 0 var(--space-24) var(--space-8);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="doc">
+      <div class="doc-top doc-only">
+        <nav class="doc-nav" aria-label="Reference pages"></nav>
+        <div class="row" data-theme-controls></div>
+      </div>
+
+      <header class="doc-only">
+        <div class="doc-badge">
+          <i data-i="layers" class="i-14"></i>Эталон · Дизайн-система · 29 окт 2026
+        </div>
+        <h1>Marp Design System</h1>
+        <p class="lead">
+          Тёплая, воздушная и честная система для приложения, в котором разработчики часами ведут
+          кодинг-агентов. Всё ниже — источник правды: токены, примитивы и продуктовые образцы.
+          Правила и рецепты — в скилле <code>.agents/skills/marp-design-system</code>; эталоны
+          разделов строятся по скиллу <code>design-reference</code>.
+        </p>
+        <div class="doc-toc">
+          <a class="chip" href="#laws">Законы</a><a class="chip" href="#color">Цвет</a
+          ><a class="chip" href="#type">Типографика</a>
+          <a class="chip" href="#geometry">Геометрия и движение</a
+          ><a class="chip" href="#buttons">Кнопки</a><a class="chip" href="#fields">Поля</a>
+          <a class="chip" href="#choice">Выбор</a
+          ><a class="chip" href="#labels">Бейджи, чипы, статусы</a
+          ><a class="chip" href="#overlays">Меню, тултипы, окна</a>
+          <a class="chip" href="#feedback">Баннеры и тосты</a
+          ><a class="chip" href="#empty">Пустые состояния</a
+          ><a class="chip" href="#shell-sec">Шелл и тред</a>
+          <a class="chip" href="#palette-sec">Палитра команд</a
+          ><a class="chip" href="#settings-sec">Настройки</a
+          ><a class="chip" href="#decisions">Решения</a>
+        </div>
+      </header>
+
+      <!-- ═════════════ Законы ═════════════ -->
+      <section class="doc-only">
+        <h2 id="laws">Семь законов</h2>
+        <p class="sub">Нарушать нельзя. Каждый закон проверяется в чек-листе перед сдачей.</p>
+        <div class="grid grid-4">
+          <div class="law">
+            <div class="n">1</div>
+            <h4>Воздух вместо рамок</h4>
+            <p>Слои фона и отступы разделяют всё. Единственная линия — между строками.</p>
+          </div>
+          <div class="law">
+            <div class="n">2</div>
+            <h4>Один акцент</h4>
+            <p>
+              Акцент выбирает пользователь. Он значит «главное действие» или «выбрано» — и больше
+              ничего.
+            </p>
+          </div>
+          <div class="law">
+            <div class="n">3</div>
+            <h4>Статус честный</h4>
+            <p>
+              Пять семейств статусов с цветом, иконкой и словом. Спиннер — только пока процесс жив.
+            </p>
+          </div>
+          <div class="law">
+            <div class="n">4</div>
+            <h4>Пустота коротко</h4>
+            <p>Пять типов, четыре размера. До 5 слов, одно предложение, одна кнопка.</p>
+          </div>
+          <div class="law">
+            <div class="n">5</div>
+            <h4>Код и числа читаются</h4>
+            <p>Код всегда моно, ответы агента 15/24 в колонке 760, пути режутся посередине.</p>
+          </div>
+          <div class="law">
+            <div class="n">6</div>
+            <h4>Одна шкала</h4>
+            <p>Только токены. Нет токена — спросить, а не подобрать «на глаз».</p>
+          </div>
+          <div class="law">
+            <div class="n">7</div>
+            <h4>Спокойное движение</h4>
+            <p>
+              150 / 220 мс, ease-out. Ничего не перерисовывается бесконечно, кроме спиннера работы.
+            </p>
+          </div>
+          <div class="law">
+            <div class="n">∗</div>
+            <h4>Три вопроса</h4>
+            <p>Каждый экран отвечает: что сейчас происходит, нужен ли я, что делать дальше.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Цвет ═════════════ -->
+      <section class="doc-only">
+        <h2 id="color">Цвет</h2>
+        <p class="sub">
+          Тёплая бумага и тёплые чернила. Тёмная тема — отдельная палитра, не инверсия: переключите
+          тему вверху.
+        </p>
+
+        <h3>Поверхности и чернила</h3>
+        <div class="grid grid-4">
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--bg)"></div>
+            <b>bg</b><span>окно, сайдбар</span>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--surface)"></div>
+            <b>surface</b><span>лист, карточка, поповер</span>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--surface-2)"></div>
+            <b>surface-2</b><span>поле, код, сообщение</span>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--surface-3)"></div>
+            <b>surface-3</b><span>hover на surface-2</span>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--ink)"></div>
+            <b>ink</b><span>заголовки, текст ответа</span>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--ink-2)"></div>
+            <b>ink-2</b><span>интерфейс</span>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--ink-3)"></div>
+            <b>ink-3</b><span>подписи, мета</span>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--ink-4)"></div>
+            <b>ink-4</b><span>отключено, шевроны</span>
+          </div>
+        </div>
+
+        <h3>Акцент — личная настройка</h3>
+        <p class="ink-3" style="margin-top: 0">
+          Settings → Appearance. По умолчанию «Глина». В коде только роли <code>primary*</code>.
+        </p>
+        <div class="specimen">
+          <div class="accent-pick" id="accent-pick"></div>
+          <div class="wrap" style="margin-top: var(--space-20)">
+            <button class="btn primary"><i data-i="arrow-up"></i>Primary</button>
+            <span class="chip on"><i data-i="check"></i>Selected filter</span>
+            <button class="switch" role="switch" aria-checked="true" aria-label="Example"></button>
+            <span class="check" role="checkbox" aria-checked="true"><i data-i="check"></i></span>
+            <div style="width: 160px" class="progress"><i style="width: 62%"></i></div>
+            <button class="btn" style="box-shadow: var(--focus)">Focus ring</button>
+          </div>
+        </div>
+
+        <h3>Статусы агента и смысловые цвета</h3>
+        <p class="ink-3" style="margin-top: 0">
+          Не зависят от акцента. Всегда вместе с иконкой и словом.
+        </p>
+        <div class="grid grid-4">
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--working)"></div>
+            <b>working</b><span>агент работает</span>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--attention)"></div>
+            <b>attention</b><span>нужен пользователь</span>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--success)"></div>
+            <b>success</b><span>готово, + строки</span>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: var(--danger)"></div>
+            <b>danger</b><span>ошибка, − строки</span>
+          </div>
+        </div>
+
+        <h3>Код и дифф</h3>
+        <div class="grid grid-2">
+          <div class="codeblock" style="margin: 0">
+            <div class="cb-head">
+              src/auth/session.ts<button
+                class="btn ghost icon sm"
+                aria-label="Copy code"
+                data-tip="Copy code"
+              >
+                <i data-i="copy"></i>
+              </button>
+            </div>
+            <pre><span class="com">// Refresh 60s before expiry so requests never race the deadline.</span>
+<span class="kw">export async function</span> <span class="fn">refreshSession</span>(token: <span class="kw">string</span>) {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"/api/session/refresh"</span>, { method: <span class="str">"POST"</span> });
+  <span class="kw">return</span> res.ok ? <span class="fn">parseSession</span>(<span class="kw">await</span> res.<span class="fn">json</span>()) : <span class="kw">null</span>;
+}
+<span class="kw">const</span> SKEW_MS = <span class="nm">60_000</span>;</pre>
+          </div>
+          <div class="dcode" style="max-height: none">
+            <div class="dl hunk">
+              <span class="ln">@@</span><span>-41,6 +41,8 @@ export function useSession()</span>
+            </div>
+            <div class="dl">
+              <span class="ln">41</span><span class="ln">41</span
+              ><span> const [session, setSession] = useState(initial);</span>
+            </div>
+            <div class="dl d">
+              <span class="ln">42</span><span class="ln"></span
+              ><span> const expires = session.<span class="wd">expiresAt</span>;</span>
+            </div>
+            <div class="dl a">
+              <span class="ln"></span><span class="ln">42</span
+              ><span> const expires = session.<span class="wa">expiresAt - SKEW_MS</span>;</span>
+            </div>
+            <div class="dl a">
+              <span class="ln"></span><span class="ln">43</span
+              ><span> useInterval(() =&gt; refresh(), expires - Date.now());</span>
+            </div>
+            <div class="dl">
+              <span class="ln">43</span><span class="ln">44</span><span> return session;</span>
+            </div>
+            <div class="dl fold"><span class="ln">⋯</span><span>Show 24 hidden lines</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Типографика ═════════════ -->
+      <section class="doc-only">
+        <h2 id="type">Типографика</h2>
+        <p class="sub">
+          Onest для интерфейса и текста, JetBrains Mono для всего, что является кодом. Ответ агента
+          — 15/24: его читают абзацами.
+        </p>
+        <div class="specimen">
+          <div class="type-row">
+            <code>text-hero</code>
+            <div style="font: var(--text-hero); letter-spacing: -0.02em; color: var(--ink)">
+              What should we build?
+            </div>
+            <code>30/38 · 600</code>
+          </div>
+          <div class="type-row">
+            <code>text-page</code>
+            <div style="font: var(--text-page); color: var(--ink)">Pull requests</div>
+            <code>22/30 · 600</code>
+          </div>
+          <div class="type-row">
+            <code>text-heading</code>
+            <div class="t-heading">Delete “fix-auth-flow”?</div>
+            <code>18/26 · 600</code>
+          </div>
+          <div class="type-row">
+            <code>text-title</code>
+            <div class="t-title">Refactor session refresh</div>
+            <code>15/22 · 600</code>
+          </div>
+          <div class="type-row">
+            <code>text-read</code>
+            <div class="t-read ink">
+              I moved the refresh window 60 seconds ahead of expiry, so in-flight requests no longer
+              race the deadline.
+            </div>
+            <code>15/24 · 400</code>
+          </div>
+          <div class="type-row">
+            <code>text-body</code>
+            <div class="t-body">Worktree mode runs the thread in its own checkout.</div>
+            <code>13/20 · 400/500</code>
+          </div>
+          <div class="type-row">
+            <code>text-caption</code>
+            <div class="t-caption ink-3">Claude Sonnet 4.5 · 2m ago</div>
+            <code>12/16 · 400/500</code>
+          </div>
+          <div class="type-row">
+            <code>text-code</code>
+            <div class="t-code ink">pnpm vitest run src/auth</div>
+            <code>13/20 mono</code>
+          </div>
+          <div class="type-row">
+            <code>text-code-sm</code>
+            <div class="t-code-sm ink-3">feat/session-refresh · a3f9c21</div>
+            <code>12/18 mono</code>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Геометрия ═════════════ -->
+      <section class="doc-only">
+        <h2 id="geometry">Геометрия и движение</h2>
+        <p class="sub">
+          Шаг 4. Мягкие радиусы: поле 12, карточка 20, композер 24, окно 28, кнопки — пилюли.
+        </p>
+        <div class="grid grid-2">
+          <div class="specimen">
+            <div class="specimen-label">Отступы</div>
+            <div class="scale">
+              <div><i style="width: 4px; height: 4px"></i>4</div>
+              <div><i style="width: 8px; height: 8px"></i>8</div>
+              <div><i style="width: 12px; height: 12px"></i>12</div>
+              <div><i style="width: 16px; height: 16px"></i>16</div>
+              <div><i style="width: 20px; height: 20px"></i>20</div>
+              <div><i style="width: 24px; height: 24px"></i>24</div>
+              <div><i style="width: 32px; height: 32px"></i>32</div>
+              <div><i style="width: 40px; height: 40px"></i>40</div>
+              <div><i style="width: 48px; height: 48px"></i>48</div>
+              <div><i style="width: 64px; height: 64px"></i>64</div>
+            </div>
+          </div>
+          <div class="specimen">
+            <div class="specimen-label">Радиусы</div>
+            <div class="scale">
+              <div><span class="radius-demo" style="border-radius: 6px"></span>6 · xs</div>
+              <div><span class="radius-demo" style="border-radius: 8px"></span>8 · sm</div>
+              <div><span class="radius-demo" style="border-radius: 12px"></span>12 · md</div>
+              <div><span class="radius-demo" style="border-radius: 20px"></span>20 · lg</div>
+              <div><span class="radius-demo" style="border-radius: 24px"></span>24 · composer</div>
+              <div><span class="radius-demo" style="border-radius: 28px"></span>28 · xl</div>
+            </div>
+          </div>
+        </div>
+        <div class="on-bg" style="margin-top: var(--space-12)">
+          <div class="grid grid-3">
+            <div class="shadow-demo" style="box-shadow: var(--shadow-raised)">shadow-raised</div>
+            <div class="shadow-demo" style="box-shadow: var(--shadow-card)">shadow-card</div>
+            <div class="shadow-demo" style="box-shadow: var(--shadow-pop)">shadow-pop</div>
+          </div>
+        </div>
+        <div class="doc-note">
+          <b>Движение.</b> Цвет и фон — 150 мс. Появление, раскрытие, сдвиг — 220 мс
+          <code>cubic-bezier(.22,1,.36,1)</code>. Переключатель — пружина. Нажатие —
+          <code>scale(.97)</code>. Без шиммеров, пульсаций и бегущих градиентов: единственная
+          бесконечная анимация — спиннер 14 px, пока агент реально работает.
+        </div>
+      </section>
+
+      <!-- ═════════════ Кнопки ═════════════ -->
+      <section class="doc-only">
+        <h2 id="buttons">Кнопки</h2>
+        <p class="sub">Пилюли 36 и 28. Одна primary на экран — в треде это отправка в композере.</p>
+        <div class="specimen">
+          <div class="specimen-label">Варианты · 36</div>
+          <div class="wrap">
+            <button class="btn primary"><i data-i="plus"></i>Add project</button>
+            <button class="btn"><i data-i="git-pull-request"></i>Create PR</button>
+            <button class="btn ghost">Cancel</button>
+            <button class="btn danger"><i data-i="trash"></i>Delete thread</button>
+            <button class="btn danger-solid">Delete thread</button>
+            <button class="btn" disabled>Disabled</button>
+            <button class="btn is-disabled"><i data-i="loader" class="spin"></i>Pushing…</button>
+          </div>
+          <div class="specimen-label" style="margin-top: var(--space-20)">
+            Мелкие · 28, иконочные, сплит, с клавишей
+          </div>
+          <div class="wrap">
+            <button class="btn sm"><i data-i="git-commit"></i>Commit</button>
+            <button class="btn ghost sm"><i data-i="external-link"></i>Open in</button>
+            <button
+              class="btn ghost icon"
+              aria-label="Toggle panel"
+              data-tip="Toggle panel"
+              data-tip-kbd="⌘ ⌥ B"
+            >
+              <i data-i="panel-right"></i>
+            </button>
+            <button class="btn ghost icon sm" aria-label="More" data-tip="More actions">
+              <i data-i="more"></i>
+            </button>
+            <div class="split">
+              <button class="btn sm"><i data-i="git-commit"></i>Commit &amp; push</button
+              ><button class="btn sm" aria-label="More git actions" data-pop="pop-git">
+                <i data-i="chevron-down"></i>
+              </button>
+            </div>
+            <button class="btn side-new" style="width: auto">
+              New thread<span class="kbds"
+                ><span class="kbd">⌘</span><span class="kbd">N</span></span
+              >
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Поля ═════════════ -->
+      <section class="doc-only">
+        <h2 id="fields">Поля</h2>
+        <p class="sub">
+          Без рамок: <code>surface-2</code>, на фокусе — белый фон и кольцо акцента. Ошибка говорит,
+          как исправить.
+        </p>
+        <div class="grid grid-3">
+          <div class="specimen stack">
+            <div class="field">
+              <label>Thread title</label><input class="input" value="Refactor session refresh" />
+            </div>
+            <div class="field">
+              <label
+                >Setup script <span class="ink-3" style="font-weight: 400">· optional</span></label
+              ><input class="input mono" placeholder="pnpm install" />
+              <div class="hint">Runs once in every new worktree.</div>
+            </div>
+          </div>
+          <div class="specimen stack">
+            <div class="field">
+              <label>Branch name</label
+              ><input class="input mono" aria-invalid="true" value="feat/session refresh" />
+              <div class="hint err">
+                Branch names can't contain spaces. Try feat/session-refresh.
+              </div>
+            </div>
+            <div class="field">
+              <label>Default provider</label>
+              <div class="select-wrap">
+                <button class="input select" data-pop="pop-provider">
+                  <span class="row"><span class="pmark s16">Cl</span>Claude</span></button
+                ><i data-i="chevron-down"></i>
+              </div>
+            </div>
+          </div>
+          <div class="specimen stack">
+            <div class="field">
+              <label>Search</label>
+              <div class="input-wrap">
+                <i data-i="search"></i><input class="input" placeholder="Search threads" /><span
+                  class="kbds"
+                  ><span class="kbd">⌘</span><span class="kbd">K</span></span
+                >
+              </div>
+            </div>
+            <div class="field">
+              <label>Instructions</label
+              ><textarea
+                class="input"
+                placeholder="Prefer small commits. Run tests before you finish."
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Выбор ═════════════ -->
+      <section class="doc-only">
+        <h2 id="choice">Сегменты, табы, переключатели, выбор</h2>
+        <p class="sub">
+          Сегменты — для 2–4 вариантов. Радио-карточки — когда у выбора есть последствия.
+        </p>
+        <div class="grid grid-3">
+          <div class="specimen stack">
+            <div class="specimen-label">Сегменты</div>
+            <div class="seg">
+              <button aria-pressed="true">Unified</button
+              ><button aria-pressed="false">Split</button>
+            </div>
+            <div class="seg sm">
+              <button aria-pressed="false">Light</button><button aria-pressed="false">Dark</button
+              ><button aria-pressed="true">System</button>
+            </div>
+            <div class="specimen-label" style="margin-top: var(--space-8)">Табы панели</div>
+            <div class="ptabs">
+              <button aria-selected="true">
+                <i data-i="file-diff" class="i-14"></i>Diff <span class="count">12</span></button
+              ><button aria-selected="false"><i data-i="terminal" class="i-14"></i>Terminal</button
+              ><button aria-selected="false"><i data-i="globe" class="i-14"></i>Preview</button>
+            </div>
+          </div>
+          <div class="specimen stack">
+            <div class="specimen-label">Переключатель и чекбокс</div>
+            <div class="row">
+              <div class="grow">
+                <b class="ink" style="font-weight: 500">Notify when a thread finishes</b>
+                <div class="t-caption ink-3">Only while Marp is in the background.</div>
+              </div>
+              <button
+                class="switch"
+                role="switch"
+                aria-checked="true"
+                aria-label="Notify when a thread finishes"
+              ></button>
+            </div>
+            <div class="row">
+              <div class="grow"><b class="ink" style="font-weight: 500">Play a sound</b></div>
+              <button
+                class="switch"
+                role="switch"
+                aria-checked="false"
+                aria-label="Play a sound"
+              ></button>
+            </div>
+            <div class="row">
+              <span class="check" role="checkbox" aria-checked="true"><i data-i="check"></i></span
+              >Delete the worktree too
+            </div>
+            <div class="row">
+              <span class="check" role="checkbox" aria-checked="false"><i data-i="check"></i></span
+              >Keep uncommitted changes in a stash
+            </div>
+          </div>
+          <div class="specimen stack" role="radiogroup" aria-label="Access">
+            <div class="specimen-label">Радио-карточки</div>
+            <button class="choice" role="radio" aria-checked="false">
+              <i data-i="eye"></i>
+              <div>
+                <b>Supervised</b><span>Asks before running commands or editing files.</span>
+              </div>
+            </button>
+            <button class="choice" role="radio" aria-checked="true">
+              <i data-i="shield"></i>
+              <div><b>Auto</b><span>Edits files freely, asks before risky commands.</span></div>
+            </button>
+            <button class="choice" role="radio" aria-checked="false">
+              <i data-i="zap"></i>
+              <div>
+                <b>Full access</b><span>Runs anything without asking. Trusted projects only.</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Бейджи, чипы, статусы ═════════════ -->
+      <section class="doc-only">
+        <h2 id="labels">Бейджи, чипы, статусы</h2>
+        <p class="sub">
+          Статус агента — пять семейств. Чип — контекст: файл, ветка, окружение, PR.
+        </p>
+        <div class="grid grid-3">
+          <div class="specimen stack">
+            <div class="specimen-label">Статус агента · пилюля</div>
+            <div class="wrap">
+              <span class="status working"
+                ><i data-i="loader" class="spin"></i>Working · 2m 14s</span
+              >
+              <span class="status needs-you"><i data-i="hand"></i>Approval needed</span>
+              <span class="status needs-you"><i data-i="list-checks"></i>Plan ready</span>
+              <span class="status done"><i data-i="check"></i>Done</span>
+              <span class="status failed"><i data-i="alert"></i>Failed</span>
+              <span class="status idle"><i data-i="clock"></i>Connecting</span>
+            </div>
+            <div class="specimen-label" style="margin-top: var(--space-8)">
+              Компактно · строка сайдбара
+            </div>
+            <div class="wrap">
+              <span class="row"
+                ><span class="sdot working"><i data-i="loader" class="i-14 spin"></i></span
+                >working</span
+              >
+              <span class="row"><span class="sdot needs-you"></span>needs you</span>
+              <span class="row"><span class="sdot done"></span>done</span>
+              <span class="row"><span class="sdot failed"></span>failed</span>
+            </div>
+          </div>
+          <div class="specimen stack">
+            <div class="specimen-label">Бейджи</div>
+            <div class="wrap">
+              <span class="badge">worktree</span><span class="badge">remote</span>
+              <span class="badge success dot">Merged</span
+              ><span class="badge attention dot">Checks pending</span
+              ><span class="badge danger dot">Checks failed</span
+              ><span class="badge working dot">Open</span> <span class="badge new">New</span
+              ><span class="badge new">Beta</span>
+            </div>
+          </div>
+          <div class="specimen stack">
+            <div class="specimen-label">Чипы контекста</div>
+            <div class="wrap">
+              <span class="chip"
+                ><i data-i="file"></i><span class="mono">session.ts</span
+                ><span class="x"><i data-i="x" class="i-14"></i></span
+              ></span>
+              <span class="chip"
+                ><i data-i="git-branch"></i><span class="mono">feat/session-refresh</span></span
+              >
+              <span class="chip"><i data-i="git-pull-request"></i>#482</span>
+              <span class="chip"><i data-i="laptop"></i>MacBook Pro</span>
+              <span class="chip"><i data-i="image"></i>screenshot.png</span>
+            </div>
+            <div class="specimen-label" style="margin-top: var(--space-8)">
+              Провайдеры · монохром
+            </div>
+            <div class="wrap">
+              <span class="pmark s28">Cx</span><span class="pmark s28">Cl</span
+              ><span class="pmark s28">Cu</span><span class="pmark s28">Gk</span
+              ><span class="pmark s28">Oc</span><span class="pmark s28">Ag</span>
+              <span class="mono-mark">m</span><span class="avatar">JL</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Меню, тултипы, окна ═════════════ -->
+      <section class="doc-only">
+        <h2 id="overlays">Меню, тултипы, окна</h2>
+        <p class="sub">
+          Поповер 12, окно 28. Всё закрывается по Esc и клику мимо. Наведите на (i) и иконочные
+          кнопки.
+        </p>
+        <div class="grid grid-3">
+          <div class="specimen">
+            <div class="specimen-label">Меню треда</div>
+            <div class="pop static">
+              <button class="opt">
+                <i data-i="pencil"></i>Rename<span class="meta"><span class="kbd">F2</span></span>
+              </button>
+              <button class="opt"><i data-i="pin"></i>Pin</button>
+              <button class="opt"><i data-i="snooze"></i>Snooze…</button>
+              <button class="opt"><i data-i="fork"></i>Fork thread</button>
+              <button class="opt"><i data-i="copy"></i>Copy link</button>
+              <div class="sep"></div>
+              <button class="opt">
+                <i data-i="archive"></i>Archive<span class="meta"
+                  ><span class="kbd">⌘</span><span class="kbd">⌫</span></span
+                >
+              </button>
+              <button class="opt danger"><i data-i="trash"></i>Delete…</button>
+            </div>
+          </div>
+          <div class="specimen">
+            <div class="specimen-label">Выбор модели</div>
+            <div class="pop static">
+              <div class="input-wrap">
+                <i data-i="search"></i><input class="input" placeholder="Search models" />
+              </div>
+              <div class="opt-group">Claude</div>
+              <button class="opt">
+                <span class="pmark s16">Cl</span>Claude Sonnet 4.5<span class="meta">fast</span
+                ><i data-i="check" style="color: var(--ink)"></i>
+              </button>
+              <button class="opt">
+                <span class="pmark s16">Cl</span>Claude Opus 4.5<span class="meta">1M context</span>
+              </button>
+              <div class="opt-group">Codex</div>
+              <button class="opt">
+                <span class="pmark s16">Cx</span>GPT-5.5<span class="meta">high</span>
+              </button>
+              <button class="opt">
+                <span class="pmark s16">Cx</span>GPT-5.6 Luna<span class="meta">cheap</span>
+              </button>
+            </div>
+          </div>
+          <div class="specimen stack">
+            <div class="specimen-label">Тултипы и (i)</div>
+            <div class="row">
+              Worktree mode
+              <span
+                class="info"
+                data-tip-title="Worktree mode"
+                data-tip="Runs the thread in its own git worktree, so changes never touch your current checkout."
+                ><i data-i="info"></i
+              ></span>
+            </div>
+            <div class="row">
+              Checkpoint
+              <span
+                class="info"
+                data-tip-title="Checkpoint"
+                data-tip="A snapshot taken after every turn. Restore it to undo everything the agent changed since."
+                ><i data-i="info"></i
+              ></span>
+            </div>
+            <div class="specimen-label" style="margin-top: var(--space-8)">Окна (живые)</div>
+            <div class="wrap">
+              <button class="btn sm" data-modal="m-delete">Delete dialog</button>
+              <button class="btn sm" data-modal="m-pr">Create PR dialog</button>
+              <button class="btn sm" data-modal="palette">
+                Command palette
+                <span class="kbds"><span class="kbd">⌘</span><span class="kbd">K</span></span>
+              </button>
+            </div>
+            <div class="specimen-label" style="margin-top: var(--space-8)">Клавиши</div>
+            <div class="wrap">
+              <span class="kbds"><span class="kbd">⌘</span><span class="kbd">K</span></span
+              ><span class="kbds"><span class="kbd">Ctrl</span><span class="kbd">Enter</span></span
+              ><span class="kbd">Esc</span>
+            </div>
+          </div>
+        </div>
+        <h3>Окно подтверждения</h3>
+        <div class="on-bg">
+          <div class="modal static">
+            <div class="modal-head">
+              <span class="danger-mark"><i data-i="trash" class="i-18"></i></span>
+              <div>
+                <div class="t-heading">Delete “fix-auth-flow”?</div>
+                <p>
+                  Removes the thread, its 14 checkpoints and the worktree at
+                  <code class="t-code-sm">~/.marp/worktrees/fix-auth-flow</code>. You can't undo
+                  this.
+                </p>
+              </div>
+            </div>
+            <div class="modal-body">
+              <div class="row">
+                <span class="check" role="checkbox" aria-checked="false"
+                  ><i data-i="check"></i></span
+                >Keep the branch <code class="t-code-sm">fix/auth-flow</code>
+              </div>
+            </div>
+            <div class="modal-foot">
+              <button class="btn ghost">Cancel</button
+              ><button class="btn danger-solid">Delete thread</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Баннеры и тосты ═════════════ -->
+      <section class="doc-only">
+        <h2 id="feedback">Баннеры, тосты, прогресс</h2>
+        <p class="sub">
+          Баннер — только когда проблема мешает работе. Тост подтверждает сделанное или сообщает о
+          фоне.
+        </p>
+        <div class="grid grid-2">
+          <div class="stack">
+            <div class="alert">
+              <i data-i="loader" class="spin"></i>
+              <div class="grow">
+                <b>Reconnecting to MacBook Pro…</b>Messages will send when it's back.
+              </div>
+              <button class="btn sm">Retry now</button>
+            </div>
+            <div class="alert warning">
+              <i data-i="alert"></i>
+              <div class="grow">
+                <b>Claude isn't signed in</b>Run <code class="t-code-sm">claude login</code> or sign
+                in from Settings.
+              </div>
+              <button class="btn sm">Sign in</button>
+            </div>
+            <div class="alert danger">
+              <i data-i="alert"></i>
+              <div class="grow">
+                <b>Couldn't start the worktree</b>Branch <code class="t-code-sm">main</code> is
+                checked out elsewhere.
+              </div>
+              <button class="btn sm">Use another branch</button>
+            </div>
+            <div class="alert success">
+              <i data-i="check"></i>
+              <div class="grow"><b>Update ready</b>Restart Marp to use version 0.42.</div>
+              <button class="btn sm">Restart</button>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="toast static">
+              <i data-i="check" class="ok"></i>
+              <div class="grow">
+                <b>Pull request created</b><small>#482 · fix-auth-flow → main</small>
+              </div>
+              <button class="act">Open</button>
+            </div>
+            <div class="toast static">
+              <i data-i="archive" class="ok"></i>
+              <div class="grow"><b>Thread archived</b></div>
+              <button class="act">Undo</button>
+            </div>
+            <div class="toast static">
+              <i data-i="alert" class="bad"></i>
+              <div class="grow">
+                <b>Couldn't push</b><small>Remote rejected the push: branch is protected.</small>
+              </div>
+              <button class="act">Retry</button>
+            </div>
+            <div class="wrap">
+              <button
+                class="btn sm"
+                data-toast='{"title":"“Refactor auth” is done","text":"6 files changed","action":"Open"}'
+              >
+                Show toast
+              </button>
+              <button
+                class="btn sm"
+                data-toast='{"title":"Couldn&#39;t push","text":"Remote rejected the push.","kind":"bad","action":"Retry"}'
+              >
+                Show error toast
+              </button>
+            </div>
+            <div class="specimen stack" style="margin-top: var(--space-8)">
+              <div class="row">
+                <span class="grow ink" style="font-weight: 500">Weekly usage</span
+                ><span class="num ink-3">62%</span>
+              </div>
+              <div class="progress"><i style="width: 62%"></i></div>
+              <div class="row" style="margin-top: var(--space-8)">
+                <span class="grow ink" style="font-weight: 500">Context window</span
+                ><span class="num ink-3">91%</span>
+              </div>
+              <div class="progress warn"><i style="width: 91%"></i></div>
+              <div class="steps" style="margin-top: var(--space-8)">
+                <span class="st done"><i data-i="check" class="i-14"></i></span
+                ><span class="ln done"></span><span class="st cur">2</span><span class="ln"></span
+                ><span class="st">3</span>
+              </div>
+              <div class="row" style="margin-top: var(--space-8)">
+                <span class="skel" style="width: 16px; height: 16px; border-radius: 50%"></span
+                ><span class="skel" style="height: 12px; width: 60%"></span>
+              </div>
+              <div class="row">
+                <span class="skel" style="width: 16px; height: 16px; border-radius: 50%"></span
+                ><span class="skel" style="height: 12px; width: 40%"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Пустые состояния ═════════════ -->
+      <section class="doc-only">
+        <h2 id="empty">Пустые состояния</h2>
+        <p class="sub">
+          Цвет плитки = есть ли что делать: акцент — есть действие, серая — подождать или поменять
+          фильтр, зелёная — всё хорошо.
+        </p>
+        <div class="grid grid-3">
+          <div class="card">
+            <div class="empty panel">
+              <span class="tile"><i data-i="folder"></i></span>
+              <h4>Add your first project</h4>
+              <p>Point Marp at a folder or clone a repository.</p>
+              <button class="btn">Add project</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="empty panel">
+              <span class="tile"><i data-i="plug"></i></span>
+              <h4>Connect an agent</h4>
+              <p>Sign in to Codex, Claude or another provider to start.</p>
+              <button class="btn">Connect provider</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="empty panel">
+              <span class="tile muted"><i data-i="search"></i></span>
+              <h4>Nothing matches</h4>
+              <p>Try removing a filter.</p>
+              <button class="btn">Clear filters</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="empty panel">
+              <span class="tile muted"><i data-i="clock"></i></span>
+              <h4>Waiting for checks</h4>
+              <p>CI usually reports within 5 minutes.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="empty panel">
+              <span class="tile ok"><i data-i="check"></i></span>
+              <h4>All caught up</h4>
+              <p>New pull requests will show up here.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="specimen-label">Строка · поповер, палитра</div>
+            <div class="pop static">
+              <div class="input-wrap">
+                <i data-i="search"></i><input class="input" value="auth" />
+              </div>
+              <div class="empty-row">No threads match “auth”.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Шелл и тред ═════════════ -->
+      <section>
+        <h2 id="shell-sec" class="doc-only">Шелл и тред</h2>
+        <p class="sub doc-only">
+          Сайдбар на бумаге, лист треда и правая панель — отдельные поверхности. Переключайте
+          состояния в демо-панели: статус агента, панель, соединение, перетаскивание файла.
+        </p>
+
+        <div class="demo-bar doc-only" data-target="#shell">
+          <label>Status</label>
+          <div class="seg sm" data-demo="status">
+            <button data-v="working">Working</button><button data-v="needs-you">Needs you</button
+            ><button data-v="done">Done</button><button data-v="failed">Failed</button>
+          </div>
+          <label>Panel</label>
+          <div class="seg sm" data-demo="panel">
+            <button data-v="open">Diff open</button><button data-v="closed">Closed</button>
+          </div>
+          <label>Connection</label>
+          <div class="seg sm" data-demo="conn">
+            <button data-v="online">Online</button><button data-v="offline">Reconnecting</button>
+          </div>
+          <label>Drop</label>
+          <div class="seg sm" data-demo="drop">
+            <button data-v="off">Off</button><button data-v="on">Dragging file</button>
+          </div>
+        </div>
+
+        <div class="frame">
+          <div class="app" id="shell" data-status="needs-you" data-panel="open">
+            <!-- Сайдбар -->
+            <aside class="sidebar" aria-label="Threads">
+              <div class="top">
+                <span class="logo">m</span><span class="wordmark">marp</span
+                ><span class="grow"></span>
+                <button
+                  class="btn ghost icon sm"
+                  aria-label="Collapse sidebar"
+                  data-tip="Collapse sidebar"
+                  data-tip-kbd="⌘ B"
+                >
+                  <i data-i="panel-left"></i>
+                </button>
+              </div>
+              <button class="side-btn side-new">
+                <i data-i="plus"></i>New thread<span class="meta"
+                  ><span class="kbd">⌘</span><span class="kbd">N</span></span
+                >
+              </button>
+              <button class="side-btn" data-modal="palette">
+                <i data-i="search"></i>Search<span class="meta"
+                  ><span class="kbd">⌘</span><span class="kbd">K</span></span
+                >
+              </button>
+              <button class="side-btn">
+                <i data-i="git-pull-request"></i>Pull requests<span class="meta t-caption ink-3"
+                  >3</span
+                >
+              </button>
+
+              <div class="side-scroll">
+                <div class="proj">
+                  <span class="mono-mark">a</span>acme-web<span class="acts"
+                    ><button aria-label="New thread in acme-web" data-tip="New thread">
+                      <i data-i="plus" class="i-14"></i></button
+                    ><button aria-label="Project actions"><i data-i="more" class="i-14"></i></button
+                  ></span>
+                </div>
+                <button class="thr st-needs current">
+                  <span class="sdot needs-you"></span><span class="t">Refactor session refresh</span
+                  ><span class="when">now</span>
+                </button>
+                <button class="thr st-working current">
+                  <span class="sdot working"><i data-i="loader" class="i-14 spin"></i></span
+                  ><span class="t">Refactor session refresh</span><span class="when num">2m</span>
+                </button>
+                <button class="thr st-done current">
+                  <span class="sdot done"></span><span class="t">Refactor session refresh</span
+                  ><span class="when">now</span>
+                </button>
+                <button class="thr st-failed current">
+                  <span class="sdot failed"></span><span class="t">Refactor session refresh</span
+                  ><span class="when">now</span>
+                </button>
+                <button class="thr">
+                  <span class="sdot working"><i data-i="loader" class="i-14 spin"></i></span
+                  ><span class="t">Add rate limiting to /api/upload</span
+                  ><span class="when num">6m</span
+                  ><span class="more" data-pop="pop-thread" data-pop-align="end"
+                    ><i data-i="more" class="i-14"></i
+                  ></span>
+                </button>
+                <button class="thr unread">
+                  <span class="sdot done"></span><span class="t">Fix flaky checkout e2e test</span
+                  ><span class="when">12m</span
+                  ><span class="more" data-pop="pop-thread" data-pop-align="end"
+                    ><i data-i="more" class="i-14"></i
+                  ></span>
+                </button>
+                <button class="thr">
+                  <span class="sdot idle"></span><span class="t">Migrate billing to Stripe v2</span
+                  ><i data-i="pin" class="i-14 pin"></i
+                  ><span class="more" data-pop="pop-thread" data-pop-align="end"
+                    ><i data-i="more" class="i-14"></i
+                  ></span>
+                </button>
+                <button class="thr">
+                  <span class="sdot idle"></span><span class="t">Dark mode for marketing site</span
+                  ><span class="when">3h</span
+                  ><span class="more" data-pop="pop-thread" data-pop-align="end"
+                    ><i data-i="more" class="i-14"></i
+                  ></span>
+                </button>
+                <button class="show-more">Show 14 more</button>
+
+                <div class="proj">
+                  <span class="mono-mark">i</span>infra<span class="acts"
+                    ><button aria-label="New thread in infra" data-tip="New thread">
+                      <i data-i="plus" class="i-14"></i></button
+                    ><button aria-label="Project actions"><i data-i="more" class="i-14"></i></button
+                  ></span>
+                </div>
+                <button class="thr">
+                  <span class="sdot failed"></span
+                  ><span class="t">Terraform plan for eu-west-2</span><span class="when">1h</span
+                  ><span class="more" data-pop="pop-thread" data-pop-align="end"
+                    ><i data-i="more" class="i-14"></i
+                  ></span>
+                </button>
+                <button class="thr">
+                  <span class="sdot idle"></span><span class="t">Rotate staging secrets</span
+                  ><span class="when">Oct 26</span
+                  ><span class="more" data-pop="pop-thread" data-pop-align="end"
+                    ><i data-i="more" class="i-14"></i
+                  ></span>
+                </button>
+
+                <div class="proj">
+                  <span class="mono-mark">d</span>docs<span class="acts"
+                    ><button aria-label="New thread in docs" data-tip="New thread">
+                      <i data-i="plus" class="i-14"></i></button
+                    ><button aria-label="Project actions"><i data-i="more" class="i-14"></i></button
+                  ></span>
+                </div>
+                <button class="thr">
+                  <span class="sdot idle"></span><span class="t">Rewrite getting started guide</span
+                  ><span class="when">Oct 24</span
+                  ><span class="more" data-pop="pop-thread" data-pop-align="end"
+                    ><i data-i="more" class="i-14"></i
+                  ></span>
+                </button>
+              </div>
+
+              <div class="side-foot">
+                <button class="side-btn">
+                  <i data-i="settings"></i>Settings<span class="meta"
+                    ><span class="kbd">⌘</span><span class="kbd">,</span></span
+                  >
+                </button>
+                <div class="env-card">
+                  <i data-i="laptop" class="ink-3"></i>
+                  <div class="grow">
+                    <b>MacBook Pro</b><small class="conn-ok">Local · on this device</small
+                    ><small class="conn-off">Reconnecting…</small>
+                  </div>
+                  <span class="conn conn-ok"></span><span class="conn warn conn-off"></span>
+                </div>
+              </div>
+            </aside>
+
+            <!-- Лист треда -->
+            <main class="sheet">
+              <div class="dropzone"><i data-i="upload"></i>&nbsp;Drop to attach</div>
+              <div class="sheet-head" id="th-head">
+                <span class="title">Refactor session refresh</span>
+                <span class="status working st-working"
+                  ><i data-i="loader" class="spin"></i>Working · 2m 14s</span
+                >
+                <span class="status needs-you st-needs"><i data-i="hand"></i>Approval needed</span>
+                <span class="status done st-done"><i data-i="check"></i>Done</span>
+                <span class="status failed st-failed"><i data-i="alert"></i>Failed</span>
+                <div class="right">
+                  <button class="chip" data-pop="pop-branch">
+                    <i data-i="git-branch"></i><span class="mono">feat/session-refresh</span
+                    ><i data-i="chevron-down" class="i-14"></i>
+                  </button>
+                  <span class="badge wide-only">worktree</span>
+                  <button
+                    class="btn ghost icon sm wide-only"
+                    aria-label="Open in VS Code"
+                    data-tip="Open in VS Code"
+                    data-tip-kbd="⌘ O"
+                  >
+                    <i data-i="external-link"></i>
+                  </button>
+                  <div class="split">
+                    <button
+                      class="btn sm"
+                      aria-label="Commit"
+                      data-tip="Commit"
+                      data-tip-kbd="⌘ ⇧ C"
+                    >
+                      <i data-i="git-commit"></i><span class="wide-only">Commit</span></button
+                    ><button
+                      class="btn sm"
+                      aria-label="More git actions"
+                      data-pop="pop-git"
+                      data-pop-align="end"
+                    >
+                      <i data-i="chevron-down"></i>
+                    </button>
+                  </div>
+                  <button
+                    class="btn ghost icon sm"
+                    aria-label="Toggle diff panel"
+                    data-tip="Diff panel"
+                    data-tip-kbd="⌘ ⌥ B"
+                  >
+                    <i data-i="panel-right"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="alert conn-banner conn-off">
+                <i data-i="loader" class="spin"></i>
+                <div class="grow">
+                  <b>Reconnecting to MacBook Pro…</b>Messages will send when it's back.
+                </div>
+                <button class="btn sm">Retry now</button>
+              </div>
+
+              <div class="thread" data-scroll-shadow="th-head">
+                <div class="col">
+                  <div class="msg-user">
+                    The session refresh races the expiry and we see random 401s in prod. Move the
+                    refresh earlier and add a test for the edge case.
+                    <div class="chips">
+                      <span class="chip"
+                        ><i data-i="file"></i><span class="mono">src/auth/session.ts</span></span
+                      ><span class="chip"><i data-i="image"></i>sentry-401.png</span>
+                    </div>
+                  </div>
+
+                  <div class="msg-wrap">
+                    <div class="author">
+                      <span class="pmark s16">Cl</span><b>Claude Sonnet 4.5</b>· 14:12
+                    </div>
+                    <div class="work open" id="work1">
+                      <button class="work-sum" data-toggle="work1">
+                        <i data-i="chevron-right" class="i-14 chev"></i
+                        ><i data-i="wrench" class="i-14"></i
+                        ><span class="grow">Read 3 files, edited 2, ran 2 commands</span
+                        ><span class="num">1m 12s</span>
+                      </button>
+                      <div class="work-steps">
+                        <button class="step">
+                          <i data-i="brain"></i><span class="thinking">Thought for 8s</span>
+                        </button>
+                        <button class="step">
+                          <i data-i="file"></i>Read<span class="obj"
+                            ><span class="dir">src/auth/</span>session.ts</span
+                          >
+                        </button>
+                        <button class="step">
+                          <i data-i="search"></i>Searched<span class="obj">"expiresAt" in src/</span
+                          ><span class="meta">6 results</span>
+                        </button>
+                        <button class="step">
+                          <i data-i="file-pen"></i>Edited<span class="obj"
+                            ><span class="dir">src/auth/</span>session.ts</span
+                          ><span class="meta"
+                            ><span class="add">+4</span><span class="del">−2</span></span
+                          >
+                        </button>
+                        <button class="step">
+                          <i data-i="file-pen"></i>Created<span class="obj"
+                            ><span class="dir">src/auth/</span>session.test.ts</span
+                          ><span class="meta"><span class="add">+38</span></span>
+                        </button>
+                        <div class="work" id="step-run">
+                          <button class="step err" data-toggle="step-run">
+                            <i data-i="terminal"></i>Ran<span class="obj"
+                              >pnpm vitest run src/auth</span
+                            ><span class="meta"
+                              ><span class="exit">exit 1</span><span class="num">9s</span></span
+                            >
+                          </button>
+                          <div class="work-steps">
+                            <div class="step-body">
+                              <pre><span class="term"><span class="e">FAIL</span></span> src/auth/session.test.ts &gt; refreshes before expiry
+AssertionError: expected 1 to be 2 // Object.is equality
+  ❯ src/auth/session.test.ts:31:24</pre>
+                              <div class="sb-foot">
+                                <span class="grow">Exit code 1 · 9s</span
+                                ><button class="btn ghost sm">Show full output</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <button class="step">
+                          <i data-i="file-pen"></i>Edited<span class="obj"
+                            ><span class="dir">src/auth/</span>session.test.ts</span
+                          ><span class="meta"
+                            ><span class="add">+2</span><span class="del">−1</span></span
+                          >
+                        </button>
+                        <button class="step">
+                          <i data-i="terminal"></i>Ran<span class="obj"
+                            >pnpm vitest run src/auth</span
+                          ><span class="meta"><span class="num">7s</span></span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="msg-wrap">
+                    <div class="msg-ai">
+                      <p>
+                        The refresh fired exactly at <code>expiresAt</code>, so any request in
+                        flight during that tick went out with a dead token. I moved the refresh 60
+                        seconds earlier and covered the boundary with a test.
+                      </p>
+                      <div class="codeblock">
+                        <div class="cb-head">
+                          src/auth/session.ts<button
+                            class="btn ghost icon sm"
+                            aria-label="Copy code"
+                            data-tip="Copy code"
+                          >
+                            <i data-i="copy"></i>
+                          </button>
+                        </div>
+                        <pre><span class="kw">const</span> SKEW_MS = <span class="nm">60_000</span>;
+<span class="kw">const</span> expires = session.expiresAt - SKEW_MS;</pre>
+                      </div>
+                      <ul>
+                        <li>Both auth tests pass, including the new boundary case.</li>
+                        <li>The <a href="#">Sentry issue</a> should stop within one deploy.</li>
+                      </ul>
+                      <p>
+                        Before I push, I want to clear the stale build output so the bundle check
+                        runs clean.
+                      </p>
+                    </div>
+                    <div class="msg-acts show">
+                      <button aria-label="Copy" data-tip="Copy">
+                        <i data-i="copy" class="i-14"></i></button
+                      ><button aria-label="Fork from here" data-tip="Fork from here">
+                        <i data-i="fork" class="i-14"></i></button
+                      ><button aria-label="Restore checkpoint" data-tip="Restore checkpoint">
+                        <i data-i="undo" class="i-14"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="checkpoint">
+                    Checkpoint · 2 files changed · <a href="#">View diff</a> ·
+                    <a href="#">Restore</a>
+                  </div>
+
+                  <!-- needs-you -->
+                  <div class="ask st-needs">
+                    <div class="row">
+                      <span class="status needs-you"><i data-i="hand"></i>Approval needed</span
+                      ><span class="grow"></span
+                      ><span class="t-caption ink-3">Supervised mode</span>
+                    </div>
+                    <div class="q">Run a command that deletes files</div>
+                    <div class="cmd">rm -rf dist .turbo</div>
+                    <div class="foot">
+                      <span class="grow"
+                        >Removes build output in <span class="mono">acme-web</span>. Source files
+                        are not touched.</span
+                      >
+                      <button class="btn ghost sm">Deny <span class="kbd">Esc</span></button
+                      ><button class="btn sm">Always allow</button
+                      ><button class="btn primary sm">Approve <span class="kbd">↵</span></button>
+                    </div>
+                  </div>
+                  <!-- working -->
+                  <div class="work st-working">
+                    <div class="step live">
+                      <i data-i="loader" class="spin"></i>Running<span class="obj"
+                        >pnpm build --filter web</span
+                      ><span class="meta"><span class="num">0:14</span></span>
+                    </div>
+                  </div>
+                  <!-- done -->
+                  <div class="msg-ai st-done">
+                    <p>
+                      Done. Build output is cleared and the bundle check passes — ready to commit.
+                    </p>
+                  </div>
+                  <!-- failed -->
+                  <div
+                    class="ask st-failed"
+                    style="background: var(--danger-soft); box-shadow: none"
+                  >
+                    <div class="row">
+                      <span class="status failed"><i data-i="alert"></i>Turn failed</span>
+                    </div>
+                    <div class="q">Claude stopped responding</div>
+                    <div class="t-body">
+                      The provider closed the connection after 30 seconds without output. Your
+                      changes up to the last checkpoint are safe.
+                    </div>
+                    <div class="foot">
+                      <span class="grow mono">error: stream closed (code 1006)</span
+                      ><button class="btn sm">Retry turn</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="composer-dock">
+                <div class="composer">
+                  <div class="chips st-working">
+                    <span class="queued"><i data-i="clock" class="i-14"></i>Queued · 1</span>
+                  </div>
+                  <textarea rows="2" placeholder="Ask Claude to…" aria-label="Message"></textarea>
+                  <div class="bar">
+                    <button class="btn ghost sm" aria-label="Attach" data-tip="Attach files">
+                      <i data-i="paperclip"></i>
+                    </button>
+                    <button class="btn ghost sm" data-pop="pop-provider">
+                      <span class="pmark s16">Cl</span>Sonnet 4.5<i
+                        data-i="chevron-down"
+                        class="i-14"
+                      ></i>
+                    </button>
+                    <button class="btn ghost sm"><i data-i="brain"></i>High</button>
+                    <button class="btn ghost sm" data-pop="pop-access">
+                      <i data-i="shield"></i>Supervised
+                    </button>
+                    <div class="right">
+                      <span
+                        class="row t-caption ink-3"
+                        data-tip-title="Context window"
+                        data-tip="How much of the model's memory this thread uses. Near the limit, older messages get summarized."
+                        ><span class="ctx-ring" style="--p: 38"></span
+                        ><span class="num">38%</span></span
+                      >
+                      <button
+                        class="send stop st-working"
+                        aria-label="Stop"
+                        data-tip="Stop"
+                        data-tip-kbd="Esc"
+                      >
+                        <span class="sq"></span>
+                      </button>
+                      <button class="send st-needs" disabled aria-label="Send">
+                        <i data-i="arrow-up"></i>
+                      </button>
+                      <button
+                        class="send st-done"
+                        aria-label="Send"
+                        data-tip="Send"
+                        data-tip-kbd="↵"
+                      >
+                        <i data-i="arrow-up"></i>
+                      </button>
+                      <button
+                        class="send st-failed"
+                        aria-label="Send"
+                        data-tip="Send"
+                        data-tip-kbd="↵"
+                      >
+                        <i data-i="arrow-up"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </main>
+
+            <!-- Правая панель: дифф -->
+            <section class="panel" aria-label="Diff">
+              <div class="panel-head">
+                <div class="ptabs">
+                  <button aria-selected="true">
+                    <i data-i="file-diff" class="i-14"></i>Diff <span class="count">2</span></button
+                  ><button aria-selected="false">
+                    <i data-i="terminal" class="i-14"></i>Terminal</button
+                  ><button aria-selected="false"><i data-i="globe" class="i-14"></i>Preview</button>
+                </div>
+                <span class="grow"></span>
+                <button class="btn ghost icon sm" aria-label="Close panel" data-tip="Close panel">
+                  <i data-i="x"></i>
+                </button>
+              </div>
+              <div class="dtool">
+                <div class="seg sm">
+                  <button aria-pressed="true">Unified</button
+                  ><button aria-pressed="false">Split</button>
+                </div>
+                <div class="seg sm">
+                  <button aria-pressed="true">This turn</button
+                  ><button aria-pressed="false">Branch</button>
+                </div>
+                <span class="grow"></span
+                ><span class="t-caption"
+                  ><span class="add">+44</span> <span class="del">−3</span></span
+                >
+              </div>
+              <div class="dbody">
+                <div class="dfiles">
+                  <button class="dfile on">
+                    <i data-i="file-pen" class="i-14 ink-3"></i><span class="nm2">session.ts</span
+                    ><span class="s add">+4</span><span class="s del">−2</span>
+                  </button>
+                  <button class="dfile">
+                    <i data-i="plus" class="i-14 add"></i><span class="nm2">session.test.ts</span
+                    ><span class="s add">+40</span>
+                  </button>
+                </div>
+                <div class="dcode">
+                  <div class="dhead">
+                    <span class="grow trunc"><span>src/auth/</span><b>session.ts</b></span
+                    ><span class="t-caption"
+                      ><span class="add">+4</span> <span class="del">−2</span></span
+                    ><button class="btn ghost icon sm" aria-label="Copy path" data-tip="Copy path">
+                      <i data-i="copy"></i>
+                    </button>
+                  </div>
+                  <div class="dl hunk"><span class="ln">@@</span><span>-38,9 +38,11 @@</span></div>
+                  <div class="dl">
+                    <span class="ln">38</span><span class="ln">38</span
+                    ><span>import { useInterval } from "./timers";</span>
+                  </div>
+                  <div class="dl a">
+                    <span class="ln"></span><span class="ln">39</span
+                    ><span><span class="wa">const SKEW_MS = 60_000;</span></span>
+                  </div>
+                  <div class="dl">
+                    <span class="ln">39</span><span class="ln">40</span><span></span>
+                  </div>
+                  <div class="dl">
+                    <span class="ln">40</span><span class="ln">41</span
+                    ><span>export function useSession(initial: Session) {</span>
+                  </div>
+                  <div class="dl">
+                    <span class="ln">41</span><span class="ln">42</span
+                    ><span> const [session, setSession] = useState(initial);</span>
+                  </div>
+                  <div class="dl d">
+                    <span class="ln">42</span><span class="ln"></span
+                    ><span> const expires = session.<span class="wd">expiresAt</span>;</span>
+                  </div>
+                  <div class="dl a">
+                    <span class="ln"></span><span class="ln">43</span
+                    ><span>
+                      const expires = session.<span class="wa">expiresAt - SKEW_MS</span>;</span
+                    >
+                  </div>
+                  <div class="dl d">
+                    <span class="ln">43</span><span class="ln"></span
+                    ><span> useInterval(refresh, <span class="wd">expires</span>);</span>
+                  </div>
+                  <div class="dl a">
+                    <span class="ln"></span><span class="ln">44</span
+                    ><span>
+                      useInterval(refresh,
+                      <span class="wa">Math.max(0, expires - Date.now())</span>);</span
+                    >
+                  </div>
+                  <div class="dl a">
+                    <span class="ln"></span><span class="ln">45</span
+                    ><span> // Refresh early so requests never race the deadline.</span>
+                  </div>
+                  <div class="dl">
+                    <span class="ln">44</span><span class="ln">46</span
+                    ><span> return session;</span>
+                  </div>
+                  <div class="dl">
+                    <span class="ln">45</span><span class="ln">47</span><span>}</span>
+                  </div>
+                  <div class="dl fold">
+                    <span class="ln">⋯</span><span>Show 61 hidden lines</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div class="screen-doc doc-only">
+          <div class="doc-note">
+            <b>Почему так.</b> Сайдбар не имеет своей поверхности — он часть «бумаги», поэтому лист
+            треда читается как документ, на который смотришь. Статус треда виден трижды по делу:
+            точка в сайдбаре (обзор), пилюля в шапке (здесь и сейчас), состояние композера (что я
+            могу сделать). Git-действия — secondary: primary в треде всегда одна — отправка, а в
+            момент запроса одобрения её роль берёт «Approve».
+          </div>
+          <div class="doc-note">
+            <b>Работа агента.</b> Шаги хода свёрнуты в одну строку-сводку с длительностью. Упавший
+            шаг раскрыт сам и окрашен в <code>danger</code>; длинный вывод режется на 320 px с «Show
+            full output».
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Палитра ═════════════ -->
+      <section class="doc-only">
+        <h2 id="palette-sec">Палитра команд</h2>
+        <p class="sub">
+          Каждое действие из меню и кнопок доступно здесь.
+          <span class="kbds"><span class="kbd">⌘</span><span class="kbd">K</span></span> открывает
+          живую версию.
+        </p>
+        <div class="on-bg" style="display: flex; justify-content: center">
+          <div class="palette static">
+            <div class="pal-search">
+              <i data-i="search"></i
+              ><input placeholder="Search threads, projects and actions" value="ref" /><span
+                class="kbd"
+                >Esc</span
+              >
+            </div>
+            <div class="pal-list">
+              <div class="opt-group">Threads</div>
+              <button class="opt active">
+                <span class="sdot needs-you"></span>Refactor session refresh<span class="meta"
+                  >acme-web · now</span
+                >
+              </button>
+              <button class="opt">
+                <span class="sdot idle"></span>Rewrite getting started guide<span class="meta"
+                  >docs · Oct 24</span
+                >
+              </button>
+              <div class="opt-group">Actions</div>
+              <button class="opt">
+                <i data-i="undo"></i>Restore last checkpoint<span class="meta"
+                  ><span class="kbd">⌘</span><span class="kbd">Z</span></span
+                >
+              </button>
+              <button class="opt"><i data-i="git-pull-request"></i>Create pull request</button>
+              <div class="opt-group">Settings</div>
+              <button class="opt"><i data-i="keyboard"></i>Keybindings</button>
+            </div>
+            <div class="pal-foot">
+              <span><span class="kbd">↑</span><span class="kbd">↓</span>navigate</span
+              ><span><span class="kbd">↵</span>open</span
+              ><span><span class="kbd">⌘</span><span class="kbd">↵</span>open in new tab</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Настройки ═════════════ -->
+      <section class="doc-only">
+        <h2 id="settings-sec">Настройки</h2>
+        <p class="sub">
+          Навигация разделов слева, колонка 720 справа. Секции — плашки <code>surface-2</code> со
+          строками; изменения применяются сразу.
+        </p>
+        <div class="frame">
+          <div class="app h-640">
+            <main class="sheet" style="flex-direction: row">
+              <nav class="set-nav" aria-label="Settings">
+                <button class="side-btn" style="margin-bottom: var(--space-12)">
+                  <i data-i="arrow-left"></i>Back to threads
+                </button>
+                <div class="opt-group">General</div>
+                <button class="side-btn"><i data-i="settings"></i>General</button>
+                <button class="side-btn on"><i data-i="sun"></i>Appearance</button>
+                <button class="side-btn"><i data-i="keyboard"></i>Keybindings</button>
+                <div class="opt-group">Agents</div>
+                <button class="side-btn"><i data-i="plug"></i>Providers</button>
+                <button class="side-btn"><i data-i="history"></i>Scheduled tasks</button>
+                <div class="opt-group">Workspace</div>
+                <button class="side-btn"><i data-i="folder"></i>Projects</button>
+                <button class="side-btn"><i data-i="git-branch"></i>Worktrees</button>
+                <div class="opt-group">Connections</div>
+                <button class="side-btn"><i data-i="laptop"></i>Devices</button>
+              </nav>
+              <div class="set-main">
+                <div class="set-col">
+                  <h2>Appearance</h2>
+                  <p class="sub">How Marp looks on this device.</p>
+                  <div class="set-sec">
+                    <div class="set-sec-head">
+                      <span class="t-title">Theme</span
+                      ><span class="saved"><i data-i="check" class="i-14"></i>Saved</span>
+                    </div>
+                    <div class="set-rows">
+                      <div class="set-row">
+                        <div class="lbl">
+                          <b>Color scheme</b><span>System follows your OS setting.</span>
+                        </div>
+                        <div class="seg sm">
+                          <button aria-pressed="false">Light</button
+                          ><button aria-pressed="false">Dark</button
+                          ><button aria-pressed="true">System</button>
+                        </div>
+                      </div>
+                      <div class="set-row">
+                        <div class="lbl">
+                          <b>Accent</b><span>Used for the main action and selection.</span>
+                        </div>
+                        <div class="row" id="accent-mini"></div>
+                      </div>
+                      <div class="set-row">
+                        <div class="lbl">
+                          <b
+                            >Reduce motion
+                            <span
+                              class="info"
+                              data-tip-title="Reduce motion"
+                              data-tip="Turns off transitions. Spinners still show while an agent works."
+                              ><i data-i="info"></i></span></b
+                          ><span>Also follows your OS setting.</span>
+                        </div>
+                        <button
+                          class="switch"
+                          role="switch"
+                          aria-checked="false"
+                          aria-label="Reduce motion"
+                        ></button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="set-sec">
+                    <div class="set-sec-head"><span class="t-title">Text</span></div>
+                    <div class="set-rows">
+                      <div class="set-row">
+                        <div class="lbl"><b>Interface font</b></div>
+                        <div class="select-wrap" style="width: 220px">
+                          <button class="input select">Onest</button><i data-i="chevron-down"></i>
+                        </div>
+                      </div>
+                      <div class="set-row">
+                        <div class="lbl"><b>Code font</b></div>
+                        <div class="select-wrap" style="width: 220px">
+                          <button class="input select mono">JetBrains Mono</button
+                          ><i data-i="chevron-down"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ Решения ═════════════ -->
+      <section class="doc-only">
+        <h2 id="decisions">Решения</h2>
+        <p class="sub">Чем система отличается от текущего T3 Code и почему.</p>
+        <div class="decisions">
+          <div class="decision">
+            <h4>Тёплая бумага вместо холодного серого</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Нейтральные серые, рамки панелей.</dd>
+              <dt>Стало</dt>
+              <dd>Тёплые <code>bg</code>/чернила, поверхности без рамок.</dd>
+              <dt>Почему</dt>
+              <dd>Часы перед экраном: меньше контраста на фоне, спокойнее глазам.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Лист треда как документ</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Сайдбар и чат — смежные панели с разделителем.</dd>
+              <dt>Стало</dt>
+              <dd>Сайдбар на фоне, лист и панель — плавающие поверхности r20.</dd>
+              <dt>Почему</dt>
+              <dd>Фокус на работе агента, понятная иерархия без линий.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Текст ответа 15/24</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Мелкий текст интерфейса в ответах.</dd>
+              <dt>Стало</dt>
+              <dd>Ответы читаются как статья; интерфейс остаётся 13.</dd>
+              <dt>Почему</dt>
+              <dd>Ответы агента — главный читаемый контент.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Пять семейств статусов</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>9 состояний с разными видами.</dd>
+              <dt>Стало</dt>
+              <dd>working / needs-you / done / failed / idle с точным словом.</dd>
+              <dt>Почему</dt>
+              <dd>Мгновенно видно, где нужен я.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Без бесконечных анимаций</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Шиммеры и пульсации на «думает».</dd>
+              <dt>Стало</dt>
+              <dd>Спиннер 14 + таймер.</dd>
+              <dt>Почему</dt>
+              <dd>GPU на 120 Гц экранах и честность статуса.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Акцент — выбор пользователя</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Фиксированный цвет бренда.</dd>
+              <dt>Стало</dt>
+              <dd>8 акцентов, по умолчанию «Глина».</dd>
+              <dt>Почему</dt>
+              <dd>Личный инструмент на весь день; статусы от акцента не зависят.</dd>
+            </dl>
+          </div>
+        </div>
+        <h3>Открытые вопросы</h3>
+        <div class="doc-note">
+          1. Шрифт интерфейса: Onest (тёплый, есть кириллица) против текущего Inter — проверить на
+          плотных списках сайдбара.<br />2. Логотипы провайдеров в сайдбаре: монохром везде, или
+          цвет вендора в выборе модели?<br />3. Нужна ли плотная тема («Compact») для тех, кто
+          держит 3 панели на 1440?
+        </div>
+      </section>
+    </div>
+
+    <!-- ═════════════ Поповеры ═════════════ -->
+    <div class="pop" id="pop-thread">
+      <button class="opt">
+        <i data-i="pencil"></i>Rename<span class="meta"><span class="kbd">F2</span></span>
+      </button>
+      <button class="opt"><i data-i="pin"></i>Pin</button>
+      <button class="opt"><i data-i="snooze"></i>Snooze…</button>
+      <button class="opt"><i data-i="fork"></i>Fork thread</button>
+      <div class="sep"></div>
+      <button class="opt" data-toast='{"title":"Thread archived","action":"Undo"}'>
+        <i data-i="archive"></i>Archive
+      </button>
+      <button class="opt danger" data-modal="m-delete"><i data-i="trash"></i>Delete…</button>
+    </div>
+    <div class="pop" id="pop-git">
+      <button class="opt">
+        <i data-i="git-commit"></i>Commit<span class="meta"
+          ><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">C</span></span
+        >
+      </button>
+      <button class="opt"><i data-i="upload"></i>Commit &amp; push</button>
+      <button class="opt" data-modal="m-pr">
+        <i data-i="git-pull-request"></i>Create pull request…
+      </button>
+      <div class="sep"></div>
+      <button class="opt"><i data-i="undo"></i>Restore last checkpoint</button>
+    </div>
+    <div class="pop" id="pop-branch">
+      <div class="input-wrap">
+        <i data-i="search"></i><input class="input" placeholder="Search or create branch" />
+      </div>
+      <div class="opt-group">Recent</div>
+      <button class="opt">
+        <i data-i="git-branch"></i><span class="mono t-code-sm">feat/session-refresh</span
+        ><i data-i="check" style="margin-left: auto; color: var(--ink)"></i>
+      </button>
+      <button class="opt">
+        <i data-i="git-branch"></i><span class="mono t-code-sm">main</span>
+      </button>
+      <button class="opt">
+        <i data-i="git-branch"></i><span class="mono t-code-sm">fix/checkout-e2e</span>
+      </button>
+    </div>
+    <div class="pop" id="pop-provider">
+      <div class="input-wrap">
+        <i data-i="search"></i><input class="input" placeholder="Search models" />
+      </div>
+      <div class="opt-group">Claude</div>
+      <button class="opt">
+        <span class="pmark s16">Cl</span>Claude Sonnet 4.5<span class="meta">fast</span>
+      </button>
+      <button class="opt">
+        <span class="pmark s16">Cl</span>Claude Opus 4.5<span class="meta">1M context</span>
+      </button>
+      <div class="opt-group">Codex</div>
+      <button class="opt"><span class="pmark s16">Cx</span>GPT-5.5</button>
+      <div class="opt-group">Cursor</div>
+      <button class="opt"><span class="pmark s16">Cu</span>Composer 2</button>
+    </div>
+    <div class="pop" id="pop-access">
+      <button class="opt">
+        <i data-i="eye"></i>Supervised<span class="meta">asks first</span>
+      </button>
+      <button class="opt">
+        <i data-i="shield"></i>Auto<span class="meta">asks for risky</span>
+      </button>
+      <button class="opt">
+        <i data-i="zap"></i>Full access<span class="meta"><span class="access-dot"></span></span>
+      </button>
+    </div>
+
+    <!-- ═════════════ Окна ═════════════ -->
+    <div class="overlay" id="m-delete">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-delete-t">
+        <div class="modal-head">
+          <span class="danger-mark"><i data-i="trash" class="i-18"></i></span>
+          <div class="grow">
+            <div class="t-heading" id="m-delete-t">Delete “fix-auth-flow”?</div>
+            <p>Removes the thread and its 14 checkpoints. You can't undo this.</p>
+          </div>
+          <button class="btn ghost icon sm" data-close aria-label="Close">
+            <i data-i="x"></i>
+          </button>
+        </div>
+        <div class="modal-foot" style="padding-top: var(--space-24)">
+          <button class="btn ghost" data-close>Cancel</button
+          ><button class="btn danger-solid" data-close data-toast='{"title":"Thread deleted"}'>
+            Delete thread
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="overlay" id="m-pr">
+      <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="m-pr-t">
+        <div class="modal-head">
+          <div class="grow">
+            <div class="t-heading" id="m-pr-t">Create pull request</div>
+            <p>
+              <span class="mono t-code-sm">feat/session-refresh</span> →
+              <span class="mono t-code-sm">main</span> · 2 commits
+            </p>
+          </div>
+          <button class="btn ghost icon sm" data-close aria-label="Close">
+            <i data-i="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="field">
+            <label>Title</label
+            ><input class="input" value="fix(auth): refresh sessions before they expire" />
+          </div>
+          <div class="field">
+            <label>Description</label
+            ><textarea class="input">
+The refresh fired exactly at expiry, so in-flight requests raced the deadline. Refresh 60s early and test the boundary.</textarea>
+          </div>
+          <div class="row">
+            <span class="check" role="checkbox" aria-checked="false"><i data-i="check"></i></span
+            >Open as draft
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn ghost" data-close>Cancel</button
+          ><button
+            class="btn primary"
+            data-close
+            data-toast='{"title":"Pull request created","text":"#482 · feat/session-refresh → main","action":"Open"}'
+          >
+            <i data-i="git-pull-request"></i>Create pull request
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="overlay top" id="palette">
+      <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+        <div class="pal-search">
+          <i data-i="search"></i><input placeholder="Search threads, projects and actions" /><span
+            class="kbd"
+            >Esc</span
+          >
+        </div>
+        <div class="pal-list">
+          <div class="opt-group">Threads</div>
+          <button class="opt active" data-close>
+            <span class="sdot needs-you"></span>Refactor session refresh<span class="meta"
+              >acme-web · now</span
+            >
+          </button>
+          <button class="opt" data-close>
+            <span class="sdot working"><i data-i="loader" class="i-14 spin"></i></span>Add rate
+            limiting to /api/upload<span class="meta">acme-web · 6m</span>
+          </button>
+          <div class="opt-group">Actions</div>
+          <button class="opt" data-close>
+            <i data-i="plus"></i>New thread<span class="meta"
+              ><span class="kbd">⌘</span><span class="kbd">N</span></span
+            >
+          </button>
+          <button class="opt" data-close><i data-i="folder"></i>Add project…</button>
+          <button class="opt" data-close><i data-i="moon"></i>Switch to dark theme</button>
+        </div>
+        <div class="pal-foot">
+          <span><span class="kbd">↑</span><span class="kbd">↓</span>navigate</span
+          ><span><span class="kbd">↵</span>open</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const pick = (host, withLabels) => {
+          const el = document.getElementById(host);
+          if (!el) return;
+          el.innerHTML = Ref.ACCENTS.map(([id, label, color]) =>
+            withLabels
+              ? `<button data-set-accent="${id}"><span style="background:${color}"></span>${label}</button>`
+              : `<button class="btn ghost icon sm" data-set-accent="${id}" aria-label="${label}" data-tip="${label}"><span style="width:16px;height:16px;border-radius:50%;background:${color}"></span></button>`,
+          ).join("");
+        };
+        pick("accent-pick", true);
+        pick("accent-mini", false);
+        Ref.setAccent(document.documentElement.dataset.accent);
+      });
+    </script>
+  </body>
+</html>
