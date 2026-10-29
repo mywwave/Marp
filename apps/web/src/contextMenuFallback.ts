@@ -1,4 +1,4 @@
-import type { ContextMenuItem } from "@t3tools/contracts";
+import type { ContextMenuItem } from "@marp/contracts";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -442,19 +442,14 @@ export function showContextMenuFallback<T extends string>(
           button.style.pointerEvents = "none";
         }
 
+        // Checks trail the label, so checked and unchecked labels line up with plain items.
+        const check =
+          typeof item.checked === "boolean" && item.checked
+            ? createIconElement("check", "neutral")
+            : null;
         if (typeof item.checked === "boolean") {
           button.setAttribute("role", "menuitemradio");
           button.setAttribute("aria-checked", item.checked ? "true" : "false");
-          const check = item.checked ? createIconElement("check", "neutral") : null;
-          if (check) {
-            button.appendChild(check);
-          } else {
-            const spacer = document.createElement("span");
-            spacer.className = "size-4.5 shrink-0 sm:size-4";
-            spacer.style.cssText = "display:inline-block;width:1rem;height:1rem;flex-shrink:0;";
-            spacer.setAttribute("aria-hidden", "true");
-            button.appendChild(spacer);
-          }
         } else if (typeof item.icon === "string") {
           const icon = createIconElement(item.icon, isLeafDestructive ? "destructive" : "neutral");
           if (icon) {
@@ -466,6 +461,7 @@ export function showContextMenuFallback<T extends string>(
         label.className = "min-w-0 flex-1 truncate";
         label.textContent = item.label;
         button.appendChild(label);
+        if (check) button.appendChild(check);
 
         if (hasChildren) {
           button.setAttribute("aria-haspopup", "menu");

@@ -27,6 +27,9 @@ const toggleVariants = cva(
         ghost:
           "border-transparent text-foreground shadow-none [:disabled,:active,[data-pressed]]:shadow-none before:shadow-none data-pressed:bg-accent data-pressed:text-accent-foreground disabled:opacity-100 disabled:text-muted-foreground disabled:[&_svg]:opacity-100",
         outline: "border-transparent bg-muted hover:bg-surface-hover data-pressed:bg-surface-hover",
+        /** Header panel toggles: 8px corners, a flat fill while pressed. */
+        toolbar:
+          "rounded-sm border-transparent text-muted-foreground shadow-none before:rounded-sm before:shadow-none hover:text-foreground data-pressed:bg-accent data-pressed:text-foreground",
         segmented:
           "rounded-full border-transparent text-muted-foreground shadow-none transition-colors before:shadow-none hover:text-foreground data-pressed:bg-card data-pressed:text-foreground data-pressed:shadow-raised",
       },

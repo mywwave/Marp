@@ -1,16 +1,16 @@
 import {
   FULL_ACCESS_OVERRIDE_QUESTION,
   fullAccessOverrideExplanation,
-} from "@t3tools/client-runtime/state/thread-requests";
-import { ShieldIcon } from "lucide-react";
+} from "@marp/client-runtime/state/thread-requests";
+import { HandIcon } from "lucide-react";
 import { memo, use } from "react";
 import { type PendingApproval } from "../../session-logic";
+import { Badge } from "../ui/badge";
 import { InlineButton } from "../ui/button";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { ComposerPendingApprovalActions } from "./ComposerPendingApprovalActions";
 import { ToolActivityIconView, type WorkEntryIconName } from "./TimelineToolActivityIcon";
 import { TimelineRowCtx } from "./timelineRowContext";
-import { WorkLogRow } from "./WorkLog";
 
 const APPROVAL_PRESENTATION = {
   command: { icon: "terminal", label: "Command approval", detailLabel: "Command" },
@@ -31,6 +31,15 @@ const APPROVAL_PRESENTATION = {
   { icon: WorkEntryIconName; label: string; detailLabel: string }
 >;
 
+const APPROVAL_TITLE = {
+  command: "Run a command",
+  "file-change": "Change files",
+  "file-read": "Read a file",
+  permission: "Grant an app permission",
+  "mcp-elicitation": "Give an app access",
+} satisfies Record<PendingApproval["requestKind"], string>;
+
+/** A decision card: what the agent wants, why, and the answers, in one place. */
 export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalRow({
   approval,
 }: {
@@ -40,63 +49,47 @@ export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalR
   const presentation = APPROVAL_PRESENTATION[approval.requestKind];
   const canRespond = approval.responseCapability === "live";
   return (
-    <WorkLogRow
+    <div
       role="group"
       aria-label={presentation.label}
       data-v2-item-type="approval_request"
-      wrapLabel
-      icon={
+      className="my-2 flex min-w-0 flex-col gap-3 rounded-card bg-card px-5 py-4 shadow-raised"
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <Badge variant="warning">
+          <HandIcon aria-hidden />
+          Approval needed
+        </Badge>
+        {approval.appName ? (
+          <span className="ms-auto min-w-0 truncate text-xs text-muted-foreground">
+            {approval.appName}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex min-w-0 items-center gap-2 text-base font-semibold text-foreground">
         <ToolActivityIconView
           icon={undefined}
           fallbackName={presentation.icon}
           className="block size-4 shrink-0 stroke-2 text-icon-muted"
           muted
         />
-      }
-      label={
-        <code
-          aria-label={presentation.detailLabel}
-          className="block max-h-40 min-w-0 overflow-auto whitespace-pre-wrap font-mono text-xs leading-5 text-foreground select-text! wrap-anywhere [scrollbar-width:thin] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
-          data-approval-detail="complete"
-          tabIndex={0}
-        >
-          {approval.detail || presentation.label}
-        </code>
-      }
-    >
-      <div className="ms-7.5 flex min-w-0 flex-col gap-1 pb-1 text-xs">
-        {approval.appName ? (
-          <span className="text-muted-foreground wrap-anywhere">{approval.appName}</span>
-        ) : null}
-        {approval.reason ? (
-          <span className="text-muted-foreground select-text wrap-anywhere">{approval.reason}</span>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          {canRespond ? (
-            <>
-              <span className="inline-flex items-center gap-1 text-warning">
-                <ShieldIcon aria-hidden className="size-3 shrink-0" />
-                Waiting for approval
-              </span>
-              {onRespondToApproval ? (
-                <>
-                  <span aria-hidden className="text-muted-foreground">
-                    ·
-                  </span>
-                  <ComposerPendingApprovalActions
-                    presentation="inline"
-                    requestId={approval.requestId}
-                    disabled={!canOperateThread}
-                    isResponding={respondingRequestIds.includes(approval.requestId)}
-                    canRespond={canRespond}
-                    options={approval.options}
-                    onRespondToApproval={onRespondToApproval}
-                  />
-                </>
-              ) : null}
-            </>
-          ) : (
-            <span className="text-warning">
+        {APPROVAL_TITLE[approval.requestKind]}
+      </div>
+      <code
+        aria-label={presentation.detailLabel}
+        className="block max-h-40 min-w-0 overflow-auto rounded-field bg-muted px-3 py-2.5 font-mono text-sm leading-5 whitespace-pre-wrap text-foreground select-text! wrap-anywhere [scrollbar-width:thin] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
+        data-approval-detail="complete"
+        tabIndex={0}
+      >
+        {approval.detail || presentation.label}
+      </code>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div className="flex min-w-40 flex-1 flex-col gap-1 text-xs text-muted-foreground">
+          {approval.reason ? (
+            <span className="select-text wrap-anywhere">{approval.reason}</span>
+          ) : null}
+          {canRespond ? null : (
+            <span className="text-warning-foreground">
               Provider process is gone. Interrupt or restart the run to respond.
             </span>
           )}
@@ -116,7 +109,19 @@ export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalR
             </Popover>
           ) : null}
         </div>
+        {canRespond && onRespondToApproval ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <ComposerPendingApprovalActions
+              requestId={approval.requestId}
+              disabled={!canOperateThread}
+              isResponding={respondingRequestIds.includes(approval.requestId)}
+              canRespond={canRespond}
+              options={approval.options}
+              onRespondToApproval={onRespondToApproval}
+            />
+          </div>
+        ) : null}
       </div>
-    </WorkLogRow>
+    </div>
   );
 });

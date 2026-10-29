@@ -1,9 +1,9 @@
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
 import { WorkLogButton, WorkLogList, WorkLogRow } from "./WorkLog";
-import type { WorktreeSetupSnapshot } from "@t3tools/contracts";
-import { type ToolActivityIcon } from "@t3tools/contracts";
-import { liveThoughtLine } from "@t3tools/client-runtime/work-log/presentation";
-import { resolveWorkGroupScrollAnchor } from "@t3tools/client-runtime/work-log/scroll-anchor";
+import type { WorktreeSetupSnapshot } from "@marp/contracts";
+import { type ToolActivityIcon } from "@marp/contracts";
+import { liveThoughtLine } from "@marp/client-runtime/work-log/presentation";
+import { resolveWorkGroupScrollAnchor } from "@marp/client-runtime/work-log/scroll-anchor";
 import { observeResize } from "~/lib/observeResize";
 import { tickTextContent } from "~/lib/tickTextContent";
 import { observeVisibleAnimation } from "../../lib/visibleAnimation";
@@ -25,7 +25,7 @@ import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { Spinner } from "../ui/spinner";
 import { WorktreeSetupCard } from "./WorktreeSetupCard";
 import { cn } from "~/lib/utils";
-import { type TimestampFormat } from "@t3tools/contracts/settings";
+import { type TimestampFormat } from "@marp/contracts/settings";
 import {
   TimelineRowCtx,
   TimelineRowActivityCtx,
@@ -119,7 +119,7 @@ function WorkingTimer({ createdAt }: { createdAt: string }) {
   );
 }
 
-const compactWorkEntryHeight = 24;
+const compactWorkEntryHeight = 28;
 
 function ExpandedWorkGroupEntries({
   anchorKey,
@@ -201,7 +201,7 @@ function ExpandedWorkGroupEntries({
     setRestoringPosition(false);
   };
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- observes the list scroller and its content with ResizeObserver to update scroll fades
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- observes the list scroller and its content with ResizeObserver to update scroll fades
   useLayoutEffect(() => {
     const element = listRef.current?.getScrollableNode();
     if (!element) return;
@@ -227,7 +227,7 @@ function ExpandedWorkGroupEntries({
     setExpandedContentHeight(height);
   };
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- reads expanded row sizes from LegendList's measured state after layout
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- reads expanded row sizes from LegendList's measured state after layout
   useLayoutEffect(updateExpandedContentHeight, [entries, updateExpandedContentHeight]);
 
   return (
@@ -275,7 +275,7 @@ function ExpandedWorkGroupEntries({
 const workEntryKey = (entry: TimelineWorkEntry) => entry.id;
 
 export function WorkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "working" }> }) {
-  const { isCompacting, isPreparingWorktree, backgroundWorktreeSetup } =
+  const { isCompacting, isPreparingWorktree, backgroundWorktreeSetup, awaitingUser } =
     use(TimelineRowActivityCtx);
   const compacting = row.compacting === true || isCompacting;
   const shimmer = isPreparingWorktree || compacting;
@@ -283,25 +283,31 @@ export function WorkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: 
     "Setting up worktree…"
   ) : compacting ? (
     <CompactingLabel createdAt={row.createdAt} />
-  ) : row.createdAt ? (
-    <>
-      Working for <WorkingTimer createdAt={row.createdAt} />
-    </>
   ) : (
-    "Working..."
+    "Working"
   );
   return (
-    <div className="border-b border-border/60 pb-2 pt-1">
-      <div className="flex h-6 min-w-0 items-baseline gap-2 px-1 text-sm leading-relaxed text-muted-foreground tabular-nums">
+    <div className="pb-1">
+      <div className="flex h-7 min-w-0 items-center gap-2 px-1 text-sm text-muted-foreground tabular-nums">
+        {shimmer || awaitingUser ? null : (
+          <span className="flex shrink-0 text-info-foreground">
+            <Spinner size="sm" />
+          </span>
+        )}
         <span
           ref={shimmer ? observeVisibleAnimation : undefined}
-          className="relative shrink-0 overflow-hidden whitespace-nowrap"
+          className="relative min-w-0 shrink-0 overflow-hidden whitespace-nowrap"
         >
           {label}
           {shimmer ? <ActivityShimmerOverlay>{label}</ActivityShimmerOverlay> : null}
         </span>
         {backgroundWorktreeSetup ? (
           <BackgroundWorktreeSetupChip snapshot={backgroundWorktreeSetup} />
+        ) : null}
+        {!shimmer && row.createdAt ? (
+          <span className="ms-auto shrink-0">
+            <WorkingTimer createdAt={row.createdAt} />
+          </span>
         ) : null}
       </div>
     </div>
@@ -371,7 +377,7 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
   return (
     <button
       type="button"
-      className="group/live-work flex min-h-6 w-full max-w-full cursor-pointer items-center rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
+      className="group/live-work flex min-h-7 w-full max-w-full cursor-pointer items-center rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
       aria-expanded={row.expanded === true}
       onClick={() => ctx.onToggleWorkGroup(groupId, row.id)}
     >
@@ -387,6 +393,7 @@ function LiveActivityRow({
   failed = false,
   active = false,
   shimmer = false,
+  spinner = false,
 }: {
   label: ReactNode;
   iconName?: WorkEntryIconName;
@@ -394,13 +401,16 @@ function LiveActivityRow({
   failed?: boolean;
   active?: boolean;
   shimmer?: boolean;
+  /** A running tool shows the spinner in place of its icon. */
+  spinner?: boolean;
 }) {
   const animated = active && !failed;
   const showShimmer = animated && shimmer;
+  const showSpinner = animated && spinner;
   return (
     <div
       ref={animated ? observeVisibleAnimation : undefined}
-      className="relative min-h-6 w-fit max-w-full min-w-0 overflow-hidden rounded-md text-sm leading-relaxed"
+      className="relative min-h-7 w-fit max-w-full min-w-0 overflow-hidden rounded-md text-sm leading-relaxed"
     >
       <LiveActivityContent
         label={label}
@@ -408,11 +418,18 @@ function LiveActivityRow({
         toolIcon={toolIcon}
         failed={failed}
         announceFailure={failed}
-        active={animated && !shimmer}
+        spinner={showSpinner}
       />
       {showShimmer ? (
         <ActivityShimmerOverlay>
-          <LiveActivityContent label={label} iconName={iconName} toolIcon={toolIcon} highlighted />
+          {/* The sweep copies the label only; a second spinner would double the animation. */}
+          <LiveActivityContent
+            label={label}
+            iconName={iconName}
+            toolIcon={toolIcon}
+            highlighted
+            iconHidden={showSpinner}
+          />
         </ActivityShimmerOverlay>
       ) : null}
     </div>
@@ -425,16 +442,18 @@ function LiveActivityContent({
   toolIcon,
   failed = false,
   announceFailure = false,
-  active = false,
   highlighted = false,
+  spinner = false,
+  iconHidden = false,
 }: {
   label: ReactNode;
   iconName: WorkEntryIconName | undefined;
   toolIcon?: ToolActivityIcon | undefined;
   failed?: boolean;
   announceFailure?: boolean;
-  active?: boolean;
   highlighted?: boolean;
+  spinner?: boolean;
+  iconHidden?: boolean;
 }) {
   const showTrailingFailureMark =
     failed && iconName !== undefined && !toolIconAcceptsTint(toolIcon);
@@ -442,7 +461,13 @@ function LiveActivityContent({
   return (
     <WorkLogRow
       icon={
-        iconName ? (
+        iconHidden ? (
+          <span className="size-4" />
+        ) : spinner ? (
+          <span className="flex size-4 items-center justify-center text-info-foreground">
+            <Spinner size="sm" />
+          </span>
+        ) : iconName ? (
           <span
             className={cn(
               "flex size-4 items-center justify-center",
@@ -465,15 +490,7 @@ function LiveActivityContent({
         ) : null
       }
       label={
-        <span
-          className={cn(
-            "block truncate",
-            highlighted && "text-foreground",
-            active && "live-tool-shine",
-          )}
-        >
-          {label}
-        </span>
+        <span className={cn("block truncate", highlighted && "text-foreground")}>{label}</span>
       }
       trailing={
         showTrailingFailureMark ? (
@@ -484,12 +501,16 @@ function LiveActivityContent({
   );
 }
 
+/** While a turn runs, the newest steps stay readable above the live one; older ones fold. */
+const LIVE_PREVIEW_STEPS = 3;
+
 export function LiveWorkEntryTimelineRow({
   row,
 }: {
   row: Extract<TimelineRow, { kind: "work-live" }>;
 }) {
   const ctx = use(TimelineRowCtx);
+  const { awaitingUser } = use(TimelineRowActivityCtx);
   const threadTarget = useThreadReadTarget(row.entry, ctx.activeThreadEnvironmentId);
   const label = liveWorkEntryLabel(row.entry, ctx.workspaceRoot, row.active);
   const threadLabel = threadReadLabel(label, threadTarget);
@@ -502,80 +523,120 @@ export function LiveWorkEntryTimelineRow({
   const failed = workEntryDisplayIndicatesToolFailure(row.entry);
   const thoughtLine = row.thought && !row.expanded ? liveThoughtLine(row.thought.detail ?? "") : "";
   const thoughtIsStatus = thoughtLine !== "" && row.entry === row.thought;
+  const toggleGroup = () => ctx.onToggleWorkGroup(row.groupId, row.id);
+  const finishedSteps = row.expanded
+    ? []
+    : row.groupedEntries.filter(
+        (entry) => entry.id !== row.entry.id && entry.itemType !== "reasoning",
+      );
+  const previewSteps = finishedSteps.slice(-LIVE_PREVIEW_STEPS);
+  const earlierStepCount = finishedSteps.length - previewSteps.length;
+  // Waiting on the user is not work in progress: no spinner, sweep, or ticking timer.
+  const live = row.active && !awaitingUser;
+  const toolIsRunning = live && !thoughtIsStatus && row.entry.itemType !== "reasoning";
 
   return (
-    <button
-      type="button"
-      className={cn(
-        "group/live-work flex w-full max-w-full cursor-pointer rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
-        thoughtLine ? "flex-col items-start" : "min-h-6 items-center",
-      )}
-      aria-label={
-        failed
-          ? `${thoughtLine ? `${thoughtLine} ` : ""}${threadLabel?.text ?? label}, tool call failed`
-          : undefined
-      }
-      aria-expanded={row.expanded}
-      onClick={() => ctx.onToggleWorkGroup(row.groupId, row.id)}
-    >
-      {thoughtLine ? (
-        <WorkLogRow
-          icon={
-            <span className="flex size-4 items-center justify-center text-icon-muted">
-              <ToolActivityIconView
-                icon={undefined}
-                fallbackName="brain"
-                className="block size-4 shrink-0 stroke-2"
-                muted
-              />
-            </span>
-          }
-          label={
-            <span className="line-clamp-4">
-              <ChatMarkdown
-                inline
-                text={thoughtLine}
-                cwd={ctx.markdownCwd}
-                parseRawHtml={false}
-                extraRemarkPlugins={[[remarkThoughtPreview, "Thought"]]}
-              />
-            </span>
-          }
-          wrapLabel
-        />
+    <div className="flex min-w-0 flex-col">
+      {earlierStepCount > 0 ? (
+        <button
+          type="button"
+          className="flex h-7 w-full cursor-pointer items-center rounded-lg ps-8 text-left text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
+          aria-expanded={false}
+          onClick={toggleGroup}
+        >
+          {earlierStepCount} earlier {earlierStepCount === 1 ? "step" : "steps"}
+        </button>
       ) : null}
-      <LiveActivityRow
-        label={
-          thoughtIsStatus ? (
-            row.active ? (
-              "Thinking"
-            ) : (
-              "Thought"
-            )
-          ) : row.entry.itemType === "reasoning" ? (
-            <ChatMarkdown
-              inline
-              text={row.entry.detail ?? label}
-              cwd={ctx.markdownCwd}
-              parseRawHtml={false}
-              extraRemarkPlugins={[[remarkThoughtPreview, row.active ? "Thinking" : "Thought"]]}
-            />
-          ) : threadLabel ? (
-            <ThreadReadLabel
-              label={threadLabel}
-              environmentId={ctx.activeThreadEnvironmentId}
-              linked={false}
-            />
-          ) : (
-            label
-          )
+      {previewSteps.map((entry) => (
+        <SimpleWorkEntryRow
+          key={entry.id}
+          workEntry={entry}
+          workspaceRoot={ctx.workspaceRoot}
+          onToggleEntry={(collapsed) => ctx.onToggleWorkEntry(row.id, collapsed)}
+        />
+      ))}
+      <button
+        type="button"
+        className={cn(
+          "group/live-work flex w-full max-w-full cursor-pointer rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
+          thoughtLine ? "flex-col items-start" : "min-h-7 items-center",
+        )}
+        aria-label={
+          failed
+            ? `${thoughtLine ? `${thoughtLine} ` : ""}${threadLabel?.text ?? label}, tool call failed`
+            : undefined
         }
-        iconName={workEntryIconName(row.entry)}
-        toolIcon={row.entry.toolIcon ?? row.entry.toolSource?.icon}
-        failed={failed}
-        active={row.active}
-      />
-    </button>
+        aria-expanded={row.expanded}
+        onClick={toggleGroup}
+      >
+        {thoughtLine ? (
+          <WorkLogRow
+            icon={
+              <span className="flex size-4 items-center justify-center text-icon-muted">
+                <ToolActivityIconView
+                  icon={undefined}
+                  fallbackName="brain"
+                  className="block size-4 shrink-0 stroke-2"
+                  muted
+                />
+              </span>
+            }
+            label={
+              <span className="line-clamp-4">
+                <ChatMarkdown
+                  inline
+                  text={thoughtLine}
+                  cwd={ctx.markdownCwd}
+                  parseRawHtml={false}
+                  extraRemarkPlugins={[[remarkThoughtPreview, "Thought"]]}
+                />
+              </span>
+            }
+            wrapLabel
+          />
+        ) : null}
+        <span className="flex w-full min-w-0 items-center gap-2">
+          <LiveActivityRow
+            label={
+              thoughtIsStatus ? (
+                row.active ? (
+                  "Thinking"
+                ) : (
+                  "Thought"
+                )
+              ) : row.entry.itemType === "reasoning" ? (
+                <ChatMarkdown
+                  inline
+                  text={row.entry.detail ?? label}
+                  cwd={ctx.markdownCwd}
+                  parseRawHtml={false}
+                  extraRemarkPlugins={[[remarkThoughtPreview, row.active ? "Thinking" : "Thought"]]}
+                />
+              ) : threadLabel ? (
+                <ThreadReadLabel
+                  label={threadLabel}
+                  environmentId={ctx.activeThreadEnvironmentId}
+                  linked={false}
+                />
+              ) : (
+                label
+              )
+            }
+            iconName={workEntryIconName(row.entry)}
+            toolIcon={row.entry.toolIcon ?? row.entry.toolSource?.icon}
+            failed={failed}
+            active={row.active}
+            shimmer={live}
+            spinner={toolIsRunning}
+          />
+          {toolIsRunning && !failed ? (
+            <span className="ms-auto shrink-0 pe-1 text-xs text-muted-foreground tabular-nums">
+              <WorkingTimer createdAt={row.entry.createdAt} />
+            </span>
+          ) : null}
+        </span>
+      </button>
+    </div>
   );
 }
 

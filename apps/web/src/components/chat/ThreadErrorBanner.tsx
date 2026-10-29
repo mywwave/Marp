@@ -1,15 +1,15 @@
-import type { OrchestrationV2ProviderFailureClass } from "@t3tools/contracts";
+import type { OrchestrationV2ProviderFailureClass } from "@marp/contracts";
 import {
   CHATGPT_USAGE_LIMIT_CODE,
   CHATGPT_WORKSPACE_ADMIN_REQUEST,
   CHATGPT_WORKSPACE_USAGE_LIMIT_CODE,
-} from "@t3tools/shared/usageLimits";
+} from "@marp/shared/usageLimits";
 import { memo } from "react";
 import { writeTextToClipboard } from "../../hooks/useCopyToClipboard";
 import { Alert, AlertAction, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
-import { CircleAlertIcon, XIcon } from "lucide-react";
+import { CircleAlertIcon, RotateCcwIcon, XIcon } from "lucide-react";
 import { OpenAI } from "../Icons";
 import { ChatGptUsageButton } from "../settings/ChatGptUsageButton";
 import { ExpandableText } from "../settings/ExpandableText";
@@ -45,6 +45,24 @@ export function getThreadErrorBannerMessage(error: string): string {
     : error;
 }
 
+/** A plain-language headline for a provider failure; the raw text stays under it. */
+export function failedTurnTitle(errorClass: OrchestrationV2ProviderFailureClass): string {
+  switch (errorClass) {
+    case "usage_limit":
+      return "Usage limit reached";
+    case "transport_error":
+      return "Lost the connection to the agent";
+    case "permission_error":
+      return "The agent was not allowed to continue";
+    case "validation_error":
+      return "The provider rejected the request";
+    case "provider_error":
+      return "The agent stopped with an error";
+    case "unknown":
+      return "This turn failed";
+  }
+}
+
 export function getThreadErrorBannerKey(threadKey: string, error: string | null): string | null {
   return error === null ? null : `${threadKey}\u0000${error}`;
 }
@@ -74,11 +92,14 @@ export const ThreadErrorBanner = memo(function ThreadErrorBanner({
   onDismiss,
   errorClass,
   errorCode,
+  onRetry,
 }: {
   error: string | null;
   errorClass?: OrchestrationV2ProviderFailureClass | null;
   errorCode?: string | null;
   onDismiss?: () => void;
+  /** Continues the failed turn where it stopped. */
+  onRetry?: (() => void) | undefined;
 }) {
   if (!error) return null;
   const workspaceLimit = errorCode === CHATGPT_WORKSPACE_USAGE_LIMIT_CODE;
@@ -102,12 +123,23 @@ export const ThreadErrorBanner = memo(function ThreadErrorBanner({
                   : "Review your usage settings in ChatGPT."}
               </p>
             </div>
+          ) : errorClass ? (
+            <div className="space-y-1">
+              <p className="font-medium">{failedTurnTitle(errorClass)}</p>
+              <ExpandableText text={error} collapsedText={getThreadErrorBannerMessage(error)} />
+            </div>
           ) : (
             <ExpandableText text={error} collapsedText={getThreadErrorBannerMessage(error)} />
           )}
         </AlertDescription>
-        {(chatGptLimit || onDismiss) && (
+        {(chatGptLimit || onDismiss || onRetry) && (
           <AlertAction>
+            {onRetry && !chatGptLimit ? (
+              <Button variant="outline" size="sm" onClick={onRetry}>
+                <RotateCcwIcon aria-hidden />
+                Retry turn
+              </Button>
+            ) : null}
             {workspaceLimit ? (
               <Button variant="default" size="sm" onClick={copyAdminRequest}>
                 Copy request for admin

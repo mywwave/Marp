@@ -16,7 +16,7 @@ project picker opens. Turn off **Settings → General → Use last project** to
 choose a project every time. When you pick a project that is on more than one
 machine, the thread starts on a connected one if any is connected.
 
-When you change a new thread's project, T3 Code stays in the current environment
+When you change a new thread's project, Marp stays in the current environment
 if that project exists there. Otherwise it selects an environment that has it.
 
 ### Start without a project
@@ -29,8 +29,8 @@ list. It starts on your current machine; before sending, pick another machine
 from the machine menu to move it there. To move a draft into a project, pick the
 project in the heading.
 
-Each thread without a project works in its own folder under `~/.t3/scratch` (the
-`scratch` folder of your T3 data directory), named after its date, the first words
+Each thread without a project works in its own folder under `~/.marp/scratch` (the
+`scratch` folder of your Marp data directory), named after its date, the first words
 of its first message, and a short id, like
 `2026-09-25-convert-these-pngs-to-webp-a1b2c3d4`. Deleting a thread keeps its
 folder, so the files the agent wrote stay until you delete them. Branch, worktree, and diff controls stay hidden because
@@ -82,7 +82,7 @@ list to unpin it. Dragging a thread onto the **Settled** header settles it, and 
 thread into the active list un-settles it. A snoozed thread can be dragged out of the snoozed
 shelf, which wakes it, but threads cannot be dragged into the shelf because snoozing needs a wake
 time. Dragging a pinned thread out of the pinned section does not ask for unpin confirmation.
-Pinned and active boundary labels appear only while dragging, without moving the rows. The
+The **Pinned** label shows whenever you have pins; the active boundary label appears only while dragging. The
 other rows slide aside to show where the thread will land. When you cross into another section,
 the dragged thread shows the action the drop performs, with its icon: **Pin**, **Unpin**,
 **Settle**, **Un-settle**, or **Wake**. Its status and hover actions hide during the drag. A pinned
@@ -111,7 +111,7 @@ position, so using **Un-settle** returns it to the top. Pinning and snoozing pre
 position until you move it again. Thread activity does not change the order. The settled shelf
 continues to use settlement time.
 
-If dragging is unavailable for one environment, update the T3 Code server running in that
+If dragging is unavailable for one environment, update the Marp server running in that
 environment. Pinned and active reordering require server support. Threads from older servers keep
 their default order until the server is updated.
 
@@ -123,7 +123,7 @@ To change how titles are written, add **Thread title instructions** in **Setting
 Text generation**, under Advanced, such as a length limit or an identifier to put first. They apply to new and
 regenerated titles. Select a project to give it its own instructions.
 
-Agents connected through T3 Code can use the same server-owned metadata workflow to
+Agents connected through Marp can use the same server-owned metadata workflow to
 rename a thread, regenerate its title, or link and unlink a pull request. These changes
 appear on web, desktop, and mobile without requiring the originating browser to remain
 open.
@@ -149,11 +149,20 @@ cannot drag or move threads within it. Your saved order returns when you turn it
 
 Turn on **Settings → Labs → Boring sidebar (group by project)** on web and desktop to put active
 threads in a folder for each project. A project with no active threads has no folder until you
-pick it in the project filter. Click a folder to open or close it. A closed folder shows how
-many threads it holds, and a dot when one of them needs you. Use the pen button on a folder, or
-right-click it, to start a thread in that project. Pinned threads stay above the folders, and
+pick it in the project filter. Click a folder to open or close it; a closed folder shows a dot
+when one of its threads needs you. A folder lists its first five threads; click **Show N more**
+for the rest. Use the **+** button on a folder, or right-click it, to start a thread in that
+project. When a project's machine is unreachable, its folder shows a red dot and a
+**Reconnecting…** line with **Retry now**. Pinned threads stay above the folders, and
 Snoozed and Settled stay below them. In this mode you cannot drag threads, and the Working section
 is off. Each device keeps its own choice.
+
+## Needs you
+
+On web and desktop, threads waiting on you collect in **Needs you** at the top of the sidebar,
+from every project: an approval, a question, a plan ready to review, or a turn that failed. Each
+row says what is needed and which project it belongs to. A thread goes back to its place once you
+answer it; a failed thread goes back once you open it.
 
 ## Settle finished work
 
@@ -167,7 +176,7 @@ runs a command, such as a dev server, stays open.
 
 To reclaim disk space from settled work, turn on **Run in the thread's worktree when the
 thread settles** for one of the project's actions, or set `"runOnSettle": true` on a
-`t3.json` script, for example `cargo clean`. It runs each time a thread in its own
+`marp.json` script, for example `cargo clean`. It runs each time a thread in its own
 worktree settles, manually or automatically, even if a terminal there still runs a
 command such as a dev server. Threads in the project's main checkout skip it. Its terminal
 closes when the command succeeds and stays open when it fails.
@@ -229,7 +238,7 @@ and copying a thread reference. A copied reference uses the thread's pull reques
 link when available, otherwise the thread itself, which pastes into a composer as
 a thread chip. To copy the thread even when it has a PR, choose **Copy → Thread**
 from its context menu, or **Copy thread** from its long-press menu on mobile.
-**Thread ID** copies the bare ID for scripts and the `t3` CLI. See
+**Thread ID** copies the bare ID for scripts and the `marp` CLI. See
 [keybindings](./keybindings.md) for custom configuration.
 
 ## Inspect agent work
@@ -274,7 +283,7 @@ On web and desktop, the thread details card lists the web servers that the
 thread's terminals or its Claude agent started, with their ports. A server the
 agent started stays listed after the agent's turn ends.
 Select a server to open it in the browser panel. **Stop** ends the server's job
-and keeps the agent, the terminal, and T3 Code running. Stop needs terminal
+and keeps the agent, the terminal, and Marp running. Stop needs terminal
 access to the environment and is not available on Windows.
 
 To choose what the thread details card shows, right-click the card or open
@@ -293,7 +302,9 @@ selected, the options apply to every connected environment, and the mobile app u
 Choose **Snooze → Custom…** from a thread's menu to pick a date and time in your
 local time zone, or a duration in minutes, hours, or days. Durations start when
 you confirm; one day means 24 hours. On web and desktop, you can also snooze
-several selected threads together. Choose **Wake thread** to bring a thread back early.
+several selected threads together: Ctrl-click (Cmd-click on macOS) or Shift-click
+rows, then use **Settle**, **Snooze**, or **Archive** in the card at the bottom of
+the sidebar, or press Escape to clear the selection. Choose **Wake thread** to bring a thread back early.
 A snoozed thread keeps working and stays hidden until its wake time, even while
 its agent wakes itself for background work. It comes back early only when it needs
 an approval or answer from you, when a run fails, or when you send it a message.

@@ -1,5 +1,5 @@
-import { presentThreadShell } from "@t3tools/client-runtime/state/models";
-import { isThreadWorking as isSidebarThreadWorking } from "@t3tools/client-runtime/state/thread-inbox";
+import { presentThreadShell } from "@marp/client-runtime/state/models";
+import { isThreadWorking as isSidebarThreadWorking } from "@marp/client-runtime/state/thread-inbox";
 import * as DateTime from "effect/DateTime";
 import { deriveActiveWorkStartedAt } from "../session-logic.ts";
 import { describe, expect, it, vi } from "vite-plus/test";
@@ -19,7 +19,6 @@ import {
   resolveThreadStatusPill,
   resolveWorkingStartedAt,
   searchSidebarThreads,
-  shouldRecedeSidebarThread,
   sortInboxThreadsByReturn,
   resolveSidebarDropTarget,
   planSidebarThreadDrop,
@@ -34,11 +33,15 @@ import {
   resolveSidebarDropVerb,
   groupSidebarThreadsByProject,
   resolveSidebarFolderDot,
+  resolveSidebarNeedsYouReason,
+  resolveSidebarStatusFamily,
+  splitSidebarNeedsYouThreads,
+  type SidebarThreadStatus,
   sidebarFolderExpansionKeys,
 } from "./Sidebar.logic";
 import { resolveProjectExpanded } from "../uiStateStore";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
-import { EnvironmentId, ProjectId, ProviderInstanceId, RunId, ThreadId } from "@t3tools/contracts";
+import { threadSearchMatchKey } from "@marp/client-runtime/state/thread-search";
+import { EnvironmentId, ProjectId, ProviderInstanceId, RunId, ThreadId } from "@marp/contracts";
 
 import {
   DEFAULT_INTERACTION_MODE,
@@ -306,15 +309,6 @@ describe("resolveSidebarThreadStatus", () => {
     expect(
       resolveSidebarThreadStatus({ ...idle, runtime: { ...limited, status: "completed" } }),
     ).toBe("ready");
-    expect(
-      shouldRecedeSidebarThread({
-        status: "limited",
-        isUnread: false,
-        isWoke: false,
-        isActive: false,
-        isSelected: false,
-      }),
-    ).toBe(false);
   });
 
   it("reports failed only while the latest run failed", () => {
@@ -984,21 +978,21 @@ describe("unseen completion with background work", () => {
       roster: "dev server",
       task: { kind: "command" },
       status: "ready",
-      receded: false,
+      working: false,
       pill: "Completed",
     },
     {
       roster: "dev server watchdog",
       task: { kind: "monitor" },
       status: "ready",
-      receded: false,
+      working: false,
       pill: "Completed",
     },
     {
       roster: "awaited command",
       task: { kind: "command", awaited: true },
       status: "waiting",
-      receded: true,
+      working: true,
       pill: "Waiting",
     },
   ] as const)("presents a completed thread with a $roster roster", (expected) => {
@@ -1015,16 +1009,7 @@ describe("unseen completion with background work", () => {
 
     expect(isUnread).toBe(true);
     expect(status).toBe(expected.status);
-    expect(
-      shouldRecedeSidebarThread({
-        status,
-        isUnread,
-        isWoke: false,
-        isActive: false,
-        isSelected: false,
-      }),
-    ).toBe(expected.receded);
-    expect(isSidebarThreadWorking(thread)).toBe(expected.receded);
+    expect(isSidebarThreadWorking(thread)).toBe(expected.working);
     expect(resolveThreadStatusPill({ thread })).toMatchObject({ label: expected.pill });
   });
 });
@@ -1356,8 +1341,8 @@ describe("resolveSidebarRouteReveal", () => {
 describe("sidebarFolderExpansionKeys", () => {
   it("honors a collapse the legacy sidebar saved under a member's cwd", () => {
     const keys = sidebarFolderExpansionKeys({
-      projectKey: "github.com/pingdotgg/t3code",
-      memberProjects: [{ physicalProjectKey: "local:/code/t3code", workspaceRoot: "/code/t3code" }],
+      projectKey: "github.com/pingdotgg/marp",
+      memberProjects: [{ physicalProjectKey: "local:/code/marp", workspaceRoot: "/code/marp" }],
     });
     const cwdKey = keys.at(-1)!;
 
@@ -1370,8 +1355,8 @@ describe("sidebarFolderExpansionKeys", () => {
 describe("groupSidebarThreadsByProject", () => {
   it("puts each thread in its project's folder and drops empty projects unless kept", () => {
     const remoteEnvironmentId = EnvironmentId.make("environment-remote");
-    const t3code = ProjectId.make("t3code");
-    const t3codeRemote = ProjectId.make("t3code-remote");
+    const marp = ProjectId.make("marp");
+    const marpRemote = ProjectId.make("marp-remote");
     const fleet = ProjectId.make("fleet");
     const thread = (id: string, environmentId: EnvironmentId, projectId: ProjectId) => ({
       id,
@@ -1380,10 +1365,10 @@ describe("groupSidebarThreadsByProject", () => {
     });
     const groups = [
       {
-        projectKey: "t3code",
+        projectKey: "marp",
         memberProjectRefs: [
-          { environmentId: localEnvironmentId, projectId: t3code },
-          { environmentId: remoteEnvironmentId, projectId: t3codeRemote },
+          { environmentId: localEnvironmentId, projectId: marp },
+          { environmentId: remoteEnvironmentId, projectId: marpRemote },
         ],
       },
       {
@@ -1393,9 +1378,9 @@ describe("groupSidebarThreadsByProject", () => {
     ];
 
     const threads = [
-      thread("a", localEnvironmentId, t3code),
+      thread("a", localEnvironmentId, marp),
       thread("orphan", localEnvironmentId, ProjectId.make("deleted")),
-      thread("b", remoteEnvironmentId, t3codeRemote),
+      thread("b", remoteEnvironmentId, marpRemote),
     ];
     const summarize = (keepEmpty: boolean) =>
       groupSidebarThreadsByProject(groups, threads, keepEmpty).map((folder) => ({
@@ -1404,10 +1389,10 @@ describe("groupSidebarThreadsByProject", () => {
       }));
 
     expect(summarize(true)).toEqual([
-      { projectKey: "t3code", threads: ["a", "b"] },
+      { projectKey: "marp", threads: ["a", "b"] },
       { projectKey: "fleet", threads: [] },
     ]);
-    expect(summarize(false)).toEqual([{ projectKey: "t3code", threads: ["a", "b"] }]);
+    expect(summarize(false)).toEqual([{ projectKey: "marp", threads: ["a", "b"] }]);
   });
 });
 
@@ -1445,5 +1430,83 @@ describe("resolveSidebarFolderDot", () => {
     expect(resolveSidebarFolderDot([idle, working])).toBe("working");
     expect(resolveSidebarFolderDot([working, unread])).toBe("unread");
     expect(resolveSidebarFolderDot([unread, limited])).toBe("attention");
+  });
+});
+
+describe("Needs you", () => {
+  const idle = {
+    hasActionableProposedPlan: false,
+    hasPendingApprovals: false,
+    hasPendingUserInput: false,
+    interactionMode: "default" as const,
+    latestRun: makeLatestRun(),
+    lastVisitedAt: "2026-03-09T10:06:00.000Z",
+    runtime: null,
+  };
+  const failedRuntime = {
+    status: "failed" as const,
+    activeRunId: null,
+    providerInstanceId: ProviderInstanceId.make("codex"),
+    providerName: "Codex",
+    lastError: "exit 1",
+    updatedAt: "2026-03-09T10:05:00.000Z",
+  };
+  const failedRun = { ...makeLatestRun(), status: "failed" as const };
+
+  it("names what the user owes and lets seen failures go back to their project", () => {
+    expect(resolveSidebarNeedsYouReason(idle)).toBeNull();
+    expect(resolveSidebarNeedsYouReason({ ...idle, hasPendingApprovals: true })).toBe(
+      "Approval needed",
+    );
+    expect(resolveSidebarNeedsYouReason({ ...idle, hasPendingUserInput: true })).toBe("Question");
+    expect(
+      resolveSidebarNeedsYouReason({
+        ...idle,
+        interactionMode: "plan",
+        hasActionableProposedPlan: true,
+      }),
+    ).toBe("Plan ready");
+    const unseenFailure = {
+      ...idle,
+      runtime: failedRuntime,
+      latestRun: failedRun,
+      lastVisitedAt: "2026-03-09T10:04:00.000Z",
+    };
+    expect(resolveSidebarNeedsYouReason(unseenFailure)).toBe("Failed");
+    expect(
+      resolveSidebarNeedsYouReason({
+        ...unseenFailure,
+        runtime: { ...failedRuntime, lastErrorClass: "usage_limit" as const },
+      }),
+    ).toBe("Usage limit");
+    // Opening the thread after it failed returns it to its project.
+    expect(
+      resolveSidebarNeedsYouReason({ ...unseenFailure, lastVisitedAt: "2026-03-09T10:06:00.000Z" }),
+    ).toBeNull();
+  });
+
+  it("maps statuses onto the five indicator families", () => {
+    const family = (status: SidebarThreadStatus, isUnread = false, isWoke = false) =>
+      resolveSidebarStatusFamily({ status, isUnread, isWoke });
+    expect(family("approval")).toBe("needs-you");
+    expect(family("request")).toBe("needs-you");
+    expect(family("working")).toBe("working");
+    expect(family("limited")).toBe("failed");
+    expect(family("waiting", true)).toBe("idle");
+    expect(family("ready", true)).toBe("done");
+    expect(family("ready", true, true)).toBe("needs-you");
+    expect(family("ready")).toBe("idle");
+  });
+
+  it("pulls threads out of their sections in order and keeps untouched lists", () => {
+    const pinned = ["p1", "p2!"];
+    const active = ["a1"];
+    const { needsYou, rest } = splitSidebarNeedsYouThreads([pinned, active, ["b!"]], (thread) =>
+      thread.endsWith("!"),
+    );
+    expect(needsYou).toEqual(["p2!", "b!"]);
+    expect(rest[0]).toEqual(["p1"]);
+    expect(rest[1]).toBe(active);
+    expect(rest[2]).toEqual([]);
   });
 });

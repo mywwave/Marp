@@ -5,11 +5,11 @@ import {
   AuthSourceControlWriteScope,
   SourceControlProviderKind,
   type ScopedThreadRef,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@marp/client-runtime/state/runtime";
 import type {
   GitRunStackedActionResult,
   GitStackedAction,
@@ -18,7 +18,7 @@ import type {
   SourceControlPublishRepositoryResult,
   SourceControlRepositoryVisibility,
   VcsStatusResult,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import * as Option from "effect/Option";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
@@ -98,7 +98,7 @@ import { threadEnvironment } from "~/state/threads";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { vcsActionManager, vcsEnvironment, vcsStatusRevalidation } from "~/state/vcs";
 import { randomUUID } from "~/lib/utils";
-import { resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
+import { resolvePathLinkTarget } from "@marp/shared/fileLinks";
 import { type DraftId, useComposerDraftStore } from "~/composerDraftStore";
 import {
   THREAD_DETAILS_PANEL_CHEVRON_CLASS,
@@ -108,8 +108,8 @@ import {
   THREAD_DETAILS_PANEL_SPLIT_SEPARATOR_CLASS,
 } from "./chat/threadDetailsPanelStyles";
 import { getSourceControlPresentation, sourceControlIcon } from "~/sourceControlPresentation";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
+import { sourceControlClients } from "@marp/client-runtime/source-control-clients";
+import { formatDiffCount } from "@marp/client-runtime/diff-count";
 import { useOpenLink } from "~/browser/useOpenLink";
 
 interface GitActionsControlProps {
@@ -120,6 +120,8 @@ interface GitActionsControlProps {
   showActions?: boolean;
   showChanges?: boolean;
   onOpenChanges?: () => void;
+  /** `header`: the thread header's diff total and Git split button; dialogs are shared. */
+  layout?: "panel" | "header";
 }
 
 interface PendingDefaultBranchAction {
@@ -286,6 +288,16 @@ function GitActionItemIcon({
   if (icon === "commit") return <GitCommitIcon />;
   if (icon === "push") return <CloudUploadIcon />;
   return <SourceControlIcon />;
+}
+
+const compactDiffCountFormat = new Intl.NumberFormat("en", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+/** Header totals stay one short token each: 47,996 reads as 48K. */
+function formatCompactDiffCount(count: number): string {
+  return count < 1000 ? String(count) : compactDiffCountFormat.format(count);
 }
 
 function GitQuickActionIcon({
@@ -931,6 +943,7 @@ export default function GitActionsControl({
   showActions = true,
   showChanges = true,
   onOpenChanges,
+  layout = "panel",
 }: GitActionsControlProps) {
   const panelAnchorRef = useRef<HTMLDivElement | null>(null);
   const updateThreadMetadata = useAtomCommand(
@@ -1070,7 +1083,7 @@ export default function GitActionsControl({
     activeDraftThread?.envMode === "worktree" &&
     activeDraftThread.worktreePath === null;
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- persists the draft thread branch when the live git status subscription reports a different branch
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- persists the draft thread branch when the live git status subscription reports a different branch
   useEffect(() => {
     if (isGitActionRunning || isSelectingWorktreeBase || activeServerThread) {
       return;
@@ -1476,11 +1489,104 @@ export default function GitActionsControl({
     </>
   );
 
+  const headerInsertions = changesTotals?.insertions ?? 0;
+  const headerDeletions = changesTotals?.deletions ?? 0;
+  // The menu runs the full action; the button names only its first step, such as "Commit".
+  const headerActionLabel = quickAction.label.split(/,| & /)[0] ?? quickAction.label;
+  const headerControls =
+    !isRepo || quietEmptyDraft ? null : (
+      <>
+        {headerInsertions > 0 || headerDeletions > 0 ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="toolbar"
+                  size="xs"
+                  disabled={!onOpenChanges}
+                  onClick={onOpenChanges}
+                  aria-label={`Open diff: ${headerInsertions} additions, ${headerDeletions} deletions`}
+                />
+              }
+            >
+              <span className="font-mono tabular-nums text-diff-addition-foreground">
+                +{formatCompactDiffCount(headerInsertions)}
+              </span>
+              <span className="font-mono tabular-nums text-diff-deletion-foreground">
+                −{formatCompactDiffCount(headerDeletions)}
+              </span>
+            </TooltipTrigger>
+            <TooltipPopup side="bottom">Open diff</TooltipPopup>
+          </Tooltip>
+        ) : null}
+        <Menu
+          onOpenChange={(open) => {
+            if (open && gitCwd) {
+              requestVcsStatusRefresh(refreshVcsStatus, activeEnvironmentId, gitCwd);
+            }
+          }}
+        >
+          <MenuTrigger
+            render={
+              <Button
+                variant="toolbar"
+                size="xs"
+                aria-label={
+                  gitActionProgress
+                    ? gitActionProgress.status
+                    : quickActionDisabledReason
+                      ? `Git actions. ${quickAction.label}: ${quickActionDisabledReason}`
+                      : `Git actions. Next: ${quickAction.label}`
+                }
+              />
+            }
+            disabled={isGitActionRunning}
+          >
+            {gitActionProgress ? (
+              <>
+                <Spinner aria-hidden="true" />
+                <span className="hidden max-w-40 truncate @2xl/thread-header:inline">
+                  {gitActionProgress.status}
+                </span>
+              </>
+            ) : visibleInlineSuccess ? (
+              <>
+                <CheckIcon aria-hidden="true" className="text-success" />
+                <span className="hidden max-w-40 truncate @2xl/thread-header:inline">
+                  {visibleInlineSuccess.title}
+                </span>
+              </>
+            ) : (
+              <>
+                <GitCommitIcon aria-hidden="true" />
+                <span className="hidden @2xl/thread-header:inline">{headerActionLabel}</span>
+                <ChevronDownIcon aria-hidden="true" className="size-3.5" />
+              </>
+            )}
+          </MenuTrigger>
+          <MenuPopup align="end">
+            {quickActionDisabledReason ||
+            gitActionMenuItems.some((item) => item.label === quickAction.label) ? null : (
+              <MenuItem disabled={!canWriteSourceControl} onClick={runQuickAction}>
+                <GitQuickActionIcon
+                  quickAction={quickAction}
+                  SourceControlIcon={SourceControlIcon}
+                />
+                <MenuItemLabel>{quickAction.label}</MenuItemLabel>
+              </MenuItem>
+            )}
+            {gitItems}
+          </MenuPopup>
+        </Menu>
+      </>
+    );
+
   if (!gitCwd) return null;
 
   return (
     <>
-      {!showActions ? null : !isRepo ? (
+      {layout === "header" ? headerControls : null}
+      {layout === "header" || !showActions ? null : !isRepo ? (
         <ThreadDetailsControl
           size="xs"
           variant="ghost"
@@ -1622,7 +1728,7 @@ export default function GitActionsControl({
         </div>
       )}
 
-      {showChanges && isRepo && !quietEmptyDraft ? (
+      {layout === "panel" && showChanges && isRepo && !quietEmptyDraft ? (
         <ThreadDetailsControl
           type="button"
           variant="ghost"

@@ -104,6 +104,15 @@ function isMobileViewport(): boolean {
   return typeof window !== "undefined" && window.matchMedia(SIDEBAR_MOBILE_QUERY).matches;
 }
 
+/** The open state the last toggle saved, so a collapsed sidebar stays collapsed across launches. */
+export function readPersistedSidebarOpen(): boolean {
+  if (typeof document === "undefined") return true;
+  const saved = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${SIDEBAR_COOKIE_NAME}=`));
+  return saved?.slice(SIDEBAR_COOKIE_NAME.length + 1) !== "false";
+}
+
 async function persistSidebarOpen(open: boolean) {
   await cookieStore.set({
     expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
@@ -860,5 +869,4 @@ export {
   SidebarRail,
   SidebarTrigger,
   useSidebar,
-  useSidebarVisibility,
 };

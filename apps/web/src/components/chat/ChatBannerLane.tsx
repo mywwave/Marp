@@ -3,7 +3,7 @@ import type {
   ProviderInstanceId,
   ServerProvider,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import type { Dispatch, SetStateAction } from "react";
 import { ProviderStatusBanner } from "./ProviderStatusBanner";
 import { dismissThreadErrorBannerForSession, ThreadErrorBanner } from "./ThreadErrorBanner";
@@ -24,6 +24,7 @@ export function ChatBannerLane(props: {
   threadErrorBannerKey: string | null;
   setThreadError: (threadId: ThreadId | null, error: string | null) => void;
   setThreadErrorBannerDismissTick: Dispatch<SetStateAction<number>>;
+  onRetryFailedTurn?: (() => void) | undefined;
 }) {
   const {
     providerStatus,
@@ -49,6 +50,7 @@ export function ChatBannerLane(props: {
         error={threadError}
         errorClass={threadErrorClass}
         errorCode={threadErrorCode}
+        onRetry={props.onRetryFailedTurn}
         onDismiss={() => {
           setThreadError(threadId, null);
           dismissThreadErrorBannerForSession(threadErrorBannerKey);

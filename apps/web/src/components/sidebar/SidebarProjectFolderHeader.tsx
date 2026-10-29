@@ -1,6 +1,6 @@
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/models";
-import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { ChevronDownIcon, SquarePenIcon } from "lucide-react";
+import type { EnvironmentThreadShell } from "@marp/client-runtime/state/models";
+import { scopedThreadKey, scopeThreadRef } from "@marp/client-runtime/environment";
+import { ChevronDownIcon, EllipsisIcon, PlusIcon } from "lucide-react";
 import { memo } from "react";
 
 import { cn } from "~/lib/utils";
@@ -30,13 +30,14 @@ export function sidebarFolderRowId(projectKey: string) {
 }
 
 /**
- * A project folder in the boring sidebar. It reads like a shelf header: a trailing
- * count and chevron, with the count and a status dot only while it is closed, so a
- * closed folder still says when a hidden thread needs you.
+ * A project header in the boring sidebar: icon, name and chevron, with New thread
+ * and project actions on hover. A closed folder keeps a status dot, so it still
+ * says when a hidden thread needs you; an unreachable machine shows a red dot.
  */
 export const SidebarProjectFolderHeader = memo(function SidebarProjectFolderHeader(props: {
   group: SidebarProjectSnapshot;
   collapsed: boolean;
+  offline?: boolean | undefined;
   hiddenThreads: readonly EnvironmentThreadShell[];
   onToggle: (group: SidebarProjectSnapshot) => void;
   onNewThread: (group: SidebarProjectSnapshot) => void;
@@ -61,7 +62,7 @@ export const SidebarProjectFolderHeader = memo(function SidebarProjectFolderHead
   return (
     <li
       data-testid="sidebar-project-folder"
-      className="group/project-folder relative mt-2 list-none first:mt-0"
+      className="group/project-folder relative mt-3 list-none first:mt-0"
     >
       <button
         type="button"
@@ -74,32 +75,32 @@ export const SidebarProjectFolderHeader = memo(function SidebarProjectFolderHead
           event.preventDefault();
           props.onContextMenu(group, { x: event.clientX, y: event.clientY });
         }}
-        className="flex h-8 w-full cursor-pointer items-center gap-2.5 rounded-(--control-radius) px-(--sidebar-row-content-inset) text-left outline-none hover:bg-sidebar-row-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-sm px-3 text-left outline-none transition-colors duration-150 hover:bg-sidebar-row-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none"
       >
         <ProjectFavicon project={group} className="size-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-sidebar-foreground/90">
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
           {group.displayName}
         </span>
-        {dot ? (
+        {props.offline ? (
+          <span className="size-1.5 shrink-0 rounded-full bg-error">
+            <span className="sr-only">, offline</span>
+          </span>
+        ) : dot ? (
           <span className={cn("size-1.5 shrink-0 rounded-full", FOLDER_DOT_CLASS_NAME[dot])}>
             <span className="sr-only">{FOLDER_DOT_LABEL[dot]}</span>
           </span>
         ) : null}
-        {collapsed && hiddenThreads.length > 0 ? (
-          <span className="shrink-0 text-xs tabular-nums text-sidebar-muted-foreground group-hover/project-folder:invisible pointer-coarse:invisible">
-            {hiddenThreads.length}
-          </span>
-        ) : null}
+        {/* Room for the actions, which float in without moving the chevron. */}
+        <span aria-hidden className="w-13 shrink-0 pointer-coarse:w-8" />
         <ChevronDownIcon
           aria-hidden
           className={cn(
-            "size-3 shrink-0 text-sidebar-muted-foreground transition-transform",
+            "size-3.5 shrink-0 text-placeholder transition-transform duration-200 motion-reduce:transition-none",
             collapsed && "-rotate-90",
           )}
         />
       </button>
-      {/* Sits over the count, which hides on hover, and left of the chevron. */}
-      <span className="absolute inset-y-0 right-6 flex items-center opacity-0 focus-within:opacity-100 group-hover/project-folder:opacity-100 pointer-coarse:opacity-100">
+      <span className="absolute inset-y-0 right-8 flex items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/project-folder:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none">
         <Button
           data-sidebar-action-for={rowId}
           size="icon-xs"
@@ -107,7 +108,20 @@ export const SidebarProjectFolderHeader = memo(function SidebarProjectFolderHead
           aria-label={`New thread in ${group.displayName}`}
           onClick={() => props.onNewThread(group)}
         >
-          <SquarePenIcon aria-hidden />
+          <PlusIcon aria-hidden />
+        </Button>
+        <Button
+          data-sidebar-action-for={rowId}
+          size="icon-xs"
+          variant="ghost-muted"
+          aria-label="Project actions"
+          className="pointer-coarse:hidden"
+          onClick={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            props.onContextMenu(group, { x: rect.left, y: rect.bottom + 4 });
+          }}
+        >
+          <EllipsisIcon aria-hidden />
         </Button>
       </span>
     </li>

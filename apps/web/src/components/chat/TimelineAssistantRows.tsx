@@ -1,6 +1,6 @@
-import { shouldPreserveAssistantLineBreaks } from "@t3tools/shared/markdownPipeline";
-import { type RunId } from "@t3tools/contracts";
-import { canForkProjectedAssistantItem } from "@t3tools/client-runtime/state/thread-workflows";
+import { shouldPreserveAssistantLineBreaks } from "@marp/shared/markdownPipeline";
+import { type MessageId, type RunId } from "@marp/contracts";
+import { canForkProjectedAssistantItem } from "@marp/client-runtime/state/thread-workflows";
 import { memo, use, useState } from "react";
 import { type ChatMessage, type TurnDiffSummary } from "../../types";
 import ChatMarkdown from "../ChatMarkdown";
@@ -30,7 +30,7 @@ export function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind
   return (
     <>
       <div className="relative min-w-0 px-1 py-0.5">
-        <MessageAuthorHeading>T3 Code</MessageAuthorHeading>
+        <MessageAuthorHeading>Marp</MessageAuthorHeading>
         <div data-thread-find-text="true">
           <AssistantCitationSource
             messageId={row.message.id}
@@ -70,8 +70,58 @@ export function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind
             copyStreaming={row.assistantCopyStreaming}
           />
         ) : null}
+        {row.assistantTurnDiffSummary && row.assistantTurnDiffSummary.files.length > 0 ? (
+          <CheckpointDivider
+            runId={row.assistantTurnDiffSummary.runId}
+            fileCount={row.assistantTurnDiffSummary.files.length}
+            restore={row.checkpointRestore}
+          />
+        ) : null}
       </div>
     </>
+  );
+}
+
+/** Ends a turn that changed files: what changed, where to look, and the way back. */
+function CheckpointDivider({
+  runId,
+  fileCount,
+  restore,
+}: {
+  runId: RunId;
+  fileCount: number;
+  restore: { turnCount: number; messageId: MessageId } | undefined;
+}) {
+  const ctx = use(TimelineRowCtx);
+  const activity = use(TimelineRowActivityCtx);
+  const onOpenTurnDiff = ctx.onOpenTurnDiff;
+  return (
+    <div
+      role="group"
+      aria-label="Checkpoint"
+      className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"
+    >
+      <span aria-hidden className="h-px flex-1 bg-border" />
+      <span className="shrink-0">
+        Checkpoint · {fileCount} {fileCount === 1 ? "file" : "files"} changed
+      </span>
+      {onOpenTurnDiff ? (
+        <Button size="micro" variant="ghost" onClick={() => onOpenTurnDiff(runId)}>
+          View diff
+        </Button>
+      ) : null}
+      {restore ? (
+        <Button
+          size="micro"
+          variant="ghost"
+          disabled={activity.isRevertingCheckpoint || activity.isWorking}
+          onClick={() => ctx.onRevertToTurnCount(restore.turnCount, restore.messageId)}
+        >
+          Restore
+        </Button>
+      ) : null}
+      <span aria-hidden className="h-px flex-1 bg-border" />
+    </div>
   );
 }
 
@@ -227,6 +277,7 @@ export function ProposedPlanTimelineRow({
   return (
     <div className="min-w-0 px-1 py-0.5">
       <ProposedPlanCard
+        actions={ctx.planActions?.planId === row.proposedPlan.id ? ctx.planActions : null}
         planMarkdown={row.proposedPlan.planMarkdown}
         environmentId={ctx.activeThreadEnvironmentId}
         threadRef={ctx.threadRef ?? undefined}

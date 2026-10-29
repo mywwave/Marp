@@ -1,4 +1,4 @@
-import { ThreadId, type WorktreeSetupSnapshot } from "@t3tools/contracts";
+import { ThreadId, type WorktreeSetupSnapshot } from "@marp/contracts";
 import {
   CheckpointRef,
   NodeId,
@@ -10,7 +10,7 @@ import {
   RuntimeRequestId,
   type OrchestrationV2ProjectedTurnItem,
   type OrchestrationV2TurnItem,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import * as DateTime from "effect/DateTime";
 import {
   deriveTimelineEntriesFromVisibleTurnItems,
@@ -21,8 +21,8 @@ import {
 import { makeStreamingTimelineFixture } from "../../test-fixtures";
 import type { TurnDiffSummary } from "../../types";
 import { describe, expect, it } from "vite-plus/test";
-import { EnvironmentId, MessageId, RunId } from "@t3tools/contracts";
-import { serializeAssistantCitation } from "@t3tools/shared/assistantCitations";
+import { EnvironmentId, MessageId, RunId } from "@marp/contracts";
+import { serializeAssistantCitation } from "@marp/shared/assistantCitations";
 import {
   computeStableMessagesTimelineRows,
   deriveMessagesTimelineRows,
@@ -147,7 +147,7 @@ describe("deriveMessagesTimelineRows", () => {
       toolSource: { key: "mcp:node_repl", name: "node repl", kind: "integration" as const },
       input: {
         title: "Restrict the breakpoint to Git actions",
-        code: "await sky.type_text({app:'T3 Code (Nightly)',text:'debug(ga.run)'});",
+        code: "await sky.type_text({app:'Marp (Nightly)',text:'debug(ga.run)'});",
       },
     };
     const entries = deriveTimelineEntriesFromVisibleTurnItems({
@@ -902,6 +902,60 @@ describe("deriveMessagesTimelineRows", () => {
 
     expect(userRow?.revertTurnCount).toBe(0);
     expect(assistantRow?.assistantTurnDiffSummary).toBe(assistantTurnDiffSummary);
+    // The last turn has nothing after it to rewind.
+    expect(assistantRow?.checkpointRestore).toBeUndefined();
+  });
+
+  it("restores a turn's checkpoint by rewinding to the next prompt", () => {
+    const message = (id: string, role: "user" | "assistant", runId: string) => ({
+      id: `${id}-entry`,
+      kind: "message" as const,
+      createdAt: "2026-01-01T00:00:00Z",
+      message: {
+        id: id as never,
+        role,
+        text: id,
+        runId: runId as never,
+        ...(role === "user" ? { inputIntent: "turn_start" as const } : {}),
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z",
+        streaming: false,
+      },
+    });
+    const summary = (runId: string, assistantMessageId: string, checkpointTurnCount: number) => ({
+      runId: runId as never,
+      completedAt: "2026-01-01T00:00:30Z",
+      assistantMessageId: assistantMessageId as never,
+      checkpointTurnCount,
+      checkpointRef: `checkpoint-${checkpointTurnCount}` as never,
+      status: "ready" as const,
+      files: [{ path: "src/index.ts", kind: "modified", additions: 3, deletions: 1 }],
+    });
+    const rows = deriveMessagesTimelineRows({
+      timelineEntries: [
+        message("user-1", "user", "turn-1"),
+        message("assistant-1", "assistant", "turn-1"),
+        message("user-2", "user", "turn-2"),
+        message("assistant-2", "assistant", "turn-2"),
+      ],
+      isWorking: false,
+      activeTurnStartedAt: null,
+      turnDiffSummaries: [summary("turn-1", "assistant-1", 1), summary("turn-2", "assistant-2", 2)],
+      supportsConversationRollback: true,
+      threadStartCheckpointReady: true,
+    });
+    const restoreById = Object.fromEntries(
+      rows.flatMap((row) =>
+        row.kind === "message" && row.message.role === "assistant"
+          ? [[row.message.id, row.checkpointRestore ?? null]]
+          : [],
+      ),
+    );
+
+    expect(restoreById).toEqual({
+      "assistant-1": { turnCount: 1, messageId: "user-2" },
+      "assistant-2": null,
+    });
   });
 
   it("folds the first assistant message and settled work before the terminal response", () => {
@@ -1206,6 +1260,7 @@ describe("deriveMessagesTimelineRows", () => {
     );
     expect(foldRow?.runId).toBe("turn-1");
     expect(foldRow?.label).toBe("Worked for 12s");
+    expect(foldRow?.duration).toBe("12s");
   });
 
   it("uses latest-turn timings and the stopped label for an interrupted latest turn", () => {
@@ -1241,6 +1296,8 @@ describe("deriveMessagesTimelineRows", () => {
         kind: "turn-fold",
         runId: "turn-1",
         label: "You stopped after 47s",
+        title: "You stopped after 47s",
+        duration: null,
         expanded: false,
       }),
     ]);
@@ -3085,6 +3142,8 @@ it.each([
     runId: RunId.make("run"),
     createdAt: "2026-01-01T00:00:00Z",
     label: "Worked for 1m",
+    title: "Worked",
+    duration: "1m",
     expanded: true,
     ...(before === undefined ? {} : { deferredWorkItemIds: before }),
   };
@@ -3118,7 +3177,7 @@ describe("streaming v2 row projection", () => {
         {
           runId: source.historyRunId,
           checkpointTurnCount: 1,
-          checkpointRef: CheckpointRef.make("refs/t3/checkpoints/history"),
+          checkpointRef: CheckpointRef.make("refs/marp/checkpoints/history"),
           status: "ready",
           files: [],
           assistantMessageId: MessageId.make("history-assistant"),
@@ -3470,7 +3529,7 @@ describe("linked timeline resources", () => {
               runId,
               type: "dynamic_tool",
               status: failed ? "failed" : status,
-              toolName: "t3-code.delegate_task",
+              toolName: "marp.delegate_task",
               input: { task: taskId === "b" ? "a" : taskId, role },
               ...(status === "completed"
                 ? {

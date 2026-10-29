@@ -60,6 +60,9 @@ const buttonVariants = cva(
         overlay: "border-transparent bg-black/70 text-white/65 [:hover,[data-pressed]]:bg-black/90",
         secondary:
           "border-transparent bg-secondary text-secondary-foreground [:hover,[data-pressed]]:bg-surface-hover",
+        /** Header and toolbar controls: 8px corners, no fill until hover or open. */
+        toolbar:
+          "[--control-icon-color:currentColor] rounded-sm border-transparent text-muted-foreground before:rounded-sm data-pressed:bg-accent data-pressed:text-foreground [:hover,[data-pressed],[data-popup-open]]:bg-accent [:hover,[data-pressed],[data-popup-open]]:text-foreground",
         "warning-outline":
           "border-transparent bg-warning-surface text-warning-foreground [:hover,[data-pressed]]:bg-warning/16 dark:[:hover,[data-pressed]]:bg-warning/24",
       },

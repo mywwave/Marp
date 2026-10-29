@@ -1,13 +1,12 @@
-import { type RuntimeRequestId, type ScopedThreadRef } from "@t3tools/contracts";
+import { type RuntimeRequestId, type ScopedThreadRef } from "@marp/contracts";
 import { memo, use, useEffect, useEffectEvent, useRef, useState } from "react";
 import { BackgroundThreadContext } from "./backgroundThread";
 import { useStableCallback } from "~/hooks/useStableCallback";
 import { type PendingUserInput } from "../../session-logic";
-import type { PendingUserInputDraftAnswer } from "@t3tools/client-runtime/state/pending-user-input";
+import type { PendingUserInputDraftAnswer } from "@marp/client-runtime/state/pending-user-input";
 import { derivePendingUserInputProgress } from "../../pendingUserInput";
 import { CheckboxMark } from "../ui/checkbox";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
-import { Kbd } from "../ui/kbd";
 import { cn } from "~/lib/utils";
 import { ComposerBanner } from "./ComposerBanner";
 import ChatMarkdown from "../ChatMarkdown";
@@ -23,6 +22,8 @@ interface PendingUserInputPanelProps {
   onToggleOption: (questionId: string, optionValue: string) => void;
   onAdvance: () => void;
   onDismiss: (requestId: RuntimeRequestId) => void;
+  /** Moves focus to the composer, where a custom answer is typed. */
+  onOther?: (() => void) | undefined;
 }
 
 export const ComposerPendingUserInputPanel = memo(function ComposerPendingUserInputPanel({
@@ -36,6 +37,7 @@ export const ComposerPendingUserInputPanel = memo(function ComposerPendingUserIn
   onToggleOption,
   onAdvance,
   onDismiss,
+  onOther,
 }: PendingUserInputPanelProps) {
   if (pendingUserInputs.length === 0) return null;
   const activePrompt = pendingUserInputs[0];
@@ -54,6 +56,7 @@ export const ComposerPendingUserInputPanel = memo(function ComposerPendingUserIn
       onToggleOption={onToggleOption}
       onAdvance={onAdvance}
       onDismiss={onDismiss}
+      onOther={onOther}
     />
   );
 });
@@ -69,7 +72,9 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
   onToggleOption,
   onAdvance,
   onDismiss,
+  onOther,
 }: {
+  onOther: (() => void) | undefined;
   prompt: PendingUserInput;
   cwd: string | undefined;
   threadRef: ScopedThreadRef;
@@ -113,7 +118,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
     setOptimisticSingleSelect(null);
   }
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- clears the auto-advance timer when the question changes, input is disabled, or the panel unmounts
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- clears the auto-advance timer when the question changes, input is disabled, or the panel unmounts
   useEffect(() => {
     const clearAutoAdvance = () => {
       if (autoAdvanceTimerRef.current !== null) {
@@ -145,7 +150,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
   const selectOptionFromShortcut = useEffectEvent(handleOptionSelection);
   const backgroundThread = use(BackgroundThreadContext);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes a document keydown listener for digit shortcuts while a question is answerable
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- subscribes a document keydown listener for digit shortcuts while a question is answerable
   useEffect(() => {
     if (!activeQuestion || responseDisabled || isCollapsed || backgroundThread) return;
     const handler = (event: globalThis.KeyboardEvent) => {
@@ -241,8 +246,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
               threadRef={threadRef}
               className="pt-2 text-foreground/85"
             />
-            {/* Rows span the header row's width so the radios align with the question text and the shortcut column sits under the dismiss button. */}
-            <div className="-ms-2 mt-1.5 sm:-ms-1.5">
+            <div className="mt-2 flex flex-col gap-1.5">
               {activeQuestion.options.map((option, index) => {
                 const optionValue = option.value ?? option.label;
                 const isOptimisticallySelected =
@@ -250,35 +254,6 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
                   optimisticSingleSelect.optionValue === optionValue;
                 const isSelected =
                   isOptimisticallySelected || draftSelectedOptions?.[index] === true;
-                const className = cn(
-                  "group flex w-full items-start gap-2.5 rounded-md bg-transparent py-1.5 ps-2 text-left sm:ps-1.5 outline-none transition-colors duration-150 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/25",
-                  isSelected ? "text-foreground" : "text-foreground/70 hover:bg-muted/30",
-                  (disabled || isResponding) && "opacity-50 cursor-not-allowed",
-                  !disabled && !isResponding && "cursor-pointer",
-                );
-                // The h-5 slots match the label's line box, so the indicator and shortcut stay on its first line.
-                const content = (
-                  <>
-                    <span className="pointer-events-none flex h-5 shrink-0 items-center">
-                      {activeQuestion.multiSelect ? (
-                        <CheckboxMark checked={isSelected} />
-                      ) : (
-                        <OptionRadio checked={isSelected} />
-                      )}
-                    </span>
-                    <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                      <span className="text-sm font-medium">{option.label}</span>
-                      {option.description && option.description !== option.label ? (
-                        <span className="text-secondary-label text-2xs">{option.description}</span>
-                      ) : null}
-                    </div>
-                    {index < 9 ? (
-                      <span className="flex h-5 w-7 shrink-0 items-center justify-center sm:w-6">
-                        <Kbd>{index + 1}</Kbd>
-                      </span>
-                    ) : null}
-                  </>
-                );
                 return (
                   <button
                     key={`${activeQuestion.id}:${optionValue}`}
@@ -288,12 +263,51 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
                     onClick={() => {
                       handleOptionSelection(activeQuestion.id, optionValue);
                     }}
-                    className={className}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-field px-3 py-2.5 text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                      isSelected
+                        ? "bg-primary/10 ring-1 ring-inset ring-primary"
+                        : "bg-muted hover:bg-surface-hover",
+                      disabled || isResponding ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                    )}
                   >
-                    {content}
+                    {activeQuestion.multiSelect ? (
+                      <span className="pointer-events-none flex shrink-0">
+                        <CheckboxMark checked={isSelected} />
+                      </span>
+                    ) : null}
+                    {index < 9 ? (
+                      <span
+                        aria-hidden
+                        className="flex size-5 shrink-0 items-center justify-center rounded-md bg-card font-mono text-xs text-muted-foreground"
+                      >
+                        {index + 1}
+                      </span>
+                    ) : null}
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="text-sm font-semibold text-foreground">{option.label}</span>
+                      {option.description && option.description !== option.label ? (
+                        <span className="text-xs text-muted-foreground">{option.description}</span>
+                      ) : null}
+                    </span>
                   </button>
                 );
               })}
+              {onOther && activeQuestion.allowCustomAnswer !== false ? (
+                <button
+                  type="button"
+                  disabled={disabled || isResponding}
+                  onClick={onOther}
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-field bg-muted px-3 py-2.5 text-left outline-none transition-colors duration-150 hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-sm font-semibold text-foreground">Other…</span>
+                    <span className="text-xs text-muted-foreground">
+                      Type your own answer in the composer.
+                    </span>
+                  </span>
+                </button>
+              ) : null}
             </div>
           </ComposerBanner.Body>
         </ComposerBanner.Scroll>
@@ -301,21 +315,3 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
     </Collapsible>
   );
 });
-
-// Drawn with ui/radio-group's look instead of using its Radio: Radio only checks inside a
-// RadioGroup, whose arrow keys select options and would trip the single-select auto-advance.
-function OptionRadio({ checked }: { checked: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "relative inline-flex size-4.5 shrink-0 items-center justify-center rounded-full border border-input bg-background not-dark:bg-clip-padding sm:size-4 dark:bg-input/32",
-        checked ? "shadow-none" : "shadow-xs/5",
-      )}
-    >
-      {checked ? (
-        <span className="-inset-px absolute flex items-center justify-center rounded-full bg-primary before:size-2 before:rounded-full before:bg-primary-foreground sm:before:size-1.5" />
-      ) : null}
-    </span>
-  );
-}

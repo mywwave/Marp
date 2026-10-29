@@ -3,30 +3,31 @@ import type {
   ProviderApprovalDecision,
   RuntimeRequestId,
   WorktreeSetupSnapshot,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import {
   type EnvironmentId,
   type MessageId,
   type OrchestrationV2TurnItem,
+  type PlanId,
   type RunAttemptId,
   type ScopedThreadRef,
   type ServerProviderSkill,
   type RunId,
   ThreadId,
   type TurnItemId,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import type { AsyncResult, Atom } from "effect/reactivity";
-import type { CommandOutputView } from "@t3tools/client-runtime/state/command-output";
-import type { WorkflowOpening } from "@t3tools/client-runtime/state/subagentRuntime";
+import type { CommandOutputView } from "@marp/client-runtime/state/command-output";
+import type { WorkflowOpening } from "@marp/client-runtime/state/subagentRuntime";
 import { createContext, type MouseEvent, type ReactNode } from "react";
 import { type LegendListRef } from "@legendapp/list/react";
-import type { CodexArtifactTemplate } from "@t3tools/shared/codexArtifactTemplates";
+import type { CodexArtifactTemplate } from "@marp/shared/codexArtifactTemplates";
 import type { PendingApproval } from "../../session-logic";
 import { type ChatFileAttachment } from "../../types";
 import { ExpandedImagePreview } from "./ExpandedImagePreview";
 import { type AssistantCitationTarget } from "./AssistantCitationSource";
 import { type MessagesTimelineRow, type WorkGroupScrollAnchor } from "./MessagesTimeline.logic";
-import { type TimestampFormat } from "@t3tools/contracts/settings";
+import { type TimestampFormat } from "@marp/contracts/settings";
 import type { TurnItemDetailSource } from "../../state/queries";
 import { type HandoffTimelineRun } from "./V2LifecycleRow";
 
@@ -43,6 +44,8 @@ export interface TurnItemSource {
 }
 
 export interface TimelineRowSharedState {
+  /** Implement and refine for the thread's actionable plan; null when no plan waits. */
+  planActions: { planId: PlanId; onImplement: () => void; onRefine: () => void } | null;
   pendingApprovals: ReadonlyMap<RuntimeRequestId, PendingApproval>;
   respondingRequestIds: ReadonlyArray<RuntimeRequestId>;
   canOperateThread: boolean;

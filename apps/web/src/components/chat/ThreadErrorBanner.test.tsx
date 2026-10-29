@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   dismissThreadErrorBannerForSession,
+  failedTurnTitle,
   getThreadErrorBannerKey,
   getThreadErrorBannerMessage,
   isThreadErrorBannerDismissedForSession,
@@ -21,6 +22,16 @@ describe("getThreadErrorBannerMessage", () => {
     const error = JSON.stringify({ error: { message: " \n\t ", code: "unsupported_model" } });
 
     expect(getThreadErrorBannerMessage(error)).toBe(error);
+  });
+});
+
+describe("failedTurnTitle", () => {
+  it.each([
+    ["transport_error", "Lost the connection to the agent"],
+    ["usage_limit", "Usage limit reached"],
+    ["unknown", "This turn failed"],
+  ] as const)("names %s as %s", (errorClass, title) => {
+    expect(failedTurnTitle(errorClass)).toBe(title);
   });
 });
 

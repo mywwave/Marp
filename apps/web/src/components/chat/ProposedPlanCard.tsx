@@ -1,15 +1,15 @@
-import { proposedPlanTitle, stripDisplayedPlanMarkdown } from "@t3tools/shared/proposedPlanText";
+import { proposedPlanTitle, stripDisplayedPlanMarkdown } from "@marp/shared/proposedPlanText";
 import { memo, useState, useId } from "react";
 import { findRevealRef } from "./markdownFindContext";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@marp/client-runtime/state/runtime";
 import {
   AuthFilesystemWriteScope,
   type EnvironmentId,
   type ScopedThreadRef,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import {
   buildCollapsedProposedPlanPreviewMarkdown,
   buildProposedPlanMarkdownFilename,
@@ -17,7 +17,7 @@ import {
   normalizePlanMarkdownForExport,
 } from "../../proposedPlan";
 import ChatMarkdown from "../ChatMarkdown";
-import { EllipsisIcon } from "lucide-react";
+import { EllipsisIcon, ListChecksIcon, PencilIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
@@ -45,7 +45,10 @@ export const ProposedPlanCard = memo(function ProposedPlanCard({
   cwd,
   workspaceRoot,
   findActive = false,
+  actions = null,
 }: {
+  /** Present only on the plan the thread can act on now. */
+  actions?: { onImplement: () => void; onRefine: () => void } | null;
   planMarkdown: string;
   environmentId: EnvironmentId;
   threadRef?: ScopedThreadRef | undefined;
@@ -158,10 +161,17 @@ export const ProposedPlanCard = memo(function ProposedPlanCard({
   };
 
   return (
-    <div className="rounded-2xl border border-border/80 bg-card/70 p-4 sm:p-5">
+    <div className="rounded-card bg-card p-4 shadow-raised sm:px-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Badge variant="secondary">Plan</Badge>
+          {actions ? (
+            <Badge variant="warning">
+              <ListChecksIcon aria-hidden />
+              Plan ready
+            </Badge>
+          ) : (
+            <Badge variant="secondary">Plan</Badge>
+          )}
           {}
           <h3 data-thread-find-text="true" className="truncate text-sm font-medium text-foreground">
             {title}
@@ -230,6 +240,17 @@ export const ProposedPlanCard = memo(function ProposedPlanCard({
           </div>
         ) : null}
       </div>
+      {actions ? (
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+          <Button size="sm" variant="outline" onClick={actions.onRefine}>
+            <PencilIcon aria-hidden />
+            Refine
+          </Button>
+          <Button size="sm" onClick={actions.onImplement}>
+            Implement plan
+          </Button>
+        </div>
+      ) : null}
 
       <Dialog
         open={isSaveDialogOpen}

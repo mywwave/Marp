@@ -1,38 +1,38 @@
-import { resolveThreadWorkingStartedAt } from "@t3tools/client-runtime/state/models";
-import { isShownUnderParent } from "@t3tools/client-runtime/state/threads";
-import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
-import { threadPullRequestSearchTerms } from "@t3tools/shared/threadPullRequests";
+import { resolveThreadWorkingStartedAt } from "@marp/client-runtime/state/models";
+import { isShownUnderParent } from "@marp/client-runtime/state/threads";
+import { backgroundWorkHoldsCompletion } from "@marp/shared/orchestrationV2PendingBackgroundWork";
+import { threadPullRequestSearchTerms } from "@marp/shared/threadPullRequests";
 import * as React from "react";
 import {
   isAtomCommandInterrupted,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@marp/client-runtime/state/runtime";
 import { defaultAnimateLayoutChanges, type AnimateLayoutChanges } from "@dnd-kit/sortable";
 import {
   threadSearchMatchKey,
   threadSearchSubject,
   type ThreadSearchShell,
-} from "@t3tools/client-runtime/state/thread-search";
-import { foldSearchQuery, rankSearchItems, scoreThreadSearch } from "@t3tools/shared/paletteSearch";
-import type { ContextMenuItem, EnvironmentId, ThreadId } from "@t3tools/contracts";
-import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "@t3tools/contracts/settings";
+} from "@marp/client-runtime/state/thread-search";
+import { foldSearchQuery, rankSearchItems, scoreThreadSearch } from "@marp/shared/paletteSearch";
+import type { ContextMenuItem, EnvironmentId, ThreadId } from "@marp/contracts";
+import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "@marp/contracts/settings";
 import type { AsyncResult } from "effect/reactivity";
 import {
   effectiveSnoozed,
   type ThreadSnoozeShell,
-} from "@t3tools/client-runtime/state/thread-settled";
+} from "@marp/client-runtime/state/thread-settled";
 import {
   getThreadSortTimestamp,
   planPinnedReorder,
   sortThreads,
   toSortableTimestamp,
   type ThreadSortInput,
-} from "@t3tools/client-runtime/state/thread-sort";
+} from "@marp/client-runtime/state/thread-sort";
 import type { SidebarThreadSummary, Thread } from "../types";
 import { normalizeSearchText } from "../lib/utils";
 import { isLatestRunSettled } from "../session-logic";
 import { observeIntersection } from "../lib/observeIntersection";
-import { deadlineAfter, deadlineStore } from "@t3tools/client-runtime/clock";
+import { deadlineAfter, deadlineStore } from "@marp/client-runtime/clock";
 import { useDeadlinePassed } from "../hooks/useDeadline";
 import { legacyProjectCwdPreferenceKey } from "../uiStateStore";
 
@@ -811,28 +811,6 @@ export type SidebarThreadStatus =
   | "limited"
   | "ready";
 
-export function shouldRecedeSidebarThread(input: {
-  status: SidebarThreadStatus;
-  isUnread: boolean;
-  isWoke: boolean;
-  isActive: boolean;
-  isSelected: boolean;
-}): boolean {
-  if (
-    input.isActive ||
-    input.isSelected ||
-    input.status === "input" ||
-    input.status === "request"
-  ) {
-    return false;
-  }
-  if (input.status === "working" || input.status === "waiting") return true;
-  if (input.status === "ready" || input.status === "approval") {
-    return !input.isUnread && !input.isWoke;
-  }
-  return false;
-}
-
 type SidebarThreadStatusInput = Pick<
   SidebarThreadSummary,
   | "hasPendingApprovals"
@@ -870,6 +848,76 @@ export function resolveSidebarThreadStatus(thread: SidebarThreadStatusInput): Si
     return thread.runtime.lastErrorClass === "usage_limit" ? "limited" : "failed";
   }
   return "ready";
+}
+
+/** The five status families a sidebar row's indicator can show. */
+export type SidebarStatusFamily = "working" | "needs-you" | "done" | "failed" | "idle";
+
+export function resolveSidebarStatusFamily(input: {
+  status: SidebarThreadStatus;
+  isUnread: boolean;
+  isWoke: boolean;
+}): SidebarStatusFamily {
+  switch (input.status) {
+    case "approval":
+    case "input":
+    case "request":
+      return "needs-you";
+    case "working":
+      return "working";
+    case "failed":
+    case "limited":
+      return "failed";
+    case "waiting":
+      return "idle";
+    case "ready":
+      return input.isWoke ? "needs-you" : input.isUnread ? "done" : "idle";
+  }
+}
+
+/**
+ * Why a thread sits in "Needs you", or null when it does not. Failures count
+ * only until the thread is opened after them; everything else until resolved.
+ */
+export function resolveSidebarNeedsYouReason(
+  thread: ThreadStatusInput & SidebarThreadStatusInput,
+): string | null {
+  const status = resolveSidebarThreadStatus(thread);
+  if (status === "approval") return "Approval needed";
+  if (status === "input") return "Question";
+  if (status === "request") return "Guest request";
+  if (status === "failed" || status === "limited") {
+    if (!hasUnseenFailure(thread)) return null;
+    return status === "limited" ? "Usage limit" : "Failed";
+  }
+  if (
+    status === "ready" &&
+    !thread.hasPendingUserInput &&
+    thread.interactionMode === "plan" &&
+    isLatestRunSettled(thread.latestRun, thread.runtime) &&
+    thread.hasActionableProposedPlan
+  ) {
+    return "Plan ready";
+  }
+  return null;
+}
+
+/**
+ * Moves threads that need the user out of their section, keeping each list's
+ * order. The needs-you list follows the input order of `lists`.
+ */
+export function splitSidebarNeedsYouThreads<TThread>(
+  lists: ReadonlyArray<readonly TThread[]>,
+  needsYou: (thread: TThread) => boolean,
+): { needsYou: TThread[]; rest: Array<readonly TThread[]> } {
+  const picked: TThread[] = [];
+  const rest = lists.map((list): readonly TThread[] => {
+    const kept: TThread[] = [];
+    for (const thread of list) (needsYou(thread) ? picked : kept).push(thread);
+    // Unchanged lists keep their identity, so memoized consumers hold still.
+    return kept.length === list.length ? list : kept;
+  });
+  return { needsYou: picked, rest };
 }
 
 /**
@@ -970,14 +1018,14 @@ export function firstValidTimestampMs(
   return 0;
 }
 
-export { sortActiveThreadsByOrderKey as sortThreadsForSidebar } from "@t3tools/client-runtime/state/thread-sort";
+export { sortActiveThreadsByOrderKey as sortThreadsForSidebar } from "@marp/client-runtime/state/thread-sort";
 export {
   sortInboxThreadsByReturn,
   sortWorkingThreadsBySend,
-} from "@t3tools/client-runtime/state/thread-inbox";
+} from "@marp/client-runtime/state/thread-inbox";
 
-export { pinOrderKeyBetween } from "@t3tools/client-runtime/state/thread-sort";
-export { sortPinnedThreadsByOrderKey as sortPinnedThreadsForSidebar } from "@t3tools/client-runtime/state/thread-sort";
+export { pinOrderKeyBetween } from "@marp/client-runtime/state/thread-sort";
+export { sortPinnedThreadsByOrderKey as sortPinnedThreadsForSidebar } from "@marp/client-runtime/state/thread-sort";
 
 const EMPTY_CONTENT_MATCH_KEYS: ReadonlySet<string> = new Set<string>();
 

@@ -1,23 +1,17 @@
-import { worktreeSetupAgentStarted } from "@t3tools/client-runtime/worktree-setup";
-import { isLiveSubagentTurnItem } from "@t3tools/client-runtime/state/subagentRuntime";
+import { worktreeSetupAgentStarted } from "@marp/client-runtime/worktree-setup";
+import { isLiveSubagentTurnItem } from "@marp/client-runtime/state/subagentRuntime";
 import * as DateTime from "effect/DateTime";
 import * as Equal from "effect/Equal";
-import {
-  assistantCitationLabel,
-  collectAssistantCitations,
-} from "@t3tools/shared/assistantCitations";
+import { assistantCitationLabel, collectAssistantCitations } from "@marp/shared/assistantCitations";
 import { shallow } from "zustand/vanilla/shallow";
-import { claudeResumeCompactionAge } from "@t3tools/shared/claudeCompaction";
-import {
-  IDLE_COMPACTING_LABELS,
-  IDLE_COMPACTION_TITLES,
-} from "@t3tools/client-runtime/user-message";
-import type { HandoffTimelineRun } from "@t3tools/client-runtime/handoff";
-import { renderCodexDirectivesForCopy } from "@t3tools/shared/codexMarkdownDirectives";
+import { claudeResumeCompactionAge } from "@marp/shared/claudeCompaction";
+import { IDLE_COMPACTING_LABELS, IDLE_COMPACTION_TITLES } from "@marp/client-runtime/user-message";
+import type { HandoffTimelineRun } from "@marp/client-runtime/handoff";
+import { renderCodexDirectivesForCopy } from "@marp/shared/codexMarkdownDirectives";
 import {
   commandDisplayText,
   commandProgramName,
-} from "@t3tools/client-runtime/work-log/command-label";
+} from "@marp/client-runtime/work-log/command-label";
 import {
   liveActivityToolStatus,
   normalizeCompactToolLabel,
@@ -27,7 +21,7 @@ import {
   toolGroupSummaryKind,
   contextCompactionTokenCounts,
   type ToolGroupSummaryKind,
-} from "@t3tools/client-runtime/work-log/presentation";
+} from "@marp/client-runtime/work-log/presentation";
 import {
   deriveRevertTurnCountByUserMessageId,
   formatDuration,
@@ -59,20 +53,20 @@ import {
   RunId,
   type ThreadId,
   type TurnItemId,
-} from "@t3tools/contracts";
-import type { ThreadRunSummary } from "@t3tools/client-runtime/state/shell";
-import { resolveT3McpToolDefinition } from "@t3tools/shared/t3McpToolPresentation";
-import { compactDynamicToolOutput } from "@t3tools/shared/toolOutput";
-import { htmlRenderReferencesEqual, type HtmlRenderReference } from "@t3tools/shared/htmlRender";
-import { mcpAppReferencesEqual, type McpAppReference } from "@t3tools/shared/mcpApp";
-import { dynamicToolTitle } from "@t3tools/shared/toolActivity";
+} from "@marp/contracts";
+import type { ThreadRunSummary } from "@marp/client-runtime/state/shell";
+import { resolveMarpMcpToolDefinition } from "@marp/shared/marpMcpToolPresentation";
+import { compactDynamicToolOutput } from "@marp/shared/toolOutput";
+import { htmlRenderReferencesEqual, type HtmlRenderReference } from "@marp/shared/htmlRender";
+import { mcpAppReferencesEqual, type McpAppReference } from "@marp/shared/mcpApp";
+import { dynamicToolTitle } from "@marp/shared/toolActivity";
 import { formatWorkspaceRelativePath } from "../../filePathDisplay";
 import {
   collectToolFilePaths,
   formatReadToolLabel,
   formatSearchToolLabel,
-} from "@t3tools/shared/toolActivity";
-import { isWindowsAbsolutePath } from "@t3tools/shared/path";
+} from "@marp/shared/toolActivity";
+import { isWindowsAbsolutePath } from "@marp/shared/path";
 
 function timelineEntryRunId(entry: TimelineEntry): RunId | null {
   if (entry.kind === "message") {
@@ -180,14 +174,14 @@ export function workEntryDisplayLabel(entry: WorkLogEntry, workspaceRoot: string
 export function threadReadTargetId(entry: Pick<WorkLogEntry, "structuredPayload">) {
   const item = entry.structuredPayload;
   if (item?.type !== "dynamic_tool") return null;
-  if (resolveT3McpToolDefinition(item.toolName)?.summaryAction !== "thread-read") return null;
+  if (resolveMarpMcpToolDefinition(item.toolName)?.summaryAction !== "thread-read") return null;
   const input = item.input;
   const threadId =
     input !== null && typeof input === "object" && "threadId" in input ? input.threadId : null;
   return typeof threadId === "string" && threadId.trim().length > 0 ? threadId.trim() : null;
 }
 
-const THREAD_READ_OBJECT = " a T3 thread";
+const THREAD_READ_OBJECT = " a Marp thread";
 
 export function threadReadTargetTitle(
   shell: Pick<ThreadShell, "title" | "archivedAt" | "deletedAt"> | null,
@@ -557,7 +551,12 @@ type MessagesTimelineRowContent =
       id: string;
       createdAt: string;
       runId: RunId;
+      /** The full sentence, such as "Worked for 1m 12s", for assistive tech. */
       label: string;
+      /** What the row shows: the folded work, such as "Read 3 files and changed 2 files". */
+      title: string;
+      /** Shown at the row's end; null when the title already says how long. */
+      duration: string | null;
       expanded: boolean;
     }
   | {
@@ -577,7 +576,7 @@ type MessagesTimelineRowContent =
       label: string;
       tokenCounts: ReturnType<typeof contextCompactionTokenCounts>;
       active: boolean;
-      /** Replaces "Context compacted" when T3 Code compacted without being asked. */
+      /** Replaces "Context compacted" when Marp compacted without being asked. */
       title?: string;
       failed?: true;
       /** The provider's reason, when a failed compaction gave one. */
@@ -594,6 +593,8 @@ type MessagesTimelineRowContent =
       assistantCopyStreaming: boolean;
       assistantTurnDiffSummary?: TurnDiffSummary | undefined;
       revertTurnCount?: number | undefined;
+      /** Restoring this turn's checkpoint rewinds to the next prompt, which owns the target. */
+      checkpointRestore?: { turnCount: number; messageId: MessageId } | undefined;
     }
   | {
       kind: "assistant-meta";
@@ -700,6 +701,22 @@ function deriveTerminalAssistantMessageIds(timelineEntries: ReadonlyArray<Timeli
   return new Set(lastAssistantMessageIdByResponseKey.values());
 }
 
+/** Deferred work has not loaded, so counting what is here would undercount the turn. */
+function foldedWorkSummary(
+  entries: ReadonlyArray<TimelineEntry>,
+  hiddenEntryIds: ReadonlySet<string>,
+): string | null {
+  const work: WorkLogEntry[] = [];
+  for (const entry of entries) {
+    if (entry.kind !== "work" || !hiddenEntryIds.has(entry.id)) continue;
+    if (entry.entry.projectedItem?.item.deferredWork) return null;
+    if (workEntryIsVisibleInGroup(entry.entry, true)) work.push(entry.entry);
+  }
+  return work.some((entry) => entry.itemType !== "reasoning")
+    ? summarizeToolGroup(work).summary
+    : null;
+}
+
 interface TurnFold {
   runId: RunId;
   anchorEntryId: string;
@@ -708,6 +725,8 @@ interface TurnFold {
   /** Every entry in the segment, including the cards a fold never hides. */
   entryIds: ReadonlySet<string>;
   label: string;
+  title: string;
+  duration: string | null;
 }
 
 interface SupersededAttemptFold {
@@ -1187,6 +1206,9 @@ function deriveTurnFolds(input: {
       hiddenEntryIds: segmentHiddenIds(firstSegment),
       entryIds: new Set(firstSegment.map((entry) => entry.id)),
       label,
+      ...(isLatestInterruptedTurn
+        ? { title: label, duration: null }
+        : { title: foldedWorkSummary(group.entries, hiddenEntryIds) ?? "Worked", duration }),
     });
     for (const [index, { startIndex, steer }] of group.steerSegments.entries()) {
       const entries = group.entries.slice(startIndex, group.steerSegments[index + 1]?.startIndex);
@@ -1204,6 +1226,8 @@ function deriveTurnFolds(input: {
         hiddenEntryIds: segmentHiddenIds(entries),
         entryIds: new Set(entries.map((entry) => entry.id)),
         label: segmentMs !== null ? `Continued for ${formatDuration(segmentMs)}` : "Continued",
+        title: foldedWorkSummary(entries, hiddenEntryIds) ?? "Continued",
+        duration: segmentMs !== null ? formatDuration(segmentMs) : null,
       });
     }
   }
@@ -1321,7 +1345,7 @@ function withoutSubagentDelegationRows(entries: ReadonlyArray<TimelineEntry>) {
       item?.type !== "dynamic_tool" ||
       item.runId === null ||
       (item.status !== "running" && item.status !== "completed") ||
-      resolveT3McpToolDefinition(item.toolName)?.summaryAction !== "delegate"
+      resolveMarpMcpToolDefinition(item.toolName)?.summaryAction !== "delegate"
     )
       return true;
     const output = compactDynamicToolOutput(item.output);
@@ -1716,6 +1740,8 @@ export function deriveMessagesTimelineRows(input: {
         createdAt: turnFold.createdAt,
         runId: turnFold.runId,
         label: turnFold.label,
+        title: turnFold.title,
+        duration: turnFold.duration,
         expanded: input.expandedRunIds?.has(turnFold.runId) ?? false,
       });
     }
@@ -2131,14 +2157,38 @@ export function deriveMessagesTimelineRows(input: {
     }
   }
 
-  const result = attachTrailingToolGroupsToAssistant(
-    attachCreatedThreadSummaries(nextRows, timelineEntries, collapsedFoldMemberIds),
+  const result = attachCheckpointRestoreTargets(
+    attachTrailingToolGroupsToAssistant(
+      attachCreatedThreadSummaries(nextRows, timelineEntries, collapsedFoldMemberIds),
+    ),
   );
   return result.map((row, index) =>
     timelineRowIsWorkLog(row) && timelineRowIsWorkLog(result[index + 1])
       ? { ...row, continuesWorkLog: true }
       : row,
   );
+}
+
+function attachCheckpointRestoreTargets(rows: MessagesTimelineRow[]): MessagesTimelineRow[] {
+  let checkpointRowIndex: number | null = null;
+  for (const [index, row] of rows.entries()) {
+    if (row.kind !== "message") continue;
+    if (row.message.role === "assistant" && row.assistantTurnDiffSummary !== undefined) {
+      checkpointRowIndex = index;
+      continue;
+    }
+    if (row.message.role !== "user") continue;
+    const target = checkpointRowIndex;
+    checkpointRowIndex = null;
+    const checkpointRow = target === null ? undefined : rows[target];
+    if (target === null || checkpointRow?.kind !== "message" || row.revertTurnCount === undefined)
+      continue;
+    rows[target] = {
+      ...checkpointRow,
+      checkpointRestore: { turnCount: row.revertTurnCount, messageId: row.message.id },
+    };
+  }
+  return rows;
 }
 
 function timelineRowIsWorkLog(row: MessagesTimelineRow | undefined): boolean {
@@ -2389,6 +2439,8 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
       return (
         a.createdAt === bf.createdAt &&
         a.label === bf.label &&
+        (a.kind === "attempt-fold" ||
+          (bf.kind === "turn-fold" && a.title === bf.title && a.duration === bf.duration)) &&
         a.expanded === bf.expanded &&
         anchors.length === nextAnchors.length &&
         anchors.every((id, index) => id === nextAnchors[index])
@@ -2478,7 +2530,9 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.showAssistantCopyButton === bm.showAssistantCopyButton &&
         a.assistantCopyStreaming === bm.assistantCopyStreaming &&
         a.assistantTurnDiffSummary === bm.assistantTurnDiffSummary &&
-        a.revertTurnCount === bm.revertTurnCount
+        a.revertTurnCount === bm.revertTurnCount &&
+        a.checkpointRestore?.turnCount === bm.checkpointRestore?.turnCount &&
+        a.checkpointRestore?.messageId === bm.checkpointRestore?.messageId
       );
     }
   }
