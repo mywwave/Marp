@@ -108,6 +108,15 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/archived": "Archived threads",
 };
 
+// Pages that were renamed or merged stay findable by the names people learned.
+const SETTINGS_SECTION_FORMER_LABELS: Readonly<Partial<Record<SettingsPath, string>>> = {
+  "/settings/access": "Sharing & access",
+  "/settings/connections": "Environments connections",
+  "/settings/source-control": "Source control diffs",
+  "/settings/threads": "Threads",
+  "/settings/archived": "Archive",
+};
+
 /** One line under each page title: what the page is for. */
 export const SETTINGS_SECTION_DESCRIPTIONS: Readonly<Record<SettingsPath, string>> = {
   "/settings/overview": "What needs attention, and where everything is set up.",
@@ -1369,6 +1378,7 @@ export function searchSettings(
       const fields = [
         title,
         normalizeSearchText(SETTINGS_SECTION_LABELS[item.to]),
+        normalizeSearchText(SETTINGS_SECTION_FORMER_LABELS[item.to] ?? ""),
         ...(item.searchTerms ?? []).map(normalizeSearchText),
       ];
       if (!queryTokens.every((token) => fields.some((field) => field.includes(token)))) return [];

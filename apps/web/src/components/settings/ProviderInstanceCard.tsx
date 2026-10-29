@@ -1343,4 +1343,3 @@ export function ProviderInstanceCard({
     </div>
   );
 }
-
