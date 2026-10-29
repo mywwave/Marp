@@ -17,7 +17,7 @@ import * as Result from "effect/Result";
 import { PlusIcon } from "lucide-react";
 import { useId, useRef, useState } from "react";
 
-import { requestConfirmDialog } from "~/confirmDialog";
+import { confirmDestructiveAction } from "~/confirmDialog";
 import { mintPairingCodeOn } from "~/state/peerPairingCode";
 import { peerLinkEnvironment, useLinkableMachines } from "~/state/peerLinks";
 import { useEnvironmentQuery } from "~/state/query";
@@ -102,10 +102,11 @@ function LinkedEnvironmentRow({
   const canUnlink = useAtomValue(peerLinkEnvironment.unlink.permissionAtom(environmentId));
   const [busy, setBusy] = useState(false);
   const forget = async () => {
-    const confirmed = await (requestConfirmDialog(
-      `Forget ${link.label}? Agents here stop working there. Revoke "T3 Code · …" in ${link.label}'s Connections to end the session there too.`,
-      { variant: "destructive" },
-    ) ?? Promise.resolve(false));
+    const confirmed = await confirmDestructiveAction({
+      title: `Forget “${link.label}”?`,
+      description: `Agents here stop working there. Revoke "T3 Code · …" in ${link.label}'s Connections to end the session there too.`,
+      confirmLabel: "Forget link",
+    });
     if (!confirmed) return;
     setBusy(true);
     const result = await unlink({ environmentId, input: { environmentId: link.environmentId } });

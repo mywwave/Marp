@@ -1184,6 +1184,8 @@ export type ConfirmDialogVariant = "default" | "destructive";
 
 export interface ConfirmDialogOptions {
   readonly variant?: ConfirmDialogVariant;
+  /** Names the action, e.g. "Delete instance". Defaults to "Confirm". */
+  readonly confirmLabel?: string;
 }
 
 export interface LocalApi {

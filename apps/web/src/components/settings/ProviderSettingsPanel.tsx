@@ -104,6 +104,7 @@ import { ProviderAuthenticationSection } from "./ProviderAuthenticationSection";
 import { CodexSetupSection, CodexManagedRuntimeFields } from "./CodexSetupSection";
 import { readCodexSetupMode } from "./CodexSetupSection.logic";
 import { providerClients } from "./providerDriverMeta";
+import { confirmDestructiveAction } from "~/confirmDialog";
 import { searchableSetting } from "./settingsSearch";
 import { CompactIdleThreadsRow } from "./SettingsPanels";
 import {
@@ -1369,7 +1370,14 @@ function ProviderInstanceRow({
       onUpdate={(next) => actions.updateInstance(instanceId, instance, next)}
       onDelete={
         mode === "editor" && !isDefault
-          ? () => actions.deleteInstance(instanceId, instance)
+          ? () =>
+              void confirmDestructiveAction({
+                title: `Delete “${instance.displayName ?? instanceId}”?`,
+                description: `Removes this ${resetLabel} instance and its settings from ${environmentLabel}. You can't undo this.`,
+                confirmLabel: "Delete instance",
+              }).then((confirmed) => {
+                if (confirmed) void actions.deleteInstance(instanceId, instance);
+              })
           : undefined
       }
       headerAction={

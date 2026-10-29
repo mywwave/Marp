@@ -7,6 +7,7 @@ import {
 } from "@t3tools/contracts";
 import { type CustomModelDefinition, normalizeCustomModelSlug } from "@t3tools/shared/model";
 
+import { confirmDestructiveAction } from "../../confirmDialog";
 import { useStableCallback } from "../../hooks/useStableCallback";
 import { cn } from "../../lib/utils";
 import { sortModelsForProviderInstance } from "../../modelOrdering";
@@ -256,12 +257,24 @@ export function ProviderModelsSection({
     if (!canManageCustomModels) return;
     setEditingSlug((current) => (current === slug ? null : slug));
   });
+  const removeCustomModel = useStableCallback(handleRemove);
+  const confirmRemoveCustomModel = useStableCallback((slug: string) => {
+    const name = customModels.find((entry) => entry.slug === slug)?.name ?? slug;
+    void confirmDestructiveAction({
+      title: `Remove “${name}”?`,
+      description:
+        "It leaves the model picker and your favorites. Threads that used it keep their history.",
+      confirmLabel: "Remove model",
+    }).then((confirmed) => {
+      if (confirmed) removeCustomModel(slug);
+    });
+  });
   const rowHandlers = {
     onToggleFavorite: useStableCallback(handleToggleFavorite),
     onMove: useStableCallback(handleMove),
     onSetHidden: useStableCallback(setHidden),
     onToggleEdit: handleToggleEdit,
-    onRemove: useStableCallback(handleRemove),
+    onRemove: confirmRemoveCustomModel,
   };
 
   const renderRow = (model: (typeof displayModels)[number]) => {
