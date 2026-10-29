@@ -12,13 +12,14 @@ import {
   type WorkRunHeaderRule,
 } from "@marp/client-runtime/work-log/event-presentation";
 import { resolveWorkGroupScrollAnchor } from "@marp/client-runtime/work-log/scroll-anchor";
+import { responseStalled } from "@marp/client-runtime/work-log/live-cards";
 import { observeResize } from "~/lib/observeResize";
 import { observeVisibleAnimation } from "../../lib/visibleAnimation";
 import { tickTextContent } from "../../lib/tickTextContent";
 import { memo, use, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { workEntryDisplayIndicatesToolFailure } from "../../session-logic";
-import { ChevronRightIcon, Minimize2Icon, XIcon } from "lucide-react";
+import { ChevronRightIcon, HourglassIcon, Minimize2Icon, XIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { getVirtualizedScrollFadeClassName } from "../ui/scroll-area";
 import {
@@ -393,9 +394,28 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
   }
   // A failed group keeps this disclosure while an approval waits, but nothing is thinking then.
   const live = ctx.pendingApprovals.size === 0;
-  const activity = (
-    <LiveActivityRow label="Thinking" iconName="brain" active={live} shimmer={live} />
-  );
+  // Waiting is not work: a muted row with no spinner or sweep.
+  if (row.waitingForSubagent && live && row.groupId === undefined) {
+    return (
+      <WorkLogRow
+        icon={<HourglassIcon aria-hidden className="size-3.5 text-icon-muted" />}
+        label="Waiting for subagent"
+      />
+    );
+  }
+  const lastActivityAt = row.lastActivityAt ?? null;
+  const label =
+    live && lastActivityAt !== null ? (
+      <span
+        ref={tickTextContent(
+          (nowMs) => (responseStalled(lastActivityAt, nowMs) ? "Waiting for response" : "Thinking"),
+          true,
+        )}
+      />
+    ) : (
+      "Thinking"
+    );
+  const activity = <LiveActivityRow label={label} iconName="brain" active={live} shimmer={live} />;
   const { groupId } = row;
   if (groupId === undefined) return activity;
   return (

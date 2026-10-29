@@ -86,3 +86,33 @@ it("keeps an image on its own line under a label but leaves inline images inline
   expect(render("Built [![CI](/ci.svg)](/ci)\nand wrapped")).toBe("Built <img>\nand wrapped");
   expect(render("Hard-wrapped\nprose")).toBe("Hard-wrapped\nprose");
 });
+
+it("folds images in a row into one grid paragraph, but not badges, video, or prose", () => {
+  const processor = unified()
+    .use(remarkParse)
+    .use(CHAT_MARKDOWN_REMARK_PLUGINS)
+    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(CHAT_MARKDOWN_REHYPE_PLUGINS);
+  type Node = {
+    type: string;
+    tagName?: string;
+    properties?: Record<string, unknown>;
+    children?: Node[];
+  };
+  const shape = (node: Node): string =>
+    node.tagName === "img"
+      ? `img${node.properties?.dataStandalone ? "!" : ""}`
+      : node.tagName === "p"
+        ? `${node.properties?.dataImageGrid ? "grid" : "p"}(${(node.children ?? []).map(shape).filter(Boolean).join(",")})`
+        : (node.children ?? []).map(shape).filter(Boolean).join(",");
+  const render = (markdown: string) => shape(processor.runSync(processor.parse(markdown)) as Node);
+
+  expect(render("![a](/a.png)\n\n![b](/b.png)\n\n![c](/c.png)\n\nAfter")).toBe(
+    "grid(img,img,img),p()",
+  );
+  expect(render("![a](/a.png)\n![b](/b.png)")).toBe("grid(img,img)");
+  expect(render("![a](/a.png)")).toBe("p(img!)");
+  expect(render("![a](/a.png) ![b](/b.png)")).toBe("p(img,img)");
+  expect(render("[![CI](/ci.svg)](/ci)\n[![npm](/npm.svg)](/npm)")).toBe("p(img,img)");
+  expect(render("![a](/a.png)\n\n![clip](/clip.mp4)")).toBe("p(img!),p(img!)");
+});

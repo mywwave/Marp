@@ -41,6 +41,8 @@ interface CompactToolOutput {
   status?: "rolled_back";
   htmlRender?: HtmlRenderReference;
   [MCP_APP_OUTPUT_KEY]?: McpAppReference;
+  /** Image blocks the full output holds, so clients can load them by index without the bytes. */
+  outputImages?: number;
   thread?: { threadId: string };
   threads?: Array<{ threadId?: string; status?: "rolled_back" }>;
 }
@@ -117,6 +119,16 @@ export function compactDynamicToolOutput(value: unknown): CompactToolOutput | un
   const result = readResult(value, budget);
   const output: CompactToolOutput = result.failed ? { isError: true } : {};
   const data = budget.exceeded ? undefined : result.data;
+  // Raw output counts its image blocks; compacted output carries the count forward.
+  const outputImages = toolOutputImages(value).length || data?.outputImages;
+  if (
+    typeof outputImages === "number" &&
+    Number.isInteger(outputImages) &&
+    outputImages > 0 &&
+    outputImages <= MAX_TOOL_OUTPUT_IMAGES
+  ) {
+    output.outputImages = outputImages;
+  }
   if (data !== undefined) {
     for (const key of ["threadId", "messageId", "taskId", "scheduledTaskId"] as const) {
       const id = boundedId(data[key]);

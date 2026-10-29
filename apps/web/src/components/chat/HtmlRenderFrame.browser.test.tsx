@@ -19,13 +19,37 @@ vi.mock(import("~/assets/assetUrls"), async (importOriginal) => ({
 
 import { HtmlRenderFrame } from "./HtmlRenderFrame";
 
+const htmlRender = { attachmentId: "attachment", title: "Report", height: 200 };
+
 describe("HtmlRenderFrame", () => {
+  it("mounts the sandboxed page only once the card nears the viewport", async () => {
+    await using screen = await render(
+      <div style={{ paddingTop: "400vh" }}>
+        <HtmlRenderFrame
+          environmentId={EnvironmentId.make("environment")}
+          htmlRender={htmlRender}
+          threadRef={undefined}
+        />
+      </div>,
+    );
+    const card = screen.getByRole("region", { name: "Report" });
+    await expect.element(card).toBeInTheDocument();
+    expect(card.element().querySelector("iframe")).toBeNull();
+
+    card.element().scrollIntoView();
+    await expect.element(screen.getByTitle("Report")).toBeInTheDocument();
+    const frame = screen.getByTitle("Report").element();
+    // The inline card must keep the opaque-origin sandbox of every html_render frame.
+    expect(frame.getAttribute("sandbox")).toBe("allow-scripts allow-forms");
+    await expect.element(screen.getByRole("button", { name: "Copy HTML" })).toBeEnabled();
+  });
+
   it("reports leaving full screen when it unmounts while expanded", async () => {
     const onFullscreenChange = vi.fn();
     await using screen = await render(
       <HtmlRenderFrame
         environmentId={EnvironmentId.make("environment")}
-        htmlRender={{ attachmentId: "attachment", title: "Report", height: 200 }}
+        htmlRender={htmlRender}
         threadRef={undefined}
         onFullscreenChange={onFullscreenChange}
       />,

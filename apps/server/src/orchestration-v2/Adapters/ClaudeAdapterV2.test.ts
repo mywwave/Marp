@@ -8898,6 +8898,15 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       diffStr:
         "--- /workspace/notes.md\n+++ /workspace/notes.md\n@@ -1,1 +1,1 @@\n-# Todo\n+# Notes\n",
     },
+    {
+      // Subagent frames can arrive without the structured result; the input still holds the edit.
+      case: "an edit without a structured result",
+      toolName: "Write",
+      toolInput: { file_path: "/workspace/notes.md", content: "# Notes\n" },
+      toolUseResult: undefined,
+      operation: undefined,
+      diffStr: undefined,
+    },
   ])("stores the diff panel patch for $case", (testCase) =>
     Effect.scoped(
       Effect.gen(function* () {

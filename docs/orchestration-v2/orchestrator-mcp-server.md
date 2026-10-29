@@ -423,6 +423,15 @@ resultant title, title-regeneration marker, and linked pull request. Reusing a
 receipt. Thread list and read results expose the linked pull request, and thread
 detail also exposes an in-flight title regeneration.
 
+### `marp_status_update`
+
+Posts the calling agent's progress (`summary`, optional `next`, 140 characters
+each) as an internal `thread.status.update` command stamped with the thread's
+active run. The thread record keeps only the latest update; the shell exposes it
+as `liveStatus` only while that run is still the active one, so it clears at turn
+end without a second event. The timeline row comes from the provider's own tool
+call item, so it needs no extra turn item.
+
 ### `marp_thread_send`
 
 Sends a message to any ordinary or delegated thread in the environment:

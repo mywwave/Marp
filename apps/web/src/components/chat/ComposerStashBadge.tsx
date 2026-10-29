@@ -20,7 +20,7 @@ export const ComposerStashBadge = memo(function ComposerStashBadge(props: {
       className={cn(
         "text-muted-foreground",
         pulsed &&
-          "animate-stash-pulse-count transition-[opacity,translate] duration-180 ease-out starting:translate-y-0.5 starting:opacity-0 motion-reduce:transition-none",
+          "animate-stash-pulse-count transition-[opacity,translate] duration-enter ease-out starting:translate-y-0.5 starting:opacity-0 motion-reduce:transition-none",
       )}
     >
       {props.count}

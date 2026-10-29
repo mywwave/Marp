@@ -28,6 +28,7 @@ import { threadEnvironment } from "../../state/threads";
 import { useQuietThreadShell, useThreadProjection } from "../../state/entities";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { isImageAttachment, type ChatMessage } from "../../types";
+import { usePresenceList } from "~/hooks/usePresence";
 import { cn } from "~/lib/utils";
 import { Button, InlineButton } from "../ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -58,6 +59,8 @@ export interface QueuedRunsControlHandle {
 }
 
 type ThreadQueueProjection = Parameters<typeof deriveThreadQueueWorkflowState>[0];
+
+const getQueuedItemKey = (item: { readonly key: string }) => item.key;
 
 function queuedImageResources(projection: ThreadQueueProjection | undefined) {
   if (!projection) return [];
@@ -211,7 +214,11 @@ export function QueuedRunsControl({
     },
   }));
 
-  if (items.length === 0) return null;
+  const collapsible = items.length > QUEUE_VISIBLE_ROWS;
+  const visibleItems = collapsible && !showAll ? items.slice(0, QUEUE_VISIBLE_ROWS - 1) : items;
+  const rows = usePresenceList(visibleItems, getQueuedItemKey);
+
+  if (rows.length === 0) return null;
 
   const remove = async (runId: RunId) => {
     setBusyRunId(runId);
@@ -222,8 +229,7 @@ export function QueuedRunsControl({
     setBusyRunId(null);
   };
 
-  const collapsible = items.length > QUEUE_VISIBLE_ROWS;
-  const visibleItems = collapsible && !showAll ? items.slice(0, QUEUE_VISIBLE_ROWS - 1) : items;
+  let livePosition = 0;
 
   return (
     <section
@@ -236,7 +242,8 @@ export function QueuedRunsControl({
         {items.length} queued
       </span>
       <ol className="flex flex-col items-end gap-3" id={queueListId}>
-        {visibleItems.map((item, position) => {
+        {rows.map(({ item, closing }) => {
+          const position = closing ? -1 : livePosition++;
           const previewText = assistantCitationsToPlainText(
             replaceComposerContextReferences(item.text, (reference) =>
               reference.kind === "image" && item.thumbnails.length > 0 ? "" : reference.label,
@@ -250,7 +257,9 @@ export function QueuedRunsControl({
               aria-posinset={position + 1}
               aria-setsize={items.length}
               aria-current={isEditing ? "true" : undefined}
-              className="group/queued flex w-full flex-col items-end gap-1 transition-opacity duration-150 ease-out starting:opacity-0 motion-reduce:transition-none"
+              data-closing={closing || undefined}
+              inert={closing}
+              className="group/queued flex w-full flex-col items-end gap-1 transition-opacity duration-fast ease-out starting:opacity-0 data-closing:animate-fade-out motion-reduce:transition-none"
             >
               <QueuedMessage
                 environmentId={props.environmentId}
@@ -493,7 +502,7 @@ function QueuedMessage(props: {
       </div>
       <div className="flex items-center gap-0.5 pe-1 text-xs text-muted-foreground">
         {props.message ? (
-          <span className="me-1 flex items-center gap-2 px-1 opacity-0 transition-opacity duration-200 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/queued:opacity-100">
+          <span className="me-1 flex items-center gap-2 px-1 opacity-0 transition-opacity duration-100 ease-out pointer-coarse:opacity-100 focus-within:opacity-100 focus-within:duration-fast group-hover/queued:opacity-100 group-hover/queued:duration-fast">
             {attribution === "agent" && senderThreadId ? (
               <InlineButton tone="muted" onClick={() => props.onOpenThread(senderThreadId)}>
                 Open thread

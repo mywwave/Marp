@@ -44,6 +44,7 @@ import {
 import { AuthMcpClientAccess } from "./auth.ts";
 import { ChatAttachment } from "./chatAttachment.ts";
 import { ThreadGuestShare } from "./guestShare.ts";
+import { ThreadStatusText } from "./threadMetadataMcp.ts";
 import {
   OrchestrationSearchThreadsInput,
   OrchestrationSearchThreadsResult,
@@ -433,6 +434,17 @@ const LenientThreadOpens = Schema.NullOr(OrchestrationV2ThreadOpens).pipe(
   Schema.catchDecoding(() => Effect.succeedSome(null)),
 );
 
+const OrchestrationV2ThreadLiveStatus = Schema.Struct({
+  summary: ThreadStatusText,
+  next: Schema.optional(ThreadStatusText),
+});
+
+/** The agent's latest progress note, kept with the run that posted it. */
+const OrchestrationV2ThreadStatusUpdate = Schema.Struct({
+  runId: RunId,
+  ...OrchestrationV2ThreadLiveStatus.fields,
+});
+
 export const OrchestrationV2AppThread = Schema.Struct({
   ...OrchestrationV2CreationFields,
   id: ThreadId,
@@ -494,6 +506,7 @@ export const OrchestrationV2AppThread = Schema.Struct({
       }),
     ),
   ),
+  statusUpdate: Schema.optional(Schema.NullOr(OrchestrationV2ThreadStatusUpdate)),
   rollbackRequestId: Schema.optional(CommandId),
   rollbackFailure: Schema.optional(
     Schema.NullOr(
@@ -1864,6 +1877,7 @@ export const OrchestrationV2DomainEvent = Schema.Union([
       "thread.model-selection-updated",
       "thread.provider-switched",
       "thread.guest-share-updated",
+      "thread.status-updated",
     ]),
     payload: OrchestrationV2AppThread,
   }),
@@ -2092,6 +2106,8 @@ export const OrchestrationV2ThreadShell = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed([])),
   ),
   goal: Schema.optional(Schema.NullOr(OrchestrationV2ProviderGoal)),
+  /** The active run's latest status update; null once that run stops working. */
+  liveStatus: Schema.optional(Schema.NullOr(OrchestrationV2ThreadLiveStatus)),
   itemCount: NonNegativeInt,
   visibleItemCount: NonNegativeInt,
   createdAt: Schema.DateTimeUtc,
@@ -2747,6 +2763,7 @@ export const OrchestrationV2DomainEventJson = Schema.Union([
       "thread.model-selection-updated",
       "thread.provider-switched",
       "thread.guest-share-updated",
+      "thread.status-updated",
     ]),
     payload: OrchestrationV2AppThreadJson,
   }),
@@ -3468,6 +3485,15 @@ const OrchestrationV2InternalCommand = Schema.Union([
         }),
       }),
     ),
+  }),
+  /** Internal so only the calling agent's MCP session posts its run's progress. */
+  Schema.Struct({
+    type: Schema.Literal("thread.status.update"),
+    commandId: CommandId,
+    threadId: ThreadId,
+    runId: RunId,
+    summary: ThreadStatusText,
+    next: Schema.optional(ThreadStatusText),
   }),
   /**
    * Internal so no client can mark a request saved without the value being

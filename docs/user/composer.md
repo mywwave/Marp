@@ -316,6 +316,14 @@ them back.
 On mobile, tap a chip to inspect its content. File references open the current file; attached
 files show the copy that was attached to the message.
 
+## Workspace context
+
+Each turn also starts with a short workspace note so the agent spends less time looking around.
+It lists files changed since the agent's last turn by you or another tool (paths and line counts,
+no contents), a compact project tree on a thread's first turn, and, from web and desktop, the file
+or diff open in the side panel with any selected lines. To stop sending it, turn off **Share
+workspace context with agents** in **Settings → Threads & models → Agent context**.
+
 ## Attached files
 
 Select a file chip in your draft or a sent message to preview it. Code and JSON use syntax

@@ -480,7 +480,7 @@ export function showContextMenuFallback<T extends string>(
       const menu = document.createElement("div");
       // Electron drag regions swallow clicks on anything not opted out, even above them in z-order.
       menu.className =
-        "fixed z-[10000] max-h-[calc(100vh-1rem)] min-w-[220px] max-w-[360px] overflow-y-auto overflow-x-hidden rounded-lg bg-popover p-1 font-sans text-[13px] text-foreground leading-5 shadow-pop outline-none [-webkit-app-region:no-drag] transition-[opacity,scale,translate] duration-100 ease-out starting:-translate-y-0.5 starting:scale-98 starting:opacity-0 motion-reduce:transition-none";
+        "fixed z-[10000] max-h-[calc(100vh-1rem)] min-w-[220px] max-w-[360px] overflow-y-auto overflow-x-hidden rounded-lg bg-popover p-1 font-sans text-[13px] text-foreground leading-5 shadow-pop outline-none [-webkit-app-region:no-drag] origin-top-left transition-[opacity,scale] duration-fast ease-out starting:scale-97 starting:opacity-0 motion-reduce:starting:scale-100";
       menu.style.left = `${anchor.right}px`;
       menu.style.top = `${anchor.top}px`;
       menu.dataset.level = String(level);

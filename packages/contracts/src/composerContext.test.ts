@@ -206,6 +206,23 @@ describe("OrchestrationMessageContext", () => {
     expect(decodeContext(wire).records.map((record) => record.contextId)).toEqual(["ctx_1"]);
   });
 
+  it("carries what the sender has open, bounded to paths and line ranges", () => {
+    const workspace = {
+      file: "src/app.ts",
+      diff: "turn",
+      selection: { path: "src/app.ts", startLine: 4, endLine: 9 },
+    };
+    expect(decodeContext({ version: 1, records: [], workspace }).workspace).toEqual(workspace);
+    for (const invalid of [
+      { file: "x".repeat(1025) },
+      { diff: "staged" },
+      { selection: { path: "src/app.ts", startLine: 0, endLine: 2 } },
+      { selection: { path: "src/app.ts", startLine: 9, endLine: 4 } },
+    ]) {
+      expect(() => decodeContext({ version: 1, records: [], workspace: invalid })).toThrow();
+    }
+  });
+
   it("rejects oversized arrays before dropping malformed records", () => {
     expect(() =>
       decodeContext({ version: 1, records: Array.from({ length: 201 }, () => ({})) }),

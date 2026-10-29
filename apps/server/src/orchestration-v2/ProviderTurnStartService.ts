@@ -55,6 +55,7 @@ import {
 } from "@marp/provider-core/server/failure";
 import * as RunExecutionService from "./RunExecutionService.ts";
 import * as RuntimePolicy from "./RuntimePolicy.ts";
+import * as WorkspaceContext from "./WorkspaceContext.ts";
 import {
   isRestartNoteContinuation,
   pendingRestartCancelledBackgroundWork,
@@ -143,6 +144,7 @@ export const layer: Layer.Layer<
   | ProviderSessionManager.ProviderSessionManagerV2
   | RunExecutionService.RunExecutionServiceV2
   | RuntimePolicy.RuntimePolicyV2
+  | WorkspaceContext.WorkspaceContextV2
 > = Layer.effect(
   ProviderTurnStartServiceV2,
   Effect.gen(function* () {
@@ -157,6 +159,7 @@ export const layer: Layer.Layer<
     const projectionStore = yield* ProjectionStore.ProjectionStoreV2;
     const providerSessions = yield* ProviderSessionManager.ProviderSessionManagerV2;
     const runExecution = yield* RunExecutionService.RunExecutionServiceV2;
+    const workspaceContext = yield* WorkspaceContext.WorkspaceContextV2;
     const runtimePolicy = yield* RuntimePolicy.RuntimePolicyV2;
     const isManagedWorktreePath = yield* makeIsManagedWorktreePath;
 
@@ -772,6 +775,21 @@ export const layer: Layer.Layer<
       // Codex and Claude parse /goal from the prompt, so it goes verbatim and history waits a turn.
       const goalDriver = session.driver === "codex" || session.driver === "claudeAgent";
       const goalCommand = goalDriver && parseGoalCommand(message) !== null;
+      // Command turns pass their text verbatim, and restart continuations repeat no new request.
+      const workspaceSections =
+        goalCommand ||
+        isCompactionCommandMessage(message) ||
+        run.restartContinuationOfRunId !== undefined
+          ? []
+          : yield* workspaceContext.forTurn({
+              scope: checkpointScope,
+              runOrdinal: run.ordinal,
+              open: message.context?.workspace,
+            });
+      const workspaceOutOfBand = WorkspaceContext.deliversWorkspaceContextOutOfBand(session.driver);
+      const workspacePreamble = workspaceOutOfBand
+        ? undefined
+        : WorkspaceContext.renderWorkspaceContextPreamble(workspaceSections);
       // The provider turn marks cancellation work delivered; restart continuations use their own text or resume natively.
       const noteContinuation = isRestartNoteContinuation(
         run,
@@ -1419,7 +1437,7 @@ export const layer: Layer.Layer<
           });
           if (!(yield* isCurrentAttemptInStatus("running"))) return;
           const start = compact ? session.compactThread! : session.startTurn;
-          const context = [delivery.context, restartNote]
+          const context = [delivery.context, restartNote, workspacePreamble ?? ""]
             .filter((part) => part !== "")
             .join("\n\n");
           const { restartContinuationOfRunId: _resumedRunId, ...promptedInput } = turnInput;
@@ -1511,7 +1529,10 @@ export const layer: Layer.Layer<
         loadRunInterruptReason: runControls.loadRunInterruptReason,
         message: {
           messageId: message.id,
-          text: userText,
+          text:
+            workspacePreamble === undefined
+              ? userText
+              : `${workspacePreamble}\n\nUser message:\n${userText}`,
           attachments: message.attachments,
           createdBy: message.createdBy,
           creationSource: message.creationSource,
@@ -1524,6 +1545,9 @@ export const layer: Layer.Layer<
         },
         modelSelection: run.modelSelection,
         runtimePolicy: resolvedRuntimePolicy,
+        ...(workspaceOutOfBand && workspaceSections.length > 0
+          ? { workspaceContext: workspaceSections }
+          : {}),
       });
     });
 

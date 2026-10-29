@@ -3770,6 +3770,29 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
       );
       assert.isNull(shell?.latestRunCompletedAt);
 
+      const liveStatus = { summary: "Splitting the tokenizer", next: "Port the tests" };
+      yield* projectionStore.apply({
+        id: EventId.make("event:projection-shell-interruptible:status"),
+        type: "thread.status-updated",
+        threadId,
+        occurredAt: now,
+        payload: {
+          ...(yield* projectionStore.getThread(threadId)),
+          statusUpdate: { runId, ...liveStatus },
+        },
+      });
+      const liveStatuses = Effect.gen(function* () {
+        const sqlShell = (yield* projectionStore.getShellSnapshot()).threads.find(
+          (row) => row.id === threadId,
+        );
+        const projection = yield* projectionStore.getThreadProjection(threadId);
+        return [
+          sqlShell?.liveStatus,
+          ProjectionStore.threadShellFromProjection(projection).liveStatus,
+        ];
+      });
+      assert.deepEqual(yield* liveStatuses, [liveStatus, liveStatus]);
+
       const requestId = RuntimeRequestId.make("request:projection-shell-question");
       for (const [responseCapability, blocking] of [
         [{ type: "message" }, false],
@@ -3828,6 +3851,7 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
       );
       assert.equal(shell?.status, "waiting");
       assert.isNull(shell?.activeRunId);
+      assert.deepEqual(yield* liveStatuses, [null, null]);
       const later = DateTime.add(now, { hours: 1 });
       for (const status of ["queued", "cancelled"] as const) {
         yield* projectionStore.apply({

@@ -21,9 +21,11 @@ export function WorkspaceFileDropOverlay() {
 
 /**
  * Sits `bottom` pixels up, clear of the composer and its attached banners. The summary names
- * what waits at the end of the timeline, which is out of view while it shows.
+ * what waits at the end of the timeline, which is out of view while it shows. Stays mounted
+ * while hidden so it can fade out.
  */
 export function ScrollToEndButton(props: {
+  readonly visible: boolean;
   readonly bottom: number;
   /** While a turn runs, the end holds work the user has not seen yet. */
   readonly newActivity: boolean;
@@ -32,14 +34,16 @@ export function ScrollToEndButton(props: {
 }) {
   return (
     <div
-      className="chat-scroll-to-bottom pointer-events-none absolute z-30 flex justify-center py-1.5"
+      className="chat-scroll-to-bottom pointer-events-none absolute z-30 flex translate-y-1 justify-center py-1.5 opacity-0 transition-[opacity,translate] duration-exit ease-in-exit data-visible:translate-y-0 data-visible:animate-rise-in data-visible:opacity-100 data-visible:duration-enter data-visible:ease-out motion-reduce:translate-y-0 motion-reduce:data-visible:animate-none"
       style={{ bottom: props.bottom }}
+      data-visible={props.visible || undefined}
+      inert={!props.visible}
     >
       <Button
         data-scroll-to-end="true"
         onPointerDown={(event) => event.preventDefault()}
         onClick={props.onScrollToEnd}
-        className="pointer-events-auto"
+        className="in-data-visible:pointer-events-auto"
         size="xs"
         variant="glass"
       >

@@ -429,6 +429,8 @@ export interface ProviderAdapterV2TurnInput {
   readonly modelSelection: ModelSelection;
   readonly runtimePolicy: ProviderAdapterV2RuntimePolicy;
   readonly appContext?: ReadonlyArray<{ readonly key: string; readonly text: string }>;
+  /** Set only for adapters that deliver Marp's workspace snapshot outside the prompt text. */
+  readonly workspaceContext?: ReadonlyArray<{ readonly key: string; readonly text: string }>;
 }
 
 export interface ProviderAdapterV2SteerInput {

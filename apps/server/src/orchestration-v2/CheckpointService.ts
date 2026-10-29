@@ -19,12 +19,17 @@ import * as KeyedLock from "@marp/shared/KeyedLock";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 
-import { isGitImport, parseTurnDiffFilesFromNumstat } from "../checkpointing/Diffs.ts";
+import {
+  isGitImport,
+  parseTurnDiffFilesFromNumstat,
+  type TurnDiffFileSummary,
+} from "../checkpointing/Diffs.ts";
 import * as CheckpointStore from "../checkpointing/CheckpointStore.ts";
 import * as IdAllocator from "@marp/provider-core/server/IdAllocator";
 
 const CHECKPOINT_REFS_PREFIX = "refs/marp/orchestration-v2/checkpoints";
 const ROOT_CHECKPOINT_SCOPE_NAME = "root";
+const WORKSPACE_DIFF_MAX_OUTPUT_BYTES = 256 * 1024;
 
 export class CheckpointRootScopePrepareError extends Schema.TaggedError<CheckpointRootScopePrepareError>()(
   "CheckpointRootScopePrepareError",
@@ -135,6 +140,11 @@ export interface CheckpointServiceV2Shape {
     readonly scope: OrchestrationV2CheckpointScope;
     readonly checkpoints: ReadonlyArray<OrchestrationV2Checkpoint>;
   }) => Effect.Effect<void, CheckpointServiceV2Error>;
+  /** Files changed between a checkpoint and the working tree now; null without that checkpoint. */
+  readonly diffWorkspace: (input: {
+    readonly scope: OrchestrationV2CheckpointScope;
+    readonly fromOrdinalWithinScope: number;
+  }) => Effect.Effect<ReadonlyArray<WorkspaceFileChange> | null, CheckpointServiceV2Error>;
 }
 
 export class CheckpointServiceV2 extends Context.Service<
@@ -142,18 +152,55 @@ export class CheckpointServiceV2 extends Context.Service<
   CheckpointServiceV2Shape
 >()("marp/orchestration-v2/CheckpointService/CheckpointServiceV2") {}
 
+const checkpointRefsForScope = Effect.fn("checkpointRefsForScope")(function* (
+  scopeId: CheckpointScopeId,
+) {
+  const crypto = yield* Crypto.Crypto;
+  const digest = yield* crypto
+    .digest("SHA-256", new TextEncoder().encode(scopeId))
+    .pipe(Effect.orDie);
+  return `${CHECKPOINT_REFS_PREFIX}/${Base64Url.encode(Hex.encode(digest).slice(0, 32))}`;
+});
+
 export const checkpointRefForScopeOrdinal = Effect.fn("checkpointRefForScopeOrdinal")(
   function* (input: { readonly scopeId: CheckpointScopeId; readonly ordinalWithinScope: number }) {
-    const crypto = yield* Crypto.Crypto;
-    const digest = yield* crypto
-      .digest("SHA-256", new TextEncoder().encode(input.scopeId))
-      .pipe(Effect.orDie);
-    const scopeKey = Hex.encode(digest).slice(0, 32);
-    return CheckpointRef.make(
-      `${CHECKPOINT_REFS_PREFIX}/${Base64Url.encode(scopeKey)}/ordinal/${input.ordinalWithinScope}`,
-    );
+    const scopeRefs = yield* checkpointRefsForScope(input.scopeId);
+    return CheckpointRef.make(`${scopeRefs}/ordinal/${input.ordinalWithinScope}`);
   },
 );
+
+export interface WorkspaceFileChange extends TurnDiffFileSummary {
+  readonly status: "modified" | "added" | "deleted" | "renamed";
+}
+
+const NAME_STATUS_KINDS: Record<string, WorkspaceFileChange["status"]> = {
+  A: "added",
+  D: "deleted",
+  R: "renamed",
+  C: "added",
+};
+
+/** Joins `--numstat -z` counts with `--name-status -z` kinds; unlisted paths count as modified. */
+function parseWorkspaceFileChanges(
+  numstat: string,
+  nameStatus: string,
+): ReadonlyArray<WorkspaceFileChange> {
+  const statuses = new Map<string, WorkspaceFileChange["status"]>();
+  const records = nameStatus.split("\0");
+  for (let index = 0; index < records.length; index += 1) {
+    const code = records[index]!.charAt(0);
+    if (code === "") continue;
+    // Renames and copies carry the source path before the destination.
+    if (code === "R" || code === "C") index += 1;
+    const path = records[index + 1];
+    index += 1;
+    if (path !== undefined) statuses.set(path, NAME_STATUS_KINDS[code] ?? "modified");
+  }
+  return parseTurnDiffFilesFromNumstat(numstat).map((file) => ({
+    ...file,
+    status: statuses.get(file.path) ?? "modified",
+  }));
+}
 
 function checkpointIdForScopeOrdinal(
   idAllocator: IdAllocator.IdAllocatorV2["Service"],
@@ -552,6 +599,63 @@ export const layer: Layer.Layer<
         ),
       );
 
+    // Lock-free: it only reads the tree and writes its own scratch ref, so an over-budget
+    // diff finishing in the background never delays the baseline capture of the turn it serves.
+    const diffWorkspace: CheckpointServiceV2Shape["diffWorkspace"] = Effect.fn(
+      "CheckpointService.diffWorkspace",
+    )(
+      function* (input) {
+        const cwd = input.scope.cwd;
+        if (!(yield* isGitCheckpointable(cwd))) return null;
+        const fromCheckpointRef = yield* checkpointRefFor({
+          scopeId: input.scope.id,
+          ordinalWithinScope: input.fromOrdinalWithinScope,
+        });
+        if (!(yield* checkpointStore.hasCheckpointRef({ cwd, checkpointRef: fromCheckpointRef }))) {
+          return null;
+        }
+        // A scratch capture includes untracked files, which `git diff <ref>` alone cannot see.
+        const scopeRefs = yield* checkpointRefsForScope(input.scope.id).pipe(
+          Effect.provideService(Crypto.Crypto, crypto),
+        );
+        const scratchId = yield* crypto.randomUUIDv4();
+        const toCheckpointRef = CheckpointRef.make(`${scopeRefs}/workspace-${scratchId}`);
+        return yield* Effect.gen(function* () {
+          yield* checkpointStore.captureCheckpoint({ cwd, checkpointRef: toCheckpointRef });
+          const diff = (format: "numstat" | "name-status") =>
+            checkpointStore.diffCheckpoints({
+              cwd,
+              fromCheckpointRef,
+              toCheckpointRef,
+              ignoreWhitespace: false,
+              format,
+              maxOutputBytes: WORKSPACE_DIFF_MAX_OUTPUT_BYTES,
+            });
+          const [numstat, nameStatus] = yield* Effect.all([diff("numstat"), diff("name-status")], {
+            concurrency: 2,
+          });
+          return parseWorkspaceFileChanges(numstat, nameStatus);
+        }).pipe(
+          Effect.catchTags({ VcsUnsupportedOperationError: () => Effect.succeed(null) }),
+          Effect.ensuring(
+            checkpointStore
+              .deleteCheckpointRefs({ cwd, checkpointRefs: [toCheckpointRef] })
+              .pipe(Effect.ignore),
+          ),
+        );
+      },
+      (effect, input) =>
+        effect.pipe(
+          Effect.mapError(
+            (cause) =>
+              new CheckpointCaptureError({
+                scopeId: input.scope.id,
+                cause,
+              }),
+          ),
+        ),
+    );
+
     return CheckpointServiceV2.of({
       prepareRootRunScope: (input) =>
         makeRootRunScope({ ...input, idAllocator }).pipe(
@@ -569,6 +673,7 @@ export const layer: Layer.Layer<
       capture,
       restore,
       deleteStaleRefs,
+      diffWorkspace,
     } satisfies CheckpointServiceV2Shape);
   }),
 );

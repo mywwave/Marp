@@ -903,10 +903,18 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
   const statusFamily = resolveSidebarStatusFamily({ status, isUnread, isWoke });
   const settled = variantAction === "unsettle";
   const prNumber = pr?.number ?? currentLinkedPr?.number ?? null;
+  const liveStatus = status === "working" ? (thread.liveStatus?.summary ?? null) : null;
   const secondLine =
     variant === "needs-you" ? (
       <span className="block truncate text-xs text-muted-foreground">
         {[props.needsYouReason, props.projectDisplayName].filter(Boolean).join(" · ")}
+      </span>
+    ) : liveStatus !== null ? (
+      <span
+        className="block truncate text-start text-xs text-muted-foreground"
+        dir={textDirection(liveStatus)}
+      >
+        {liveStatus}
       </span>
     ) : variant === "folder-multiline" && thread.branch ? (
       <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">

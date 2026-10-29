@@ -2,7 +2,9 @@
 
 Agents can answer with a page instead of only text: a chart, table, diagram, image collage, or mockup. Ask for one ("show this as a chart", "make a collage of these screenshots") and the agent builds a self-contained HTML page, which appears in the thread above its written reply. It works with every provider, on web, desktop, and mobile.
 
-Pages use your current theme, including custom themes, and follow light and dark mode as you switch. Scripts run inside the page, but it is sandboxed away from Marp and your session. Links you click in a page open in your browser. Use the expand button to open a page full screen. On web and desktop, use the zoom controls to see more detail.
+Pages use your current theme, including custom themes, and follow light and dark mode as you switch. Scripts run inside the page, but it is sandboxed away from Marp and your session. Links you click in a page open in your browser. A tall page scrolls inside its card. On web and desktop, the buttons above a page open it in the right panel or full screen, where zoom controls show more detail, or copy its HTML.
+
+Screenshots and other images an agent's tools return also appear in the thread, after the tool call, on web and desktop. Several in a row show as a grid; click one to page through them all.
 
 Agents can place local images in a page by file path. Marp embeds them when the page is published, so the page keeps working after the original files move or are deleted. Deleting the thread deletes its pages.
 

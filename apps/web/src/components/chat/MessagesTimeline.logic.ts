@@ -59,7 +59,11 @@ import {
   type TurnItemId,
 } from "@marp/contracts";
 import type { ThreadRunSummary } from "@marp/client-runtime/state/shell";
-import { resolveMarpMcpToolDefinition } from "@marp/shared/marpMcpToolPresentation";
+import {
+  marpStatusUpdateFromToolCall,
+  resolveMarpMcpToolDefinition,
+  type MarpStatusUpdate,
+} from "@marp/shared/marpMcpToolPresentation";
 import { compactDynamicToolOutput } from "@marp/shared/toolOutput";
 import { htmlRenderReferencesEqual, type HtmlRenderReference } from "@marp/shared/htmlRender";
 import { mcpAppReferencesEqual, type McpAppReference } from "@marp/shared/mcpApp";
@@ -71,6 +75,12 @@ import {
   formatSearchToolLabel,
 } from "@marp/shared/toolActivity";
 import { isWindowsAbsolutePath } from "@marp/shared/path";
+import {
+  timelineMediaImagesEqual,
+  toolOutputMediaImages,
+  type TimelineMediaImage,
+} from "./timelineMedia.logic";
+import { activeTurnWait, withLatestTodoLists } from "./timelineLiveCards.logic";
 
 function timelineEntryRunId(entry: TimelineEntry): RunId | null {
   if (entry.kind === "message") {
@@ -539,6 +549,10 @@ type MessagesTimelineRowContent =
       expanded?: boolean;
       /** Nothing of the turn is visible yet, so the row says the agent is planning. */
       preActivity?: true;
+      /** The live turn has a running subagent, so the idle row says it waits on it. */
+      waitingForSubagent?: true;
+      /** The live turn's last event, so a long silence reads as waiting for the provider. */
+      lastActivityAt?: string;
     }
   | {
       kind: "work-toggle";
@@ -636,6 +650,18 @@ type MessagesTimelineRowContent =
       htmlRender: HtmlRenderReference;
     }
   | {
+      kind: "tool-media";
+      id: string;
+      createdAt: string;
+      images: ReadonlyArray<TimelineMediaImage>;
+    }
+  | {
+      kind: "status-update";
+      id: string;
+      createdAt: string;
+      status: MarpStatusUpdate;
+    }
+  | {
       kind: "mcp-app";
       id: string;
       createdAt: string;
@@ -648,6 +674,15 @@ type MessagesTimelineRowContent =
 export interface StableMessagesTimelineRowsState {
   byId: Map<string, MessagesTimelineRow>;
   result: MessagesTimelineRow[];
+}
+
+/** A posted status update reads like assistant text: its own row, between work runs. */
+function workEntryStatusUpdate(entry: WorkLogEntry): MarpStatusUpdate | undefined {
+  const item = entry.structuredPayload;
+  if (item?.type !== "dynamic_tool" || workEntryDisplayIndicatesToolFailure(entry)) {
+    return undefined;
+  }
+  return marpStatusUpdateFromToolCall(item.toolName, item.input);
 }
 
 function workGroupId(timelineEntryId: string): string {
@@ -848,7 +883,7 @@ function deriveSupersededAttemptFolds(
 }
 
 // After send, the previous turn stays active until the server creates its replacement.
-function deriveUnsettledRunId(
+export function deriveUnsettledRunId(
   latestRun: TimelineLatestRun | null,
   runningRunId: RunId | null = null,
 ): RunId | null {
@@ -896,6 +931,8 @@ function liveSubagentCardEntryIds(entries: ReadonlyArray<TimelineEntry>): Readon
 
 function timelineEntryFoldRunId(entry: TimelineEntry, runlessKey: RunId | null): RunId | null {
   if (entry.kind === "work" && entry.entry.itemType === "system_notice") return null;
+  // A run's plan card stays in view after its turn folds.
+  if (entry.kind === "work" && entry.entry.itemType === "todo_list") return null;
   if (entry.kind === "message" && entry.message.role === "assistant") {
     return entry.message.runId ?? runlessKey;
   }
@@ -1386,8 +1423,18 @@ function settleSupersededReasoning(entries: ReadonlyArray<TimelineEntry>) {
   });
 }
 
-function timelineRowEntries(entries: ReadonlyArray<TimelineEntry>) {
-  return withoutSubagentDelegationRows(settleSupersededReasoning(entries));
+function timelineRowEntries(
+  input: Pick<
+    MessagesTimelineRowsInput,
+    "timelineEntries" | "latestRun" | "isWorking" | "runningRunId"
+  >,
+) {
+  const liveRunId = input.isWorking
+    ? deriveUnsettledRunId(input.latestRun ?? null, input.runningRunId ?? null)
+    : null;
+  return withoutSubagentDelegationRows(
+    settleSupersededReasoning(withLatestTodoLists(input.timelineEntries, liveRunId)),
+  );
 }
 
 function deriveTimelineTurnFolds(
@@ -1396,7 +1443,7 @@ function deriveTimelineTurnFolds(
     "timelineEntries" | "latestRun" | "isWorking" | "runlessWorkActive" | "runningRunId"
   >,
 ) {
-  const timelineEntries = timelineRowEntries(input.timelineEntries);
+  const timelineEntries = timelineRowEntries(input);
   const unsettledRunId = deriveUnsettledRunId(input.latestRun ?? null, input.runningRunId ?? null);
   const failedRunIds = failedTimelineRunIds(timelineEntries, input.latestRun ?? null);
   const activeVisualResponseRunIds = deriveActiveVisualResponseRunIds({
@@ -1433,7 +1480,7 @@ export function deriveMessagesTimelineRows(input: {
   availableRevertTurnCounts?: ReadonlySet<number> | undefined;
   worktreeSetup?: WorktreeSetupSnapshot | null;
 }): MessagesTimelineRow[] {
-  const timelineEntries = timelineRowEntries(input.timelineEntries);
+  const timelineEntries = timelineRowEntries(input);
   const isPendingApproval = (entry: WorkLogEntry) => {
     const item = entry.projectedItem?.item;
     return (
@@ -1458,6 +1505,21 @@ export function deriveMessagesTimelineRows(input: {
       })
     : new Map<MessageId, number>();
   const nextRows: MessagesTimelineRow[] = [];
+  const pushToolMedia = (anchor: TimelineEntry, entries: ReadonlyArray<WorkLogEntry>) => {
+    const images = toolOutputMediaImages(entries);
+    if (images.length === 0) return;
+    const previous = nextRows.at(-1);
+    if (previous?.kind === "tool-media") {
+      nextRows[nextRows.length - 1] = { ...previous, images: [...previous.images, ...images] };
+      return;
+    }
+    nextRows.push({
+      kind: "tool-media",
+      id: `tool-media:${anchor.id}`,
+      createdAt: anchor.createdAt,
+      images,
+    });
+  };
   const terminalAssistantMessageIds = deriveTerminalAssistantMessageIds(timelineEntries);
   const failedRunIds = failedTimelineRunIds(timelineEntries, input.latestRun ?? null);
   const itemizedRunIds = itemizedFailedRunIds(timelineEntries, failedRunIds);
@@ -1545,6 +1607,7 @@ export function deriveMessagesTimelineRows(input: {
         entry.entry.itemType === "system_notice" ||
         entry.entry.itemType === "notification" ||
         entry.entry.questionAnswer !== undefined ||
+        workEntryStatusUpdate(entry.entry) !== undefined ||
         isPendingApproval(entry.entry) ||
         !runIdIsActiveResponse(entry.entry.runId) ||
         entry.entry.sourceActivityKind === "context-compaction" ||
@@ -1677,6 +1740,13 @@ export function deriveMessagesTimelineRows(input: {
   const activeCompactionRunId = compactsOnReturn
     ? runningCompactionRunId
     : (resumeCompactionEntry?.entry.runId ?? null);
+  const idleWait = () => {
+    const wait = activeTurnWait(timelineEntries, unsettledRunId);
+    return {
+      ...(wait.waitingForSubagent ? { waitingForSubagent: true as const } : {}),
+      ...(wait.lastActivityAt === null ? {} : { lastActivityAt: wait.lastActivityAt }),
+    };
+  };
   const appendWorkingRow = () => {
     if (compactionOnlyRunFinished) return;
     if (runningCompactionRunId !== null && activeCompactionRunId === null) return;
@@ -1757,6 +1827,8 @@ export function deriveMessagesTimelineRows(input: {
     }
 
     if (collapsedEntryIds.has(timelineEntry.id)) {
+      // A folded turn keeps what its tools showed, as it keeps html_render pages.
+      if (timelineEntry.kind === "work") pushToolMedia(timelineEntry, [timelineEntry.entry]);
       continue;
     }
 
@@ -1825,6 +1897,16 @@ export function deriveMessagesTimelineRows(input: {
     }
 
     if (timelineEntry.kind === "work") {
+      const status = workEntryStatusUpdate(timelineEntry.entry);
+      if (status !== undefined) {
+        nextRows.push({
+          kind: "status-update",
+          id: timelineEntry.id,
+          createdAt: timelineEntry.createdAt,
+          status,
+        });
+        continue;
+      }
       if (
         isPendingApproval(timelineEntry.entry) ||
         (timelineEntry.entry.runId != null && itemizedRunIds.has(timelineEntry.entry.runId)) ||
@@ -1834,6 +1916,7 @@ export function deriveMessagesTimelineRows(input: {
         timelineEntry.entry.sourceActivityKind === "runtime.error" ||
         timelineEntry.entry.itemType === "system_notice" ||
         timelineEntry.entry.itemType === "notification" ||
+        timelineEntry.entry.itemType === "todo_list" ||
         timelineEntry.entry.questionAnswer !== undefined
       ) {
         nextRows.push({
@@ -1843,6 +1926,7 @@ export function deriveMessagesTimelineRows(input: {
           groupedEntries: [timelineEntry.entry],
           isExpandedToolGroup: false,
         });
+        pushToolMedia(timelineEntry, [timelineEntry.entry]);
         continue;
       }
       const groupedEntries = [timelineEntry.entry];
@@ -1859,7 +1943,9 @@ export function deriveMessagesTimelineRows(input: {
           nextEntry.entry.sourceActivityKind === "runtime.error" ||
           nextEntry.entry.itemType === "system_notice" ||
           nextEntry.entry.itemType === "notification" ||
+          nextEntry.entry.itemType === "todo_list" ||
           nextEntry.entry.questionAnswer !== undefined ||
+          workEntryStatusUpdate(nextEntry.entry) !== undefined ||
           isPendingApproval(nextEntry.entry) ||
           activeWorkEntryIds.has(nextEntry.id) ||
           collapsedEntryIds.has(nextEntry.id) ||
@@ -1924,6 +2010,7 @@ export function deriveMessagesTimelineRows(input: {
             nextRows.push(
               expandedWorkGroupRow(groupId, timelineEntry.createdAt, visibleGroupedEntries),
             );
+            pushToolMedia(timelineEntry, visibleGroupedEntries);
             index = cursor - 1;
             continue;
           }
@@ -1973,6 +2060,7 @@ export function deriveMessagesTimelineRows(input: {
           }
         }
       }
+      pushToolMedia(timelineEntry, visibleGroupedEntries);
       index = cursor - 1;
       continue;
     }
@@ -2175,6 +2263,7 @@ export function deriveMessagesTimelineRows(input: {
         id: LIVE_ACTIVITY_ROW_ID,
         createdAt: input.activeTurnStartedAt ?? null,
         ...(preActivity ? { preActivity: true as const } : {}),
+        ...idleWait(),
       });
     }
   }
@@ -2441,7 +2530,9 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.createdAt === bt.createdAt &&
         a.groupId === bt.groupId &&
         a.expanded === bt.expanded &&
-        a.preActivity === bt.preActivity
+        a.preActivity === bt.preActivity &&
+        a.waitingForSubagent === bt.waitingForSubagent &&
+        a.lastActivityAt === bt.lastActivityAt
       );
     }
     case "worktree-setup":
@@ -2488,6 +2579,20 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
 
     case "proposed-plan":
       return a.proposedPlan === (b as typeof a).proposedPlan;
+
+    case "status-update": {
+      const bs = b as typeof a;
+      return (
+        a.createdAt === bs.createdAt &&
+        a.status.summary === bs.status.summary &&
+        a.status.next === bs.status.next
+      );
+    }
+
+    case "tool-media": {
+      const bt = b as typeof a;
+      return a.createdAt === bt.createdAt && timelineMediaImagesEqual(a.images, bt.images);
+    }
 
     case "html-render": {
       // Tool updates rebuild entries; preserve frames for unchanged pages.

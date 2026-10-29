@@ -3012,12 +3012,16 @@ const decodeClaudeFileEditResult = Schema.decodeUnknownOption(
   }),
 );
 
-function claudeFileChangeText(output: ClaudeNativeToolOutput): string {
+/**
+ * A recorded edit's patch. Without a structured result only a failure keeps the result text, for
+ * its reason: "File created successfully" as a diff would hide the change the tool input holds.
+ */
+function claudeFileChangeText(output: ClaudeNativeToolOutput, failed: boolean): string {
   const result =
     output.type === "structured_tool_use_result"
       ? Option.getOrUndefined(decodeClaudeFileEditResult(output.value))
       : undefined;
-  if (result === undefined) return claudeNativeToolOutputText(output);
+  if (result === undefined) return failed ? claudeNativeToolOutputText(output) : "";
   const patch =
     result.structuredPatch.length === 0 && result.type === "create" && result.content !== undefined
       ? structuredPatch("/dev/null", result.filePath, "", result.content)
@@ -3358,8 +3362,11 @@ function claudeToolResultEntriesFromMessage(message: SDKMessage): ReadonlyArray<
     (toolResult) => ({ toolResult, output: claudeNativeToolOutputFromToolResult(toolResult) }),
   );
   const userResults = claudeToolResultBlocksFromUserMessage(message);
+  // Subagent transcript lines carry the structured result as `toolUseResult`.
   const structuredOutput =
-    message.type === "user" && userResults.length === 1 ? message.tool_use_result : undefined;
+    message.type === "user" && userResults.length === 1
+      ? (message.tool_use_result ?? Reflect.get(message, "toolUseResult"))
+      : undefined;
   return [
     ...assistantResults,
     ...userResults.map((toolResult) => ({
@@ -5612,7 +5619,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
             itemType === "command_execution"
               ? claudeCommandOutputText(input.output)
               : itemType === "file_change"
-                ? claudeFileChangeText(input.output)
+                ? claudeFileChangeText(input.output, input.status === "failed")
                 : claudeNativeToolOutputText(input.output);
           const turnItem: OrchestrationV2TurnItem =
             itemType === "command_execution"

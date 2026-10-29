@@ -225,7 +225,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
           ) : null}
         </ComposerBanner.Actions>
       </CollapsibleTrigger>
-      <CollapsiblePanel>
+      <CollapsiblePanel animate="fade">
         <ComposerBanner.Scroll>
           <ComposerBanner.Body className="ps-6 pe-4 pb-1 wrap-anywhere sm:ps-5.5">
             <ChatMarkdown

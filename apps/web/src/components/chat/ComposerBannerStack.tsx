@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "../ui/button";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { ComposerBanner, type ComposerBannerVariant } from "./ComposerBanner";
+import { usePresenceList } from "~/hooks/usePresence";
 import { observeResize } from "~/lib/observeResize";
 
 /**
@@ -27,8 +28,10 @@ export interface ComposerBannerStackItem {
 
 const GROUPS = ["environment", "attention"] as const;
 
-const FADE_IN =
-  "transition-opacity duration-150 ease-out starting:opacity-0 motion-reduce:transition-none";
+const PRESENCE_FADE =
+  "transition-opacity duration-fast ease-out starting:opacity-0 data-closing:animate-fade-out motion-reduce:transition-none";
+
+const getItemId = (item: ComposerBannerStackItem) => item.id;
 
 /**
  * Notices about sending from this composer, each its own attached card. Consecutive cards join
@@ -42,18 +45,31 @@ export function ComposerBannerStack({
   readonly items: ReadonlyArray<ComposerBannerStackItem>;
   readonly detached?: boolean;
 }) {
+  const rows = usePresenceList(items, getItemId);
   const ordered = GROUPS.flatMap((group) =>
-    items.filter((item) => (item.group ?? "attention") === group),
+    rows.filter((row) => (row.item.group ?? "attention") === group),
   );
   if (detached) {
-    return ordered.map((item) => (
-      <div key={item.id} data-composer-banner-stack="true" className={FADE_IN}>
+    return ordered.map(({ key, item, closing }) => (
+      <div
+        key={key}
+        data-composer-banner-stack="true"
+        data-closing={closing || undefined}
+        inert={closing}
+        className={PRESENCE_FADE}
+      >
         <NoticeCard item={item} detached />
       </div>
     ));
   }
-  return ordered.map((item) => (
-    <ComposerBanner.Attachment key={item.id} data-composer-banner-stack="true" className={FADE_IN}>
+  return ordered.map(({ key, item, closing }) => (
+    <ComposerBanner.Attachment
+      key={key}
+      data-composer-banner-stack="true"
+      data-closing={closing || undefined}
+      inert={closing}
+      className={PRESENCE_FADE}
+    >
       <NoticeCard item={item} />
     </ComposerBanner.Attachment>
   ));

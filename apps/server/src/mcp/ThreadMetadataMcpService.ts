@@ -6,6 +6,8 @@ import {
   type ThreadMetadataMcpAction,
   type ThreadMetadataMcpUpdateInput,
   type ThreadMetadataMcpUpdateResult,
+  type ThreadStatusMcpUpdateInput,
+  type ThreadStatusMcpUpdateResult,
   ThreadId,
 } from "@marp/contracts";
 import * as Context from "effect/Context";
@@ -25,6 +27,11 @@ export class ThreadMetadataMcpService extends Context.Service<
       scope: McpInvocationScope,
       input: ThreadMetadataMcpUpdateInput,
     ) => Effect.Effect<ThreadMetadataMcpUpdateResult, OrchestratorMcpFailure>;
+    /** Records the calling agent's progress on its active run. */
+    readonly postStatus: (
+      scope: McpInvocationScope,
+      input: ThreadStatusMcpUpdateInput,
+    ) => Effect.Effect<ThreadStatusMcpUpdateResult, OrchestratorMcpFailure>;
   }
 >()("marp/mcp/ThreadMetadataMcpService") {}
 
@@ -194,7 +201,50 @@ const make = Effect.gen(function* () {
     });
   });
 
-  return ThreadMetadataMcpService.of({ update });
+  const postStatus = Effect.fn("ThreadMetadataMcpService.postStatus")(function* (
+    scope: McpInvocationScope,
+    input: ThreadStatusMcpUpdateInput,
+  ) {
+    const threadId = scope.thread?.threadId;
+    if (threadId === undefined) {
+      return yield* failure(
+        "target_required",
+        "Only an agent running in a Marp thread can post its status.",
+      );
+    }
+    const shell = yield* threadManagement
+      .getThreadShell(threadId)
+      .pipe(Effect.mapError((error) => failure("orchestration_error", errorMessage(error))));
+    if (shell === null || shell.deletedAt !== null) {
+      return yield* threadNotFound(threadManagement, threadId, `Thread ${threadId} was not found.`);
+    }
+    if (shell.activeRunId === null) {
+      return yield* failure("parent_not_active", "This thread has no working turn to report on.");
+    }
+    const requestKey = yield* crypto.randomUUIDv4().pipe(Effect.orDie);
+    yield* threadManagement
+      .dispatch({
+        type: "thread.status.update",
+        commandId: CommandId.make(
+          [
+            "command",
+            "mcp",
+            stablePart(scope.requestNamespace),
+            "thread-status",
+            stablePart(threadId),
+            requestKey,
+          ].join(":"),
+        ),
+        threadId,
+        runId: shell.activeRunId,
+        summary: input.summary,
+        ...(input.next === undefined ? {} : { next: input.next }),
+      })
+      .pipe(Effect.mapError((error) => failure("orchestration_error", errorMessage(error))));
+    return { posted: true as const };
+  });
+
+  return ThreadMetadataMcpService.of({ update, postStatus });
 });
 
 export const layer: Layer.Layer<

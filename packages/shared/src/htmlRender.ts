@@ -412,6 +412,14 @@ const blankNonMarkup = (html: string) => {
   return parts.join("");
 };
 
+const INJECTED_BOOTSTRAP =
+  /(?:<meta charset="utf-8">)?(?:<meta name="viewport" content="width=device-width, initial-scale=1">)?<style id="marp-theme">[^<]*<\/style><script>\(function\(\)\{var s=document\.getElementById\("marp-theme"\)[\s\S]*?\}\)\(\);<\/script>/;
+
+/** The published page without Marp's theme bootstrap, for copying the agent's HTML. */
+export function stripHtmlRenderBootstrap(html: string): string {
+  return html.replace(INJECTED_BOOTSTRAP, "");
+}
+
 export function injectHtmlRenderBootstrap(html: string): string {
   const scan = blankNonMarkup(html);
   const markup = bootstrapMarkup(scan);

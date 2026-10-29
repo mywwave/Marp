@@ -10,7 +10,8 @@ import type { CodeViewHandle } from "@pierre/diffs/react";
 import type { ScopedThreadRef } from "@marp/contracts";
 import { useState, type ReactNode, type Ref } from "react";
 
-import { type DraftId, useComposerDraftStore } from "~/composerDraftStore";
+import { composerTargetKey, type DraftId, useComposerDraftStore } from "~/composerDraftStore";
+import { setWorkspaceLineSelection } from "~/workspaceOpenState";
 import { fnv1a32, resolveFileDiffPath, resolveFileDiffPreviousPath } from "~/lib/diffRendering";
 import {
   buildDiffReviewComment,
@@ -267,7 +268,16 @@ export function AnnotatableCodeView({
       {...(renderCodeViewFooter ? { renderCodeViewFooter } : {})}
       items={items}
       selectedLines={selectedLines}
-      onSelectedLinesChange={setSelectedLines}
+      onSelectedLinesChange={(next) => {
+        setSelectedLines(next);
+        const file = next === null ? undefined : filesByKey.get(next.id);
+        setWorkspaceLineSelection(
+          composerTargetKey(composerDraftTarget),
+          next && file
+            ? { surface: "diff", path: file.filePath, start: next.range.start, end: next.range.end }
+            : null,
+        );
+      }}
       onRevealSearchMatch={(item) => onRevealSearchMatch(item.id)}
       options={{
         ...options,

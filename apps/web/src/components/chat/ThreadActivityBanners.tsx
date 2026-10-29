@@ -4,14 +4,17 @@ import type {
   ThreadId,
 } from "@marp/contracts";
 import type { EnvironmentThreadShell, ThreadStructure } from "@marp/client-runtime/state/shell";
+import { presentProviderGoal } from "@marp/client-runtime/state/thread-execution";
 import {
-  presentPendingBackgroundWork,
-  presentProviderGoal,
-} from "@marp/client-runtime/state/thread-execution";
+  summarizeBackgroundTasks,
+  type BackgroundTaskRow,
+} from "@marp/client-runtime/work-log/live-cards";
 import { childThreadInputsTitle } from "@marp/client-runtime/state/threads";
 import { formatDuration } from "@marp/shared/orchestrationTiming";
-import * as DateTime from "effect/DateTime";
 import {
+  ActivityIcon,
+  BotIcon,
+  CheckIcon,
   CircleDashedIcon,
   GitBranchIcon,
   MessageCircleIcon,
@@ -116,60 +119,25 @@ export function backgroundWorkNowItem(input: {
   readonly onOpenThread: (threadId: ThreadId) => void;
 }): ThreadNowItem | null {
   const { onOpenThread } = input;
-  const presentation = presentPendingBackgroundWork(input.tasks);
-  if (presentation === null) return null;
-  const rows = presentation.items.map((task) => {
-    // Same key derivePendingBackgroundWork gives turn-item tasks; subagent items carry progress.
-    const item = input.turnItems.findLast(
-      (candidate) => (candidate.nativeItemRef?.nativeId || candidate.id) === task.taskId,
-    );
-    const subagent = item?.type === "subagent" ? item : undefined;
-    return {
-      task,
-      activity: subagent?.progress?.replace(/\s+/gu, " ").trim() || null,
-      startedAtMs: item?.startedAt ? DateTime.toEpochMillis(item.startedAt) : null,
-      updatedAtMs: subagent ? DateTime.toEpochMillis(subagent.updatedAt) : 0,
-      childThreadId: task.childThreadId ?? subagent?.childThreadId ?? undefined,
-    };
-  });
-  const [only] = rows.length === 1 ? rows : [];
-  const newest = rows
-    .filter((row) => row.activity)
-    .toSorted((left, right) => right.updatedAtMs - left.updatedAtMs)[0];
-  const isCommand = (row: (typeof rows)[number]) => row.task.kind !== "subagent";
-  const verb = presentation.waiting ? "Waiting on" : "Running";
+  const summary = summarizeBackgroundTasks(input.tasks, input.turnItems);
+  if (summary === null) return null;
+  const running = summary.rows.filter((row) => row.state === "running");
+  const [only] = running.length === 1 ? running : [];
+  const withActivity = running.find((row) => row.activity !== null);
   const onlyThreadId = only?.childThreadId;
-  const startedAtMs = only?.startedAtMs ?? null;
+  const startedAt = only?.startedAt ?? null;
   return {
     id: `background-work:${input.threadId}`,
-    icon: rows.every(isCommand) ? <TerminalIcon /> : <CircleDashedIcon />,
-    title: only ? (
-      <>
-        {verb} <span className={cn(isCommand(only) && "font-mono")}>{only.task.label}</span>
-      </>
-    ) : (
-      presentation.title
-    ),
-    description: only ? (
-      only.activity
-    ) : newest ? (
-      `${newest.task.label}: ${newest.activity}`
-    ) : rows.every(isCommand) ? (
-      <span className="font-mono">{rows.map((row) => row.task.label).join(", ")}</span>
-    ) : (
-      rows.map((row) => row.task.label).join(", ")
-    ),
+    icon: running.every((row) => row.kind !== "subagent") ? <TerminalIcon /> : <CircleDashedIcon />,
+    title: summary.title,
+    description: only
+      ? [only.label, only.activity].filter((part) => part !== null).join(" · ")
+      : withActivity
+        ? `${withActivity.label}: ${withActivity.activity}`
+        : running.map((row) => row.label).join(", "),
     actions: (
       <>
-        {startedAtMs === null ? null : (
-          <span
-            ref={tickTextContent(
-              (nowMs) => formatDuration(Math.max(1_000, nowMs - startedAtMs)),
-              true,
-            )}
-            className="tabular-nums"
-          />
-        )}
+        {startedAt === null ? null : <ElapsedSince startedAt={startedAt} />}
         {onlyThreadId === undefined ? null : (
           <InlineButton tone="muted" onClick={() => onOpenThread(onlyThreadId)}>
             Open
@@ -180,7 +148,81 @@ export function backgroundWorkNowItem(input: {
         </InlineButton>
       </>
     ),
+    details: <BackgroundTaskList rows={summary.rows} onOpenThread={onOpenThread} />,
   };
+}
+
+function ElapsedSince({ startedAt }: { readonly startedAt: string }) {
+  const startedAtMs = Date.parse(startedAt);
+  return (
+    <span
+      ref={tickTextContent((nowMs) => formatDuration(Math.max(1_000, nowMs - startedAtMs)), true)}
+      className="tabular-nums"
+    />
+  );
+}
+
+const BACKGROUND_KIND_ICONS = {
+  subagent: BotIcon,
+  command: TerminalIcon,
+  monitor: ActivityIcon,
+  background_task: CircleDashedIcon,
+} as const;
+
+const BACKGROUND_STATE_LABELS = { done: "Done", failed: "Failed", stopped: "Stopped" } as const;
+
+function BackgroundTaskList({
+  rows,
+  onOpenThread,
+}: {
+  readonly rows: ReadonlyArray<BackgroundTaskRow>;
+  readonly onOpenThread: (threadId: ThreadId) => void;
+}) {
+  return (
+    <ul aria-label="Background tasks" className="flex flex-col">
+      {rows.map((row) => {
+        const Icon = BACKGROUND_KIND_ICONS[row.kind];
+        const childThreadId = row.childThreadId;
+        return (
+          <li key={row.id} className="flex h-6 min-w-0 items-center gap-1.5">
+            <Icon aria-hidden />
+            <span
+              className={cn(
+                "min-w-0 truncate",
+                row.kind === "command" && row.state === "running" && "font-mono",
+              )}
+            >
+              {row.label}
+            </span>
+            <span className="ms-auto flex shrink-0 items-center gap-2.5">
+              {row.state === "running" ? (
+                row.startedAt === null ? (
+                  "Running"
+                ) : (
+                  <ElapsedSince startedAt={row.startedAt} />
+                )
+              ) : (
+                <span
+                  className={cn(
+                    "flex items-center gap-1",
+                    row.state === "failed" && "text-destructive",
+                  )}
+                >
+                  {row.state === "done" ? <CheckIcon aria-hidden /> : null}
+                  {BACKGROUND_STATE_LABELS[row.state]}
+                </span>
+              )}
+              {childThreadId === undefined ? null : (
+                <InlineButton tone="muted" onClick={() => onOpenThread(childThreadId)}>
+                  Open
+                </InlineButton>
+              )}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 /** The local checkout moved off the branch this thread last ran on. */

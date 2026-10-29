@@ -781,6 +781,7 @@ export function applyToProjection(
       };
     case "thread.visited":
     case "thread.marked-unread":
+    case "thread.status-updated":
       return {
         ...projection,
         thread: event.payload,
@@ -1517,6 +1518,7 @@ export function threadShellFromProjection(
       projection.providerThreads,
       projection.thread.activeProviderThreadId,
     ),
+    liveStatus: liveStatusForShell(projection.thread, activeRun?.id ?? null),
     itemCount: activeLocalTurnItems(projection).length,
     visibleItemCount: projection.visibleTurnItems.length,
     createdAt: projection.thread.createdAt,
@@ -1580,6 +1582,17 @@ function isSilentRunForShell(
       (item) => item.runId === run.id && item.type === "compaction" && item.status === "failed",
     )
   );
+}
+
+/** The thread keeps its last status update; the shell shows it only while that run works. */
+function liveStatusForShell(
+  thread: Pick<OrchestrationV2AppThread, "statusUpdate">,
+  activeRunId: RunId | null,
+): OrchestrationV2ThreadShell["liveStatus"] {
+  const update = thread.statusUpdate;
+  if (update == null || update.runId !== activeRunId) return null;
+  const { runId: _runId, ...liveStatus } = update;
+  return liveStatus;
 }
 
 function isInterruptibleRunForShell(run: OrchestrationV2ThreadProjection["runs"][number]): boolean {
@@ -1783,6 +1796,7 @@ function shellFromState(input: {
     pendingBackgroundTasks: input.state.pendingBackgroundTasks,
     providerInstanceHistory: input.state.providerInstanceHistory,
     goal: input.state.goal,
+    liveStatus: liveStatusForShell(input.state.thread, input.state.activeRunId),
     itemCount: input.state.itemCount,
     visibleItemCount: input.visibleItemCount,
     createdAt: input.state.thread.createdAt,
@@ -1863,7 +1877,8 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             case "thread.interaction-mode-updated":
             case "thread.model-selection-updated":
             case "thread.provider-switched":
-            case "thread.guest-share-updated": {
+            case "thread.guest-share-updated":
+            case "thread.status-updated": {
               const payloadJson = yield* encodeThreadPayload(event.payload);
               const payload = parseEncodedPayload(payloadJson);
               yield* sql`
@@ -2670,7 +2685,8 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             event.type !== "thread.interaction-mode-updated" &&
             event.type !== "thread.model-selection-updated" &&
             event.type !== "thread.provider-switched" &&
-            event.type !== "thread.guest-share-updated"
+            event.type !== "thread.guest-share-updated" &&
+            event.type !== "thread.status-updated"
           ) {
             const updatedAt = yield* encodeThreadUpdatedAt(event.occurredAt);
             yield* sql`

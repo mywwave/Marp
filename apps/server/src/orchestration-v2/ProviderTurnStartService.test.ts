@@ -49,6 +49,7 @@ import * as ProviderSessionManager from "./ProviderSessionManager.ts";
 import * as ProviderTurnStart from "./ProviderTurnStartService.ts";
 import * as RunExecutionService from "./RunExecutionService.ts";
 import * as RuntimePolicy from "./RuntimePolicy.ts";
+import * as WorkspaceContext from "./WorkspaceContext.ts";
 
 const isDomainEvent = Schema.is(OrchestrationV2DomainEvent);
 
@@ -187,6 +188,7 @@ function startWithMissingWorktree(
         }),
         Layer.mock(RunExecutionService.RunExecutionServiceV2)({ startRootRun }),
         Layer.mock(RuntimePolicy.RuntimePolicyV2)({}),
+        WorkspaceContext.layerEmpty,
       ),
     ),
   );
@@ -286,6 +288,8 @@ function makeLocalCommandHarness(input: {
     readonly interruptFailure?: boolean;
     readonly interruptCurrentRun?: boolean;
   };
+  readonly driver?: string;
+  readonly workspaceSections?: ReadonlyArray<WorkspaceContext.WorkspaceContextSection>;
 }) {
   const now = DateTime.makeUnsafe("2026-09-04T12:00:00Z");
   const threadId = ThreadId.make("thread-native-account-command");
@@ -318,7 +322,7 @@ function makeLocalCommandHarness(input: {
   };
   const providerThread: OrchestrationV2ThreadProjection["providerThreads"][number] = {
     id: providerThreadId,
-    driver: ProviderDriverKind.make("codex"),
+    driver: ProviderDriverKind.make(input.driver ?? "codex"),
     providerInstanceId: newInstanceId,
     providerSessionId,
     appThreadId: threadId,
@@ -753,6 +757,14 @@ function makeLocalCommandHarness(input: {
         Layer.mock(RuntimePolicy.RuntimePolicyV2)({
           resolve: resolveRuntimePolicy,
         }),
+        input.workspaceSections === undefined
+          ? WorkspaceContext.layerEmpty
+          : Layer.succeed(
+              WorkspaceContext.WorkspaceContextV2,
+              WorkspaceContext.WorkspaceContextV2.of({
+                forTurn: () => Effect.succeed(input.workspaceSections ?? []),
+              }),
+            ),
       ),
     ),
   );
@@ -968,6 +980,35 @@ effectIt.effect("recovers an abandoned failed turn before continuing its native 
       "existing-native-conversation",
     );
   }),
+);
+
+effectIt.effect.each(["claudeAgent", "codex"])(
+  "delivers the workspace snapshot the way %s reads it",
+  (driver) =>
+    Effect.gen(function* () {
+      const sections = [
+        { key: "changes" as const, text: "Changed since your last turn:\n- modified a.ts (+1/-0)" },
+      ];
+      const harness = makeLocalCommandHarness({
+        text: "Continue",
+        previousTurn: { runStatus: "completed", turnStatus: "completed" },
+        driver,
+        workspaceSections: sections,
+      });
+
+      yield* harness.start;
+
+      const started = harness.startRootRun.mock.calls[0]?.[0];
+      if (driver === "codex") {
+        expect(started?.message.text).toBe("Continue");
+        expect(started?.workspaceContext).toEqual(sections);
+      } else {
+        expect(started?.message.text).toBe(
+          `${WorkspaceContext.renderWorkspaceContextPreamble(sections)}\n\nUser message:\nContinue`,
+        );
+        expect(started?.workspaceContext).toBeUndefined();
+      }
+    }),
 );
 
 effectIt.effect.each([

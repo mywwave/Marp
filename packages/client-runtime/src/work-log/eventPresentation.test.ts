@@ -192,12 +192,27 @@ describe("workRunHeader", () => {
       "Explored session.ts, 2 searches",
     ],
     [
-      "mixed steps",
+      "reads and a command",
       [read("a.ts"), read("b.ts"), read("a.ts"), read("c.ts"), grep("x"), command("pnpm test")],
       false,
-      "explore",
-      "Explored 3 files, 1 search, 1 command",
+      "shell",
+      "Ran pnpm test · explored 3 files, 1 search",
     ],
+    [
+      "edits, commands and reads",
+      [edit("src/a.ts"), command("pnpm test"), command("git status"), read("b.ts"), edit("c.ts")],
+      false,
+      "edit",
+      "Edited 2 files · ran 2 commands · explored b.ts",
+    ],
+    [
+      "an edit and a command",
+      [command("git status"), edit("a.ts")],
+      false,
+      "edit",
+      "Edited a.ts · ran 1 command",
+    ],
+    ["live edits and reads", [read("b.ts"), edit("src/a.ts")], true, "edit", "Editing a.ts"],
     [
       "read-only commands",
       [command("cat src/a.ts"), command("rg token src"), command("ls src")],
@@ -217,8 +232,10 @@ describe("workRunHeader", () => {
     expect(workRunHeader(entries, live)).toEqual({ rule, title });
   });
 
-  it("checks edits before commands", () => {
-    expect(workRunHeader([edit("a.ts"), command("ls")]).rule).toBe("explore");
+  it("never heads a run with edits as exploration", () => {
+    expect(workRunHeader([edit("a.ts"), command("ls")]).title).toBe(
+      "Edited a.ts · explored 1 folder",
+    );
     expect(workRunHeader([edit("a.ts"), thought("ok")]).rule).toBe("edit");
   });
 });

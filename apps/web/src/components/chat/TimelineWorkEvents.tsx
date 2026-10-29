@@ -49,7 +49,7 @@ import { ActivityShimmerOverlay } from "./TimelineRowParts";
 import { failedToolIconClassName, ToolActivityIconView } from "./TimelineToolActivityIcon";
 import { workEntryIconName } from "./TimelineWorkEntryRow.logic";
 import { formatWorkingTimerNow } from "./TimelineWorkGroupRows.logic";
-import { WorkLogButton } from "./WorkLog";
+import { WorkLogButton, WorkLogRow } from "./WorkLog";
 import { CommandItemOutput } from "./V2ItemInspector";
 import { TimelineRowCtx, type TimelineWorkEntry } from "./timelineRowContext";
 
@@ -204,7 +204,14 @@ export function FileEditCard({
   const { name } = splitDisplayPath(displayPath);
   const more = (workEntry.changedFiles?.length ?? 1) - 1;
   const preview = running ? fileChange?.preview : undefined;
-  const detail = useEditDetail(projectedItem, near && !failed && !running);
+  // Nothing recorded to show: no counts, tail or patch. It reads as a plain step, not an empty card.
+  const bare =
+    !failed &&
+    preview === undefined &&
+    !fileChange?.diffStr &&
+    (summary?.additions ?? 0) === 0 &&
+    (summary?.deletions ?? 0) === 0;
+  const detail = useEditDetail(projectedItem, near && !failed && !running && !bare);
   const diff = detail.diff?.kind === "diff" ? detail.diff : undefined;
   const fits = diff === undefined || diff.fileDiff.unifiedLineCount <= EDIT_PREVIEW_LINES;
   const canExpand = !failed && !running && !fits;
@@ -256,6 +263,64 @@ export function FileEditCard({
     } else await contextMenu.activate(clicked, fileTarget);
   };
   const failure = failed ? fileEditFailureReason(fileChange?.diffStr) : undefined;
+  const icon = (
+    <span
+      className={cn(
+        "flex size-4 shrink-0 items-center justify-center",
+        failed ? failedToolIconClassName : running ? "text-info-foreground" : "text-icon-muted",
+      )}
+    >
+      {running ? (
+        <Spinner size="sm" />
+      ) : (
+        <ToolActivityIconView
+          icon={workEntry.toolIcon ?? workEntry.toolSource?.icon}
+          fallbackName={workEntryIconName(workEntry)}
+          className="block size-4 shrink-0 stroke-2"
+          muted
+        />
+      )}
+    </span>
+  );
+  const label = (
+    <Shimmering active={shimmer && running}>
+      <span className={cn("shrink-0", failed && "text-destructive")}>
+        {summary?.action.verb ?? "Edited"}
+      </span>
+      {openFile ? (
+        <button
+          type="button"
+          className="min-w-0 cursor-pointer truncate rounded-sm font-mono text-xs text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          aria-label={`Open ${displayPath}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            openFile();
+          }}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void showMenu(event);
+          }}
+        >
+          {name}
+        </button>
+      ) : (
+        <span className="min-w-0 truncate font-mono text-xs text-foreground">{name}</span>
+      )}
+      {more > 0 ? <span className="shrink-0 text-muted-foreground">+{more} more</span> : null}
+    </Shimmering>
+  );
+  if (bare) {
+    return (
+      <WorkLogRow
+        ref={nearRef}
+        data-v2-item-type="file_change"
+        data-edit-row="bare"
+        icon={icon}
+        label={<span className="flex min-w-0 items-baseline gap-1.5">{label}</span>}
+      />
+    );
+  }
   return (
     <div
       ref={nearRef}
@@ -266,50 +331,9 @@ export function FileEditCard({
         className={cn("flex h-8 min-w-0 items-center gap-2 px-3", canExpand && "cursor-pointer")}
         onClick={canExpand ? onToggleExpanded : undefined}
       >
-        <span
-          className={cn(
-            "flex size-4 shrink-0 items-center justify-center",
-            failed ? failedToolIconClassName : running ? "text-info-foreground" : "text-icon-muted",
-          )}
-        >
-          {running ? (
-            <Spinner size="sm" />
-          ) : (
-            <ToolActivityIconView
-              icon={workEntry.toolIcon ?? workEntry.toolSource?.icon}
-              fallbackName={workEntryIconName(workEntry)}
-              className="block size-4 shrink-0 stroke-2"
-              muted
-            />
-          )}
-        </span>
+        {icon}
         <span className="flex min-w-0 items-baseline gap-1.5 text-secondary-label">
-          <Shimmering active={shimmer && running}>
-            <span className={cn("shrink-0", failed && "text-destructive")}>
-              {summary?.action.verb ?? "Edited"}
-            </span>
-            {openFile ? (
-              <button
-                type="button"
-                className="min-w-0 cursor-pointer truncate rounded-sm font-mono text-xs text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                aria-label={`Open ${displayPath}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  openFile();
-                }}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  void showMenu(event);
-                }}
-              >
-                {name}
-              </button>
-            ) : (
-              <span className="min-w-0 truncate font-mono text-xs text-foreground">{name}</span>
-            )}
-            {more > 0 ? <span className="shrink-0 text-muted-foreground">+{more} more</span> : null}
-          </Shimmering>
+          {label}
           {failed ? null : (
             <DiffStatLabel
               additions={counts.additions}

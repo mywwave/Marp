@@ -145,6 +145,7 @@ export function HtmlRenderDocument(props: {
   readonly className?: string;
   readonly threadRef?: ScopedThreadRef | undefined;
   readonly onContentHeight?: (height: number) => void;
+  readonly onLoad?: (() => void) | undefined;
   /** Reports fullscreen changes so virtualized rows can stay mounted. */
   readonly onFullscreenChange?: ((fullscreen: boolean) => void) | undefined;
 }) {
@@ -290,6 +291,7 @@ export function HtmlRenderDocument(props: {
         loading="lazy"
         onLoad={() => {
           setLoaded(true);
+          props.onLoad?.();
           // Covers a theme change that landed while the page was loading.
           postTheme();
           postShortcuts();

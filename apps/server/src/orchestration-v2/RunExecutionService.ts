@@ -574,6 +574,7 @@ export interface RunExecutionServiceV2StartRootRunInput {
   readonly message: ProviderAdapter.ProviderAdapterV2TurnMessage;
   readonly modelSelection: ModelSelection;
   readonly runtimePolicy: ProviderAdapter.ProviderAdapterV2RuntimePolicy;
+  readonly workspaceContext?: ProviderAdapter.ProviderAdapterV2TurnInput["workspaceContext"];
 }
 
 export interface RunExecutionServiceV2Shape {
@@ -1644,6 +1645,9 @@ export const layer: Layer.Layer<
           modelSelection: input.modelSelection,
           runtimePolicy: input.runtimePolicy,
           ...(appContext.length === 0 ? {} : { appContext }),
+          ...(input.workspaceContext === undefined
+            ? {}
+            : { workspaceContext: input.workspaceContext }),
         };
         // Check after the context read: ingestion can settle the run while
         // it awaits. A failed ownership read fails the start below.

@@ -555,6 +555,9 @@ function useSettingsRestore(onRestored?: () => void) {
     DEFAULT_UNIFIED_SETTINGS.continueThreadsAfterServerUpdate
       ? ["Continue threads after restarts"]
       : []),
+    ...(settings.shareWorkspaceContext !== DEFAULT_UNIFIED_SETTINGS.shareWorkspaceContext
+      ? ["Share workspace context with agents"]
+      : []),
     ...(isBackgroundActivityDirty ? ["Background activity"] : []),
     ...(settings.defaultThreadEnvMode !== DEFAULT_UNIFIED_SETTINGS.defaultThreadEnvMode
       ? ["New thread mode"]
@@ -672,6 +675,7 @@ function useSettingsRestore(onRestored?: () => void) {
       responseStreamingMode: DEFAULT_UNIFIED_SETTINGS.responseStreamingMode,
       enableProviderUpdateChecks: DEFAULT_UNIFIED_SETTINGS.enableProviderUpdateChecks,
       continueThreadsAfterServerUpdate: DEFAULT_UNIFIED_SETTINGS.continueThreadsAfterServerUpdate,
+      shareWorkspaceContext: DEFAULT_UNIFIED_SETTINGS.shareWorkspaceContext,
       backgroundActivity: DEFAULT_UNIFIED_SETTINGS.backgroundActivity,
       backgroundActivityProfile: DEFAULT_UNIFIED_SETTINGS.backgroundActivityProfile,
       automaticGitFetchInterval: DEFAULT_UNIFIED_SETTINGS.automaticGitFetchInterval,
@@ -1638,6 +1642,36 @@ export function ThreadsSettingsPanel() {
 
       <SettingsSection id="idle-threads" title="Idle threads">
         <CompactIdleThreadsRow />
+      </SettingsSection>
+      <SettingsSection id="agent-context" title="Agent context">
+        <SettingsRow
+          serverScoped
+          {...searchableSetting("share-workspace-context")}
+          description="Start each turn with a short note of files changed outside the agent, the project layout, and the file open in Marp."
+          settingKeys={["shareWorkspaceContext"]}
+          resetAction={
+            settings.shareWorkspaceContext !== DEFAULT_UNIFIED_SETTINGS.shareWorkspaceContext ? (
+              <SettingResetButton
+                label="workspace context sharing"
+                onClick={() =>
+                  updateSettings({
+                    shareWorkspaceContext: DEFAULT_UNIFIED_SETTINGS.shareWorkspaceContext,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <ScopedSwitch
+              settingKeys={["shareWorkspaceContext"]}
+              checked={settings.shareWorkspaceContext}
+              onCheckedChange={(checked) =>
+                updateSettings({ shareWorkspaceContext: Boolean(checked) })
+              }
+              aria-label="Share workspace context with agents"
+            />
+          }
+        />
       </SettingsSection>
       <SettingsSection id="usage-limits" title="Usage limits">
         <SettingsRow

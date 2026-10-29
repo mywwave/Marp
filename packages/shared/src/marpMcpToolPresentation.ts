@@ -31,6 +31,7 @@ export type MarpMcpToolSummaryAction =
   | "thread-transfers"
   | "thread-organize"
   | "thread-update"
+  | "status-update"
   | "queue-list"
   | "queue-read"
   | "queue-edit"
@@ -332,6 +333,7 @@ const MARP_MCP_TOOLS: Readonly<Record<string, MarpMcpToolDefinition>> = {
     ["Update", "Updating", "Updated", "Marp thread metadata"],
     "thread-update",
   ),
+  marp_status_update: tool(["Post", "Posting", "Posted", "a status update"], "status-update"),
   marp_worktree_list: tool(["List", "Listing", "Listed", "workspace branches"], "worktree-list"),
   marp_preview_list: tool(["List", "Listing", "Listed", "preview tabs"], "browser", "browser"),
   marp_preview_close: tool(["Close", "Closing", "Closed", "a preview tab"], "browser", "browser"),
@@ -428,6 +430,37 @@ type SummaryInput = Readonly<Record<string, unknown>>;
 
 const asSummaryInput = (input: unknown): SummaryInput | undefined =>
   typeof input === "object" && input !== null ? (input as SummaryInput) : undefined;
+
+export interface MarpStatusUpdate {
+  readonly summary: string;
+  readonly next?: string;
+}
+
+const statusLine = (value: unknown) =>
+  typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
+
+/** The note a `marp_status_update` call posted, read from its input. */
+export function marpStatusUpdateFromToolCall(
+  toolName: string | null | undefined,
+  input: unknown,
+): MarpStatusUpdate | undefined {
+  if (resolveMarpMcpToolId(toolName) !== "marp_status_update") return undefined;
+  let value = input;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return undefined;
+    }
+  }
+  const record = asSummaryInput(value);
+  // Cursor keeps the MCP envelope around the arguments.
+  const args = typeof record?.toolName === "string" ? asSummaryInput(record.args) : record;
+  const summary = statusLine(args?.summary);
+  if (summary === undefined) return undefined;
+  const next = statusLine(args?.next);
+  return next === undefined ? { summary } : { summary, next };
+}
 
 /** Action tools present each call as the single-purpose tool its action replaced. */
 const ACTION_TOOLS: Readonly<Record<string, (action: string) => string | undefined>> = {

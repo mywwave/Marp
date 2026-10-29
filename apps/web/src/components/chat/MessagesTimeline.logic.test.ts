@@ -2280,6 +2280,121 @@ describe("deriveMessagesTimelineRows", () => {
     ]);
   });
 
+  it("splits the work log at a status update, as assistant commentary does", () => {
+    const command = (id: string, second: number) => ({
+      id: `${id}-entry`,
+      kind: "work" as const,
+      createdAt: `2026-01-01T00:00:0${second}Z`,
+      entry: {
+        id,
+        createdAt: `2026-01-01T00:00:0${second}Z`,
+        runId: "turn-1" as never,
+        label: `Ran ${id}`,
+        command: `rg ${id}`,
+        requestKind: "command" as const,
+        tone: "tool" as const,
+        toolLifecycleStatus: "completed" as const,
+      },
+    });
+    const statusCall = (status: "completed" | "failed") => ({
+      id: "status-entry",
+      kind: "work" as const,
+      createdAt: "2026-01-01T00:00:03Z",
+      entry: {
+        id: "status",
+        createdAt: "2026-01-01T00:00:03Z",
+        runId: "turn-1" as never,
+        label: "Posted a status update",
+        tone: "tool" as const,
+        toolLifecycleStatus: status,
+        structuredPayload: {
+          type: "dynamic_tool",
+          status,
+          toolName: "mcp__marp__marp_status_update",
+          input: { summary: "Splitting the tokenizer", next: "Port the tests" },
+        } as never,
+      },
+    });
+    const rowsWith = (status: "completed" | "failed") =>
+      deriveMessagesTimelineRows({
+        timelineEntries: [
+          command("first", 1),
+          command("second", 2),
+          statusCall(status),
+          command("third", 4),
+        ],
+        latestRun: {
+          runId: "turn-1" as never,
+          status: "running",
+          startedAt: "2026-01-01T00:00:00Z",
+          completedAt: null,
+        },
+        isWorking: true,
+        activeTurnStartedAt: "2026-01-01T00:00:00Z",
+        turnDiffSummaries: [],
+        supportsConversationRollback: false,
+      }).filter((row) => row.kind !== "working" && row.kind !== "thinking");
+
+    const rows = rowsWith("completed");
+    expect(rows.map((row) => row.kind)).toEqual(["work-toggle", "status-update", "work-live"]);
+    expect(rows[1]).toMatchObject({
+      status: { summary: "Splitting the tokenizer", next: "Port the tests" },
+    });
+    // A rejected update is ordinary work.
+    expect(rowsWith("failed").map((row) => row.kind)).not.toContain("status-update");
+  });
+
+  it("shows the images tools returned inline after their work, except html_preview's", () => {
+    const tool = (id: string, second: number, toolName: string, outputImages: number) => ({
+      id: `${id}-entry`,
+      kind: "work" as const,
+      createdAt: `2026-01-01T00:00:0${second}Z`,
+      entry: {
+        id,
+        createdAt: `2026-01-01T00:00:0${second}Z`,
+        runId: "turn-1" as never,
+        label: `Called ${id}`,
+        tone: "tool" as const,
+        toolLifecycleStatus: "completed" as const,
+        structuredPayload: {
+          id,
+          threadId: "thread-1",
+          type: "dynamic_tool",
+          status: "completed",
+          toolName,
+          input: {},
+          output: { outputImages },
+        } as never,
+      },
+    });
+    const rows = deriveMessagesTimelineRows({
+      timelineEntries: [
+        tool("check", 1, "mcp__marp__html_preview", 1),
+        tool("shot", 2, "mcp__marp__device_screenshot", 2),
+      ],
+      latestRun: {
+        runId: "turn-1" as never,
+        status: "completed",
+        startedAt: "2026-01-01T00:00:00Z",
+        completedAt: "2026-01-01T00:00:09Z",
+      },
+      isWorking: false,
+      activeTurnStartedAt: null,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    });
+
+    const media = rows.filter((row) => row.kind === "tool-media");
+    expect(media).toHaveLength(1);
+    expect(rows.indexOf(media[0]!)).toBe(rows.length - 1);
+    expect(media[0]).toMatchObject({
+      images: [
+        { resource: { _tag: "tool-output-image", itemId: "shot", index: 0 } },
+        { resource: { _tag: "tool-output-image", itemId: "shot", index: 1 } },
+      ],
+    });
+  });
+
   it("does not revive stale in-progress tools before a fresh send has a turn id", () => {
     const rows = deriveMessagesTimelineRows({
       timelineEntries: [

@@ -269,6 +269,8 @@ import { useCitedHistory } from "./chat/citationProcedure";
 import type { MessagesTimelineHistoryControls } from "./chat/MessagesTimeline";
 import { ThreadTimeline } from "./chat/ThreadTimeline";
 import { ProviderSubagentBar } from "./chat/ProviderSubagentBar";
+import { DockedPlanCard } from "./chat/PlanProgressCard";
+import { deriveUnsettledRunId } from "./chat/MessagesTimeline.logic";
 import { getTriggerDisplayModelName } from "./chat/providerIconUtils";
 import { resolveScrollToEndClearance } from "./composerFooterLayout";
 import { ChatHeader } from "./chat/ChatHeader";
@@ -3296,7 +3298,14 @@ export default function ChatView(props: ChatViewProps) {
             {...(activeDraftLogicalProjectKey
               ? { onOpenProjectSettings: handleOpenDraftProjectSettingsStable }
               : {})}
-            status={headerStatus ? <ThreadHeaderStatusPill status={headerStatus} /> : null}
+            status={
+              headerStatus ? (
+                <ThreadHeaderStatusPill
+                  status={headerStatus}
+                  liveStatus={activeThreadShell?.liveStatus ?? null}
+                />
+              ) : null
+            }
             actions={
               <ThreadHeaderActions
                 environmentId={activeThread.environmentId}
@@ -3483,14 +3492,13 @@ export default function ChatView(props: ChatViewProps) {
                   : { historyControls: threadHistoryControls })}
               />
 
-              {showScrollToBottom && !isThreadFindActive && (
-                <ScrollToEndButton
-                  bottom={scrollToEndClearance + 4}
-                  newActivity={isWorking}
-                  summary={scrollToEndSummary}
-                  onScrollToEnd={() => scrollToEnd(true)}
-                />
-              )}
+              <ScrollToEndButton
+                visible={showScrollToBottom && !isThreadFindActive}
+                bottom={scrollToEndClearance + 4}
+                newActivity={isWorking}
+                summary={scrollToEndSummary}
+                onScrollToEnd={() => scrollToEnd(true)}
+              />
             </div>
 
             <div
@@ -3529,7 +3537,18 @@ export default function ChatView(props: ChatViewProps) {
                         />
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <DockedPlanCard
+                      turnItems={serverProjection?.turnItems ?? EMPTY_TURN_ITEMS}
+                      runId={
+                        isWorking
+                          ? deriveUnsettledRunId(activeActivityRun, activeRunningTurnId)
+                          : null
+                      }
+                      onStop={onInterruptStable}
+                      stopDisabled={!canInterruptRunningThread}
+                    />
+                  )}
                   <div
                     ref={draftHeroComposerAnchorRef}
                     className="relative z-10"

@@ -15,12 +15,23 @@ import { LinkRequestCard } from "./LinkRequestCard";
 import { SecretRequestCard } from "./SecretRequestCard";
 import { TimelineRowCtx, type TimelineRow } from "./timelineRowContext";
 import { subagentGroupTiming } from "./TimelineV2EventRow.logic";
+import { SubagentTaskCard } from "./SubagentTaskCard";
+import type { OrchestrationV2TurnItem } from "@marp/contracts";
 
 export function V2EventTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "event" }> }) {
   const ctx = use(TimelineRowCtx);
   const { item, visibility } = row.projectedItem;
   if (item.type === "subagent" && (row.subagents?.length ?? 1) > 1) {
     return <V2SubagentGroup key={row.id} row={row} />;
+  }
+  if (item.type === "subagent" && subagentShowsAsCard(item)) {
+    return (
+      <SubagentTaskCard
+        item={item}
+        environmentId={ctx.activeThreadEnvironmentId}
+        onOpenThread={ctx.onOpenThread}
+      />
+    );
   }
   if (item.type === "secret_request") {
     return (
@@ -49,6 +60,13 @@ export function V2EventTimelineRow({ row }: { row: Extract<TimelineRow, { kind: 
       onOpenThread={ctx.onOpenThread}
     />
   );
+}
+
+// A task running in a linked environment opens there, so it keeps the linking row.
+function subagentShowsAsCard(
+  item: Extract<OrchestrationV2TurnItem, { readonly type: "subagent" }>,
+) {
+  return item.remoteChild === undefined || item.childThreadId !== null;
 }
 
 const V2SubagentGroup = memo(function V2SubagentGroup({
@@ -145,15 +163,24 @@ const V2SubagentGroup = memo(function V2SubagentGroup({
         <CollapsiblePanel animate={false}>
           {expanded ? (
             <div className="mt-1 mb-1 rounded-lg border border-border/60 bg-card/30 p-1">
-              {members.map((item) => (
-                <V2LifecycleRow
-                  environmentId={ctx.activeThreadEnvironmentId}
-                  key={item.id}
-                  item={item}
-                  runs={ctx.runs}
-                  onOpenThread={ctx.onOpenThread}
-                />
-              ))}
+              {members.map((item) =>
+                subagentShowsAsCard(item) ? (
+                  <SubagentTaskCard
+                    key={item.id}
+                    item={item}
+                    environmentId={ctx.activeThreadEnvironmentId}
+                    onOpenThread={ctx.onOpenThread}
+                  />
+                ) : (
+                  <V2LifecycleRow
+                    environmentId={ctx.activeThreadEnvironmentId}
+                    key={item.id}
+                    item={item}
+                    runs={ctx.runs}
+                    onOpenThread={ctx.onOpenThread}
+                  />
+                ),
+              )}
             </div>
           ) : null}
         </CollapsiblePanel>

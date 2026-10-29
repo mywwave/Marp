@@ -1,5 +1,5 @@
-import { RefreshCwIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { ChevronDownIcon, RefreshCwIcon } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
 import { threadSyncLabel, type ThreadSyncPhase } from "../../threadSync";
 import { cn } from "~/lib/utils";
@@ -12,6 +12,8 @@ export interface ThreadNowItem {
   readonly title: ReactNode;
   readonly description?: ReactNode;
   readonly actions?: ReactNode;
+  /** Opens below the line from a chevron, such as the list behind a count. */
+  readonly details?: ReactNode;
 }
 
 /** Matches ThreadStatusLine, so every line at the end of the timeline reads as one family. */
@@ -33,7 +35,8 @@ function ThreadNowLine({
   /** Announces the line when it appears; only for something that needs the user. */
   readonly announce?: boolean;
 }) {
-  return (
+  const [open, setOpen] = useState(false);
+  const line = (
     <div
       role={announce ? "alert" : undefined}
       className={lineClassName}
@@ -60,10 +63,33 @@ function ThreadNowLine({
           </>
         ) : null}
       </NoticeText>
+      {item.details ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-label={open ? "Hide details" : "Show details"}
+          onClick={() => setOpen((value) => !value)}
+          className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+        >
+          <ChevronDownIcon
+            aria-hidden
+            className={cn("transition-transform duration-150", open && "rotate-180")}
+          />
+        </button>
+      ) : null}
       {item.actions ? (
         <span className="ms-1.5 flex shrink-0 items-center gap-2.5">{item.actions}</span>
       ) : null}
     </div>
+  );
+  if (!item.details || !open) return line;
+  return (
+    <>
+      {line}
+      <div className="mx-auto w-full max-w-(--chat-content-max-width) ps-6 pe-1 pb-2 text-xs text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">
+        {item.details}
+      </div>
+    </>
   );
 }
 

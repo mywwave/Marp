@@ -71,6 +71,8 @@ import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { AsyncResult, Atom } from "effect/reactivity";
 import React, {
+  Children,
+  isValidElement,
   Suspense,
   type ComponentProps,
   type ClipboardEvent as ReactClipboardEvent,
@@ -190,6 +192,12 @@ import { resolveLinkTarget } from "../browser/browserLinkTarget";
 import { PullRequestLinkPreview } from "./pullRequest/PullRequestLinkPreview";
 import { MarkdownCodeBlock, SuspenseShikiCodeBlock } from "./chat/MarkdownCodeBlock";
 import { MarkdownMermaidCodeBlock } from "./chat/MarkdownMermaidCodeBlock";
+import {
+  MEDIA_GRID_IMAGE_CLASS_NAME,
+  MEDIA_GRID_IMAGE_STYLE,
+  MediaGrid,
+  MediaGridCellContext,
+} from "./chat/MediaGrid";
 import { MarkdownTable } from "./chat/MarkdownTable";
 import { MarkdownDetails } from "./chat/MarkdownDetails";
 import {
@@ -965,8 +973,19 @@ const CHAT_MARKDOWN_COMPONENTS = {
     }
     return <div {...props}>{children}</div>;
   },
-  p: function MarkdownParagraph({ node: _node, children, ...props }) {
+  p: function MarkdownParagraph({ node, children, ...props }) {
     const { skills, threadRef } = use(ChatMarkdownRendererContext);
+    if (node?.properties?.dataImageGrid === true) {
+      return (
+        <MediaGridCellContext value>
+          <MediaGrid
+            items={Children.toArray(children).filter(
+              (child) => isValidElement(child) && child.type !== "br",
+            )}
+          />
+        </MediaGridCellContext>
+      );
+    }
     return <p {...props}>{renderSkillInlineMarkdownChildren(children, skills, threadRef)}</p>;
   },
   blockquote: function MarkdownBlockquote({ node: _node, children, ...props }) {
@@ -1385,8 +1404,14 @@ const CHAT_MARKDOWN_COMPONENTS = {
       typeof localSrc === "string" ? srcString.replaceAll("\\", "/") : srcString;
     const altText = alt ?? "";
     const copyMarkdown = markdownImageCopy(altText, srcString, authoredTitle);
-    const { className, style: _style, width, height, ...imageProps } = props;
-    const authoredSizeStyle = authoredImageSizeStyle(width, height);
+    const { className: authoredClassName, style: _style, width, height, ...imageProps } = props;
+    const gridCell = use(MediaGridCellContext);
+    const className = gridCell
+      ? cn(authoredClassName, MEDIA_GRID_IMAGE_CLASS_NAME)
+      : authoredClassName;
+    const authoredSizeStyle = gridCell
+      ? MEDIA_GRID_IMAGE_STYLE
+      : authoredImageSizeStyle(width, height);
     const imageSource = classifyMarkdownImageSource(classifiedSrc, imageBaseDir ?? cwd);
     const mediaKind = mediaKindFromPath(classifiedSrc);
     if (mediaKind === "audio") {
@@ -1527,6 +1552,7 @@ const CHAT_MARKDOWN_COMPONENTS = {
           copyMarkdown={copyMarkdown}
           srcFragment={markdownImageSourceFragment(classifiedSrc)}
           standalone={standalone}
+          className={className}
           style={authoredSizeStyle}
           workspaceRoot={cwd}
           workspaceMutationId={workspaceMutationId}

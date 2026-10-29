@@ -280,10 +280,27 @@ export const GuestMessageAttribution = Schema.Struct({
 });
 export type GuestMessageAttribution = typeof GuestMessageAttribution.Type;
 
+const WorkspaceOpenPath = TrimmedNonEmptyString.check(Schema.isMaxLength(1024));
+
+/** What the sender had open in the thread's right panel. Paths and line numbers only, no content. */
+export const WorkspaceOpenState = Schema.Struct({
+  file: Schema.optional(WorkspaceOpenPath),
+  diff: Schema.optional(Schema.Literals(["turn", "branch", "unstaged"])),
+  selection: Schema.optional(
+    Schema.Struct({
+      path: WorkspaceOpenPath,
+      startLine: PositiveInt,
+      endLine: PositiveInt,
+    }).check(Schema.makeFilter((selection) => selection.endLine >= selection.startLine)),
+  ),
+});
+export type WorkspaceOpenState = typeof WorkspaceOpenState.Type;
+
 /** Structured context riding on a user message. Undecodable records are dropped, not fatal. */
 export const OrchestrationMessageContext = Schema.Struct({
   version: Schema.Literal(1),
   guest: Schema.optional(GuestMessageAttribution),
+  workspace: Schema.optional(WorkspaceOpenState),
   records: Schema.Array(Schema.Unknown)
     .check(
       Schema.isMaxLength(COMPOSER_CONTEXT_MAX_RECORDS),

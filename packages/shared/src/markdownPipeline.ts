@@ -14,6 +14,7 @@ import {
   remarkCodexDirectives,
 } from "./codexMarkdownDirectives.ts";
 import { isWindowsDrivePathHref, normalizeMarkdownLinkDestination } from "./markdownLinks.ts";
+import { mediaKindFromPath } from "./mediaPreview.ts";
 import { THREAD_LINK_PROTOCOL } from "./threadLinks.ts";
 
 type MarkdownImageHastNode = {
@@ -60,6 +61,71 @@ function markStandaloneImages(node: MarkdownImageHastNode) {
   node.children?.forEach((child) => {
     if (child.type === "element") markStandaloneImages(child);
   });
+}
+
+/** Bare images, each on its own line, with nothing else in the paragraph. Linked images are badges. */
+function paragraphImages(node: MarkdownImageHastNode): MarkdownImageHastNode[] | undefined {
+  if (node.type !== "element" || node.tagName !== "p") return undefined;
+  const images: MarkdownImageHastNode[] = [];
+  let lineOpen = false;
+  for (const child of meaningfulHastChildren(node)) {
+    if (child.type === "element" && child.tagName === "br") {
+      lineOpen = false;
+      continue;
+    }
+    const src = child.properties?.src;
+    if (
+      lineOpen ||
+      child.type !== "element" ||
+      child.tagName !== "img" ||
+      (typeof src === "string" && (mediaKindFromPath(src) ?? "image") !== "image")
+    ) {
+      return undefined;
+    }
+    images.push(child);
+    lineOpen = true;
+  }
+  return images.length > 0 ? images : undefined;
+}
+
+/** Folds two or more images in a row, by line or by paragraph, into one paragraph clients show as a grid. */
+function groupImageRuns(node: MarkdownImageHastNode) {
+  const children = node.children;
+  if (!children) return;
+  const grouped: MarkdownImageHastNode[] = [];
+  let run: { paragraph: MarkdownImageHastNode; images: MarkdownImageHastNode[] } | undefined;
+  let pending: MarkdownImageHastNode[] = [];
+  const closeRun = () => {
+    if (run && run.images.length > 1) {
+      for (const image of run.images) {
+        const { dataStandalone: _standalone, ...properties } = image.properties ?? {};
+        image.properties = properties;
+      }
+      run.paragraph.properties = { ...run.paragraph.properties, dataImageGrid: true };
+      run.paragraph.children = run.images;
+    }
+    run = undefined;
+    grouped.push(...pending);
+    pending = [];
+  };
+  for (const child of children) {
+    if (child.type === "text" && child.value?.trim() === "") {
+      (run ? pending : grouped).push(child);
+      continue;
+    }
+    const images = paragraphImages(child);
+    if (images && run) {
+      run.images.push(...images);
+      pending = [];
+      continue;
+    }
+    closeRun();
+    if (images) run = { paragraph: child, images: [...images] };
+    grouped.push(child);
+    if (!images) groupImageRuns(child);
+  }
+  closeRun();
+  node.children = grouped;
 }
 
 function rehypePreserveBareAnchorPlaceholders() {
@@ -125,6 +191,7 @@ function rehypePreserveImageSourceMeta() {
 
     visit(tree);
     markStandaloneImages(tree);
+    groupImageRuns(tree);
   };
 }
 
@@ -142,6 +209,7 @@ const CHAT_MARKDOWN_SANITIZE_SCHEMA = {
     blockquote: [...(defaultSchema.attributes?.blockquote ?? []), "dataAlert"],
     div: [...(defaultSchema.attributes?.div ?? []), ...CODEX_ARTIFACT_TEMPLATE_HAST_PROPERTIES],
     a: [...(defaultSchema.attributes?.a ?? []), "dataPullRequestAutolink"],
+    p: [...(defaultSchema.attributes?.p ?? []), "dataImageGrid"],
     img: [
       ...(defaultSchema.attributes?.img ?? []),
       "dataLocalSrc",

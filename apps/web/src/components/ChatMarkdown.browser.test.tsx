@@ -139,6 +139,34 @@ it("loads a host image through the page's own route when there is no environment
   );
 });
 
+it("shows images in a row as a grid of four that still opens the viewer on all of them", async () => {
+  setup();
+  const pixel =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+  const onImageExpand = vi.fn();
+  const text = Array.from({ length: 6 }, (_, index) => `![Shot ${index}](/work/${index}.png)`).join(
+    "\n\n",
+  );
+  await using screen = await render(
+    <HostImageUrlContext value={(path) => `${pixel}#${path}`}>
+      <ChatMarkdown cwd={undefined} text={text} onImageExpand={onImageExpand} />
+    </HostImageUrlContext>,
+  );
+  await expect.element(screen.getByText("+2")).toBeVisible();
+  const visible = [...screen.container.querySelectorAll("img")].filter((image) =>
+    image.checkVisibility(),
+  );
+  expect(visible.map((image) => image.alt)).toEqual(["Shot 0", "Shot 1", "Shot 2", "Shot 3"]);
+
+  await userEvent.click(screen.getByAltText("Shot 3"));
+  expect(onImageExpand).toHaveBeenCalledOnce();
+  const [preview] = onImageExpand.mock.lastCall!;
+  expect(preview.index).toBe(3);
+  expect(preview.images.map((image: { name: string }) => image.name)).toEqual(
+    Array.from({ length: 6 }, (_, index) => `Shot ${index}`),
+  );
+});
+
 describe("ChatMarkdown favicon privacy", () => {
   it("suppresses private link images while preserving public links across updates", async () => {
     setup();

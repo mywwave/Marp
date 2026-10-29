@@ -781,6 +781,7 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
     /** ChatGPT token sharing does not accept service tiers. */
     readonly omitServiceTier?: boolean;
     readonly appContext?: ProviderAdapter.ProviderAdapterV2TurnInput["appContext"];
+    readonly workspaceContext?: ProviderAdapter.ProviderAdapterV2TurnInput["workspaceContext"];
   }) {
     const runtimeModeDefaults = codexRuntimeModeTurnDefaults(input.runtimePolicy.runtimeMode);
     // Ask is enforced by Codex's read-only sandbox, with no approval prompt to escalate out of it.
@@ -811,6 +812,13 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
         { kind: "untrusted" as const, value: entry.text },
       ]),
     );
+    // File names in the workspace snapshot come from the user's disk, so they stay quoted data.
+    const workspaceContext = Object.fromEntries(
+      (input.workspaceContext ?? []).map((entry) => [
+        `marp_workspace_${entry.key}`,
+        { kind: "untrusted" as const, value: entry.text },
+      ]),
+    );
     const marpContext =
       input.hasMarpMcp === true
         ? buildCodexAdditionalContext(
@@ -830,9 +838,12 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
         ? undefined
         : { marp_interaction_mode: { kind: "application" as const, value: modeInstructions } };
     const additionalContext =
-      marpContext === undefined && modeContext === undefined && Object.keys(appContext).length === 0
+      marpContext === undefined &&
+      modeContext === undefined &&
+      Object.keys(appContext).length === 0 &&
+      Object.keys(workspaceContext).length === 0
         ? undefined
-        : { ...marpContext, ...modeContext, ...appContext };
+        : { ...marpContext, ...modeContext, ...workspaceContext, ...appContext };
     return yield* decodeCodexTurnStartParamsWithCollaborationMode({
       threadId: input.nativeThreadId,
       input: input.codexInput,
@@ -6562,6 +6573,9 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
               deviceToolsAvailable: mcpSession?.capabilities?.has("device") ?? false,
               omitServiceTier: adapterOptions.resolveRuntime !== undefined,
               ...(turnInput.appContext === undefined ? {} : { appContext: turnInput.appContext }),
+              ...(turnInput.workspaceContext === undefined
+                ? {}
+                : { workspaceContext: turnInput.workspaceContext }),
             });
             yield* Ref.update(pendingRootTurns, (current) => {
               const updated = new Map(current);

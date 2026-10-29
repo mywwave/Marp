@@ -38,6 +38,17 @@ describe("compactDynamicToolOutput", () => {
     expect(output.thread.messages).toEqual(["Private message"]);
   });
 
+  it("counts image blocks without their bytes, and the count survives compacting again", () => {
+    const image = { type: "image", data: "AAAA", mimeType: "image/png" };
+    const compact = compactDynamicToolOutput({
+      content: [{ type: "text", text: "{}" }, image, image],
+      structuredContent: { taskId: "task-1" },
+    });
+    expect(compact).toEqual({ taskId: "task-1", outputImages: 2 });
+    expect(compactDynamicToolOutput(compact)).toEqual(compact);
+    expect(compactDynamicToolOutput({ outputImages: 10_000 })).toBeUndefined();
+  });
+
   it("keeps explicit envelope failure while dropping error text and arbitrary output", () => {
     for (const failure of [
       { isError: true },

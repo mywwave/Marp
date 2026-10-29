@@ -67,7 +67,8 @@ import { isHostPath } from "@marp/shared/path";
 import { resolvePathLinkTarget } from "@marp/shared/fileLinks";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
-import { type DraftId, useComposerDraftStore } from "~/composerDraftStore";
+import { composerTargetKey, type DraftId, useComposerDraftStore } from "~/composerDraftStore";
+import { setWorkspaceLineSelection } from "~/workspaceOpenState";
 import { buildFileReviewComment } from "~/reviewCommentContext";
 import { assetEnvironment } from "~/state/assets";
 import { usePreviewAvailable } from "~/browser/previewRuntime";
@@ -673,6 +674,10 @@ function EditableFileSurface({
     selectionOverride?.revealRequestId === revealRequestId ? selectionOverride.range : null;
   const setSelectedRange = (range: SelectedLineRange | null) => {
     setSelectionOverride({ revealRequestId, range });
+    setWorkspaceLineSelection(
+      composerTargetKey(composerDraftTarget),
+      range && { surface: "file", path: relativePath, start: range.start, end: range.end },
+    );
   };
   const surfaceRef = useRef<HTMLDivElement>(null);
   const selectionFrameRef = useRef<number | null>(null);

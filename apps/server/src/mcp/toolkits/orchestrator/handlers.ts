@@ -168,6 +168,13 @@ const handlers = {
         return yield* service.update(scope, input);
       }),
   ),
+  marp_status_update: McpToolAccess.actsAsCaller((input) =>
+    Effect.gen(function* () {
+      const scope = yield* McpInvocationContext.McpInvocationContext;
+      const service = yield* ThreadMetadataMcpService.ThreadMetadataMcpService;
+      return yield* service.postStatus(scope, input);
+    }),
+  ),
   marp_thread_send: McpToolAccess.writesThreads(
     (input) => [input.threadId],
     (input) =>

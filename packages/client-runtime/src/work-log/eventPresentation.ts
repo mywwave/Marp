@@ -589,6 +589,40 @@ export function workRunHeader(
   if (kinds.every((kind) => kind === null || kind === "todos" || kind === "ask")) {
     return { rule: "tools", title: summarizeToolGroup(tools).summary };
   }
+  // Edits, then commands that change things, outrank reading: "Explored" is for reads only.
+  const editIndexes = kinds.flatMap((kind, index) => (workEventIsFileChange(kind) ? [index] : []));
+  const commandIndexes = kinds.flatMap((kind, index) =>
+    kind === "shell" || kind === "await" ? [index] : [],
+  );
+  if (editIndexes.length > 0 || commandIndexes.length > 0) {
+    const pick = (indexes: ReadonlyArray<number>) => indexes.map((index) => tools[index]!);
+    const leadsWithEdits = editIndexes.length > 0;
+    const lead = leadsWithEdits
+      ? fileChangeHeader(
+          pick(editIndexes),
+          editIndexes.map((index) => kinds[index]!),
+          live,
+        )
+      : shellHeader(pick(commandIndexes), live);
+    const rule = leadsWithEdits ? "edit" : "shell";
+    // A live run's counts would tick up under the reader; it names only the lead activity.
+    if (live) return { rule, title: lead };
+    const restIndexes = kinds.flatMap((kind, index) =>
+      workEventIsFileChange(kind) || kind === "shell" || kind === "await" ? [] : [index],
+    );
+    const rest = explorationParts(
+      pick(restIndexes),
+      restIndexes.map((index) => kinds[index]!),
+    );
+    const title = [
+      lead,
+      ...(leadsWithEdits && commandIndexes.length > 0
+        ? [`ran ${plural(commandIndexes.length, "command")}`]
+        : []),
+      ...(rest.length > 0 ? [`explored ${rest.join(", ")}`] : []),
+    ].join(" · ");
+    return { rule, title };
+  }
   // A live run's counts would tick up under the reader; it names only the activity.
   if (live) return { rule: "explore", title: "Exploring…" };
   const parts = explorationParts(tools, kinds);

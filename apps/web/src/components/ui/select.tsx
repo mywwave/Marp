@@ -6,6 +6,7 @@ import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import type * as React from "react";
 
 import { cn } from "~/lib/utils";
+import { POPUP_MOTION_CLASS } from "./dialog-styles";
 
 const Select = SelectPrimitive.Root;
 
@@ -128,7 +129,11 @@ function SelectPopup({
         sideOffset={sideOffset}
       >
         <SelectPrimitive.Popup
-          className="origin-(--transform-origin) rounded-lg text-foreground outline-none"
+          className={cn(
+            POPUP_MOTION_CLASS,
+            // Item-aligned selects open over the trigger; scaling from there reads as a jump.
+            "rounded-lg text-foreground outline-none data-[side=none]:transition-none",
+          )}
           data-slot="select-popup"
           {...props}
         >

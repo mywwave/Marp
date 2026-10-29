@@ -68,3 +68,15 @@ export const ThreadMetadataMcpUpdateResult = Schema.Struct({
   updatedAt: IsoDateTime,
 });
 export type ThreadMetadataMcpUpdateResult = typeof ThreadMetadataMcpUpdateResult.Type;
+
+/** One line of agent progress, short enough for a sidebar subtitle. */
+export const ThreadStatusText = TrimmedNonEmptyString.check(Schema.isMaxLength(140));
+
+export const ThreadStatusMcpUpdateInput = Schema.Struct({
+  summary: ThreadStatusText.annotate({ description: "What you are doing now." }),
+  next: Schema.optional(ThreadStatusText.annotate({ description: "What comes after it." })),
+});
+export type ThreadStatusMcpUpdateInput = typeof ThreadStatusMcpUpdateInput.Type;
+
+export const ThreadStatusMcpUpdateResult = Schema.Struct({ posted: Schema.Literal(true) });
+export type ThreadStatusMcpUpdateResult = typeof ThreadStatusMcpUpdateResult.Type;

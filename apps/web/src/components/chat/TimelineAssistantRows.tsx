@@ -9,6 +9,9 @@ import { GitForkIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { ProposedPlanCard } from "./ProposedPlanCard";
 import { HtmlRenderFrame } from "./HtmlRenderFrame";
+import { ChatMarkdownAssetImage } from "./ChatMarkdownMedia";
+import { MEDIA_GRID_IMAGE_CLASS_NAME, MEDIA_GRID_IMAGE_STYLE, MediaGrid } from "./MediaGrid";
+import { timelineMediaCaption } from "./timelineMedia.logic";
 import { McpAppFrame } from "./McpAppFrame";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { AssistantCitationSource } from "./AssistantCitationSource";
@@ -19,6 +22,7 @@ import { shortcutLabelForCommand } from "~/keybindings";
 import { summarizeTurnDiffStats } from "~/lib/turnDiffStats";
 import { primaryServerKeybindingsAtom } from "~/state/server";
 import { Kbd } from "../ui/kbd";
+import { Spinner } from "../ui/spinner";
 import { DiffStatLabel } from "./DiffStatLabel";
 import { formatChatTimestampTooltip, formatDayAwareTimestamp } from "../../timestampFormat";
 import { useV2ItemSupport } from "../../state/v2ItemSupport";
@@ -195,7 +199,7 @@ function AssistantForkButton({
           />
         }
       >
-        <GitForkIcon className={cn("size-3", busy && "animate-pulse")} />
+        {busy ? <Spinner size="xs" /> : <GitForkIcon className="size-3" />}
       </TooltipTrigger>
       <TooltipPopup side="top">Fork from this response</TooltipPopup>
     </Tooltip>
@@ -361,6 +365,42 @@ export function McpAppTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "
         onSendMessage={ctx.onSendAppMessage}
         awaitingUser={awaitingUser}
         onFullscreenChange={(fullscreen) => ctx.onAppFullscreenChange(row.id, fullscreen)}
+      />
+    </div>
+  );
+}
+
+/** Images tools returned, loaded by index only when the row renders. */
+export function ToolMediaTimelineRow({
+  row,
+}: {
+  row: Extract<TimelineRow, { kind: "tool-media" }>;
+}) {
+  const ctx = use(TimelineRowCtx);
+  // Tool images load from the environment; the guest page has no route for them.
+  if (ctx.turnItemSource !== undefined) return null;
+  const grid = row.images.length > 1;
+  return (
+    <div className="min-w-0 px-1">
+      <MediaGrid
+        caption={timelineMediaCaption(row.images)}
+        items={row.images.map((image) => (
+          <ChatMarkdownAssetImage
+            key={`${image.resource.itemId}:${image.resource.index}`}
+            environmentId={ctx.activeThreadEnvironmentId}
+            resource={image.resource}
+            alt={image.name}
+            standalone={!grid}
+            {...(grid
+              ? {
+                  framed: false,
+                  className: MEDIA_GRID_IMAGE_CLASS_NAME,
+                  style: MEDIA_GRID_IMAGE_STYLE,
+                }
+              : {})}
+            onImageExpand={ctx.onImageExpand}
+          />
+        ))}
       />
     </div>
   );

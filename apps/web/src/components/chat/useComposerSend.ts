@@ -70,7 +70,9 @@ import {
   type DraftThreadEnvMode,
   useComposerDraftStore,
   DraftId,
+  composerTargetKey,
 } from "../../composerDraftStore";
+import { readWorkspaceOpenState } from "../../workspaceOpenState";
 import { type TerminalContextDraft } from "../../lib/terminalContext";
 import { ensureInlineContextReferences } from "../../lib/composerContextReferences";
 import {
@@ -136,6 +138,7 @@ import type { useWorktreeSetup } from "./useWorktreeSetup";
 const ENVIRONMENT_UNAVAILABLE_SEND_TOAST_TRAIL_SIZE = 3;
 
 const selectPlanModeEnabled = (settings: UnifiedSettings) => settings.planModeEnabled;
+const selectShareWorkspaceContext = (settings: UnifiedSettings) => settings.shareWorkspaceContext;
 
 function readEnvironmentPresentation(environmentId: EnvironmentId) {
   return appAtomRegistry.get(environmentPresentations.presentationsAtom).get(environmentId);
@@ -322,6 +325,14 @@ export function useComposerSend(input: ComposerSendInput) {
   const navigate = useNavigate();
   const clientSettingsHydrated = useClientSettingsHydrated();
   const planModeEnabled = useEnvironmentSettings(environmentId, selectPlanModeEnabled);
+  const shareWorkspaceContext = useEnvironmentSettings(environmentId, selectShareWorkspaceContext);
+  const readOpenWorkspace = () =>
+    shareWorkspaceContext && activeThread !== undefined
+      ? readWorkspaceOpenState({
+          threadRef: scopeThreadRef(activeThread.environmentId, activeThread.id),
+          composerTargetKey: composerTargetKey(composerDraftTarget),
+        })
+      : undefined;
   const startThreadTurn = useOrchestrationCommand(threadEnvironment.startTurn, {
     reportFailure: false,
   });
@@ -687,6 +698,7 @@ export function useComposerSend(input: ComposerSendInput) {
           previewAnnotations: composerPreviewAnnotations,
           threadContexts: composerThreadContexts,
           environmentContexts: composerEnvironmentContexts,
+          workspace: readOpenWorkspace(),
         }),
         interactionMode: followUp.interactionMode,
       });
@@ -815,8 +827,10 @@ export function useComposerSend(input: ComposerSendInput) {
     // Records bind attachments by the id each side knows: the local id for the optimistic
     // row, the upload id (or local id on the data-URL path) on the wire; the server
     // rebinds them to the persisted id.
+    const openWorkspace = readOpenWorkspace();
     const buildOutgoingMessageContext = (attachmentIds: ReadonlyArray<string>) =>
       buildMessageContext({
+        workspace: openWorkspace,
         terminalContexts: composerTerminalContextsSnapshot,
         reviewComments: composerReviewCommentsSnapshot,
         previewAnnotations: composerPreviewAnnotationsSnapshot,

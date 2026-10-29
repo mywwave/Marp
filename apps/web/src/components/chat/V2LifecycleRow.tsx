@@ -505,13 +505,20 @@ function SubagentTimelineLink(props: {
   );
 }
 
-function SubagentTimelineTooltip(
-  props: Parameters<typeof SubagentTimelineLink>[0] & {
-    model: string | null;
-    modelSelection: OrchestrationV2Subagent["modelSelection"];
-    elapsed: ReactNode;
-  },
-) {
+export function SubagentTimelineTooltip(props: {
+  readonly parentRef: ScopedThreadRef;
+  readonly threadId: ThreadId | null;
+  readonly title: string;
+  readonly providerInstanceId: ProviderInstanceId;
+  readonly origin: OrchestrationV2Subagent["origin"];
+  readonly driver: ProviderDriverKind;
+  readonly status: OrchestrationV2TurnItem["status"];
+  readonly result: string | null;
+  readonly progress: string | undefined;
+  readonly model: string | null;
+  readonly modelSelection: OrchestrationV2Subagent["modelSelection"];
+  readonly elapsed: ReactNode;
+}) {
   const environmentId = props.parentRef.environmentId;
   // Read providers only in the open popup to avoid per-row subscriptions.
   const providers =

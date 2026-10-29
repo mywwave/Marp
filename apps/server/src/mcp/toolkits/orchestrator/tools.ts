@@ -36,6 +36,8 @@ import {
   OrchestratorMcpThreadWaitResult,
   ThreadMetadataMcpUpdateInput,
   ThreadMetadataMcpUpdateResult,
+  ThreadStatusMcpUpdateInput,
+  ThreadStatusMcpUpdateResult,
   TrimmedNonEmptyString,
 } from "@marp/contracts";
 import { McpSchema, Tool, Toolkit } from "effect/ai";
@@ -266,6 +268,18 @@ const ThreadUpdateTool = Tool.make("marp_thread_update", {
   .annotate(Tool.Destructive, true)
   .annotate(Tool.Idempotent, false);
 
+const StatusUpdateTool = Tool.make("marp_status_update", {
+  description:
+    "Post a one-line progress note the user sees in this thread and the sidebar: `summary` is what you are doing now, `next` what follows. In work longer than a few minutes: at real milestones, at most every couple of minutes. Never for quick or single-step tasks.",
+  parameters: ThreadStatusMcpUpdateInput,
+  success: ThreadStatusMcpUpdateResult,
+  failure: OrchestratorMcpFailure,
+  failureMode: "return",
+  dependencies: threadMetadataDependencies,
+})
+  .annotate(Tool.Title, "Post a status update")
+  .annotate(Tool.Destructive, false);
+
 const ThreadSendTool = Tool.make("marp_thread_send", {
   description:
     "Send a message to any thread. The target cannot run with broader modes than yours. `mode:'auto'` starts an idle thread, steers a running turn, or queues. `queue`: new turn. `steer`: mid-turn update. `restart`: interrupt and restart. A send to a finished child thread starts a fresh task and returns its `taskId`. In your reply, name it as its `link` verbatim.",
@@ -362,6 +376,7 @@ export const OrchestratorToolkit = Toolkit.make(
   ThreadListTool,
   ThreadReadTool,
   ThreadUpdateTool,
+  StatusUpdateTool,
   ThreadSendTool,
   ThreadWaitTool,
   ThreadInterruptTool,

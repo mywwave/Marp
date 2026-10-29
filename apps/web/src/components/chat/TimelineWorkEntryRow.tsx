@@ -72,6 +72,7 @@ import {
   workEntryIconName,
 } from "./TimelineWorkEntryRow.logic";
 import { CommandCard, FileEditRow, WorkEventLabel } from "./TimelineWorkEvents";
+import { TimelinePlanCard } from "./PlanProgressCard";
 
 export function useThreadReadTarget(entry: TimelineWorkEntry, environmentId: EnvironmentId) {
   const rawThreadId = threadReadTargetId(entry);
@@ -162,6 +163,7 @@ type WorkEntryRowProps = {
 export const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: WorkEntryRowProps) {
   const ctx = use(TimelineRowCtx);
   const item = props.workEntry.projectedItem?.item;
+  if (item?.type === "todo_list") return <TimelinePlanCard workEntry={props.workEntry} />;
   const childThreadId =
     item?.type === "notification" ? notificationChildThreadId(item.source) : undefined;
   if (item?.type !== "notification" || childThreadId === undefined) {

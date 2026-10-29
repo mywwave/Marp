@@ -573,6 +573,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["timestamp clock locale system browser os 12 hour 24 hour"],
   },
   {
+    id: "share-workspace-context",
+    title: "Share workspace context with agents",
+    to: "/settings/threads",
+    scope: "environment-defaults",
+    searchTerms: ["agent prompt changed files edits project layout tree open file selection"],
+  },
+  {
     id: "response-streaming",
     title: "Response streaming",
     to: "/settings/threads",

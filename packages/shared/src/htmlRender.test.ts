@@ -4,6 +4,7 @@ import {
   injectHtmlRenderBootstrap,
   readHtmlRenderImageRequest,
   readHtmlRenderLinkRequest,
+  stripHtmlRenderBootstrap,
 } from "./htmlRender.ts";
 import { htmlRenderFromToolItem } from "./toolOutput.ts";
 
@@ -51,6 +52,16 @@ describe("injectHtmlRenderBootstrap", () => {
     );
     expect(injected).toContain('<meta name="viewport" content="width=device-width');
     expect(injected.endsWith(fragment)).toBe(true);
+  });
+
+  it.each([
+    "<!doctype html><html><head><title>Chart</title></head><body>x</body></html>",
+    '<meta charset="utf-8"><p>hi</p>',
+  ])("strips back to the agent's page: %s", (html) => {
+    const injected = injectHtmlRenderBootstrap(html);
+    expect(stripHtmlRenderBootstrap(injected).replace("<!doctype html><head></head>", "")).toBe(
+      html,
+    );
   });
 
   it("ignores tags written inside comments and scripts", () => {

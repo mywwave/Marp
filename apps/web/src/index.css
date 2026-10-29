@@ -206,6 +206,36 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(marp-mob
     "Liberation Mono", monospace;
 }
 
+/* Motion (design law 7). Not inline, so CSS and the default transition can
+   reference the variables. ease-out is the default curve for everything. */
+@theme {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.3, 1.12, 0.4, 1);
+  --ease-in-exit: cubic-bezier(0.4, 0, 1, 1);
+  --transition-duration-fast: 150ms;
+  --transition-duration-enter: 220ms;
+  --transition-duration-exit: 150ms;
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: var(--ease-out);
+  /* Entry for overlays that stay mounted (no @starting-style): rise 6px from .97. */
+  --animate-rise-in: rise-in var(--transition-duration-enter) var(--ease-out);
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      translate: 0 6px;
+      scale: 0.97;
+    }
+  }
+  /* Exit for usePresence rows: an animation, not a transition, so a row remounted to
+     play its exit still fades from where it was. */
+  --animate-fade-out: fade-out var(--transition-duration-exit) var(--ease-in-exit) forwards;
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+}
+
 @theme inline {
   /* Two steps below Tailwind's text-xs (12px) for dense UI: metadata rows,
      badges, counters, keyboard hints and diagnostics tables. 2xs is 11px,
@@ -223,11 +253,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(marp-mob
   --text-4xs--line-height: 1;
   --text-5xs: 0.4375rem;
   --text-5xs--line-height: 1;
-  /* Motion. drawer is the decelerating curve for surfaces that slide or pop in
-     (composer context, pills). */
   --inset-shadow-control-highlight: 0 1px rgb(255 255 255 / 16%);
   --inset-shadow-control-pressed: 0 1px rgb(0 0 0 / 8%);
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   /* The composer's elevation: a soft drop pulled in under the surface, shared
      by the composer, its context strip and attached banners. */
   --shadow-composer: 0 1px 2px rgb(31 28 25 / 4%), 0 16px 40px -16px rgb(31 28 25 / 18%);
@@ -548,35 +575,6 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(marp-mob
   mask-size:
     calc(100% - var(--app-scrollbar-width)) 100%,
     var(--app-scrollbar-width) 100%;
-}
-
-@keyframes live-tool-shine {
-  from {
-    background-position:
-      -4.5rem 0,
-      0 0;
-  }
-  to {
-    background-position:
-      calc(100% + 4.5rem) 0,
-      0 0;
-  }
-}
-
-@utility live-tool-shine {
-  @media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
-    color: transparent;
-    background-image:
-      linear-gradient(to right, transparent, var(--contrast-foreground), transparent),
-      linear-gradient(var(--contrast-secondary-label), var(--contrast-secondary-label));
-    background-size:
-      4.5rem 100%,
-      100% 100%;
-    background-repeat: no-repeat;
-    background-clip: text;
-    animation: live-tool-shine 2.2s steps(30) infinite;
-    animation-play-state: var(--visible-animation-state, paused);
-  }
 }
 
 @utility visible-animate-spin {
@@ -2181,7 +2179,7 @@ code {
   .chat-markdown[data-streaming] > *,
   .chat-markdown[data-streaming] .chat-markdown-shiki,
   .chat-markdown[data-streaming] .chat-markdown-mermaid {
-    transition: opacity 600ms ease-out;
+    transition: opacity var(--transition-duration-fast) var(--ease-out);
 
     @starting-style {
       opacity: 0;

@@ -3,6 +3,7 @@ import {
   toolGroupAction,
 } from "@marp/client-runtime/work-log/presentation";
 import { isJavaScriptReplTool } from "@marp/shared/toolActivity";
+import { workEventKind } from "@marp/client-runtime/work-log/event-presentation";
 import { formatWorkspaceRelativePath } from "../../filePathDisplay";
 import { type TimelineWorkEntry, type TimelineRow } from "./timelineRowContext";
 import { type WorkEntryIconName } from "./TimelineToolActivityIcon";
@@ -175,6 +176,14 @@ export function workEntryIconName(workEntry: TimelineWorkEntry): WorkEntryIconNa
     isJavaScriptReplTool(workEntry.structuredPayload.toolName)
   )
     return "code";
+  // A command classified as a read, search or list wears that step's icon, as native ones do.
+  if (workEntry.itemType === "command_execution") {
+    const kind = workEventKind(workEntry);
+    if (kind === "read") return "eye";
+    if (kind === "grep" || kind === "glob" || kind === "semantic-search" || kind === "list") {
+      return "search";
+    }
+  }
   const toolPresentation = resolveWorkEntryToolPresentation(workEntry);
   if (toolPresentation) return toolPresentation.icon;
   const action = toolGroupAction(workEntry);

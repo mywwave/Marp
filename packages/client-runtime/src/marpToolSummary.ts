@@ -237,6 +237,9 @@ export function summarizeMarpToolCalls(
     case "thread-update":
       label = phrase("Updated", "update", quantity(countEntities(threadIds), "thread"));
       break;
+    case "status-update":
+      label = phrase("Posted", "post", quantity(selected.length, "status update"));
+      break;
     case "queue-list":
       label = phrase("Listed", "list", `queued messages ${times}`);
       break;

@@ -1146,6 +1146,37 @@ it("keeps concurrent approvals actionable outside collapsed work and restores se
     .toBeVisible();
 });
 
+it("shows an edit with nothing recorded as a plain step, not an empty card", async () => {
+  setup();
+  const fixture = makeStreamingTimelineFixture();
+  const source = fixture.visibleTurnItems[4]!;
+  if (source.item.type !== "dynamic_tool") throw new Error("Expected fixture tool");
+  const { toolName: _toolName, input: _input, ...sourceItem } = source.item;
+  const timelineEntries = deriveTimelineEntriesFromVisibleTurnItems({
+    visibleTurnItems: [
+      {
+        ...source,
+        item: {
+          ...sourceItem,
+          type: "file_change" as const,
+          status: "completed" as const,
+          title: "Edit",
+          fileName: "src/session.ts",
+        },
+      },
+    ],
+    optimisticMessages: [],
+  });
+  await using screen = await renderElement(
+    <MessagesTimeline {...baseProps()} timelineEntries={timelineEntries} />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: /^Edited session.ts/ }));
+  await expect.element(screen.getByText("session.ts", { exact: true })).toBeVisible();
+  const edit = screen.container.querySelector<HTMLElement>('[data-v2-item-type="file_change"]')!;
+  expect(edit.dataset.editRow).toBe("bare");
+  expect(getComputedStyle(edit).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+});
+
 it("shows a file-change approval as the edit card with its decision", async () => {
   setup();
   const fixture = makeStreamingTimelineFixture();

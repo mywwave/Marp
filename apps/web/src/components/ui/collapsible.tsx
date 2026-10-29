@@ -20,13 +20,18 @@ function CollapsiblePanel({
   className,
   animate = true,
   ...props
-}: CollapsiblePrimitive.Panel.Props & { animate?: boolean }) {
+}: CollapsiblePrimitive.Panel.Props & {
+  /** `fade` skips the height animation (rows in a list) and fades the content in on open. */
+  animate?: boolean | "fade";
+}) {
   return (
     <CollapsiblePrimitive.Panel
       className={cn(
         "overflow-hidden",
-        animate &&
-          "h-(--collapsible-panel-height) transition-[height] duration-200 motion-reduce:transition-none data-ending-style:h-0 data-starting-style:h-0 data-open:data-ending-style:[height:var(--collapsible-panel-height)]",
+        animate === "fade" &&
+          "transition-opacity duration-fast ease-out data-starting-style:opacity-0 motion-reduce:transition-none",
+        animate === true &&
+          "h-(--collapsible-panel-height) transition-[height] duration-enter ease-out data-ending-style:duration-exit data-ending-style:ease-in-exit motion-reduce:transition-none data-ending-style:h-0 data-starting-style:h-0 data-open:data-ending-style:[height:var(--collapsible-panel-height)]",
         className,
       )}
       data-slot="collapsible-panel"
