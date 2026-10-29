@@ -18,10 +18,7 @@ function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className={cn(
-        "flex min-w-0 gap-1 overflow-x-auto border-b border-border",
-        className,
-      )}
+      className={cn("flex min-w-0 gap-1 overflow-x-auto border-b border-border", className)}
       {...props}
     />
   );
