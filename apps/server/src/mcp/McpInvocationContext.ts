@@ -2,6 +2,7 @@ import {
   type AuthMcpClientAccess,
   type EnvironmentId,
   McpCapabilityUnavailableError,
+  interactionModeAllowsEdits,
   OrchestratorMcpFailure,
   PreviewAutomationUnavailableError,
   type ProviderInstanceId,
@@ -68,7 +69,8 @@ const runtimeModeRank: Record<RuntimeMode, number> = {
   auto: 2,
   "full-access": 3,
 };
-const interactionModeRank: Record<ProviderInteractionMode, number> = { plan: 0, default: 1 };
+const interactionModeRank = (mode: ProviderInteractionMode) =>
+  interactionModeAllowsEdits(mode) ? 1 : 0;
 
 /**
  * The modes a client caller's writes are capped at: what it was approved
@@ -90,7 +92,7 @@ export const clientModeCeiling = (client: McpClientCaller | undefined): ClientMo
         ? asked.runtimeMode
         : approved.runtimeMode,
     interactionMode:
-      interactionModeRank[asked.interactionMode] < interactionModeRank[approved.interactionMode]
+      interactionModeRank(asked.interactionMode) < interactionModeRank(approved.interactionMode)
         ? asked.interactionMode
         : approved.interactionMode,
   };

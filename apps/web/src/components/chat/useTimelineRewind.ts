@@ -22,7 +22,7 @@ import { findRevertCheckpoint } from "../../session-logic";
 import { type ChatMessage } from "../../types";
 import { newThreadId } from "~/lib/utils";
 import { buildThreadRouteParams } from "../../threadRoutes";
-import { useComposerDraftStore } from "../../composerDraftStore";
+import { composerDraftHasUserContent, useComposerDraftStore } from "../../composerDraftStore";
 import { threadEnvironment } from "../../state/threads";
 import { waitForThreadShell } from "../../state/entities";
 import { openRevertConfirm } from "./ChatOverlayHosts";
@@ -51,6 +51,8 @@ interface TimelineRewindInput {
   readonly composerRef: ComposerHandleRef;
   readonly composerDraftTarget: ComposerThreadTarget;
   readonly setThreadError: ReturnType<typeof makeThreadErrorSetter>;
+  /** Sends the composer once the rewind settles; an in-place edit has put its text there. */
+  readonly requestResend: (threadKey: string) => void;
 }
 
 /**
@@ -76,6 +78,7 @@ export function useTimelineRewind(input: TimelineRewindInput) {
     composerRef,
     composerDraftTarget,
     setThreadError,
+    requestResend,
   } = input;
   const navigate = useNavigate();
   const createAttachmentAssetUrl = useAtomQueryRunner(assetEnvironment.createUrl, {
@@ -94,6 +97,7 @@ export function useTimelineRewind(input: TimelineRewindInput) {
     turnCount: number,
     messageId: MessageId,
     restoreFiles?: boolean,
+    editedText?: string,
   ) => {
     const localApi = readLocalApi();
     if (
@@ -124,8 +128,16 @@ export function useTimelineRewind(input: TimelineRewindInput) {
       setThreadError(activeThread.id, "Interrupt the current turn before reverting checkpoints.");
       return;
     }
+    // An edit sent on top of the user's own draft would send text they did not see.
+    const composerHasDraft = composerDraftHasUserContent(
+      useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
+    );
     if (restoreFiles === undefined) {
-      openRevertConfirm(routeThreadKey, { turnCount, messageId });
+      openRevertConfirm(routeThreadKey, {
+        turnCount,
+        messageId,
+        ...(editedText === undefined ? {} : { edit: { text: editedText, composerHasDraft } }),
+      });
       return;
     }
 
@@ -140,6 +152,7 @@ export function useTimelineRewind(input: TimelineRewindInput) {
       threadId: activeThread.id,
       turnCount,
       restoreFiles,
+      promptOverride: editedText,
       // Keep the live checkpoint identity when command context refetches a bounded window.
       checkpoint: findRevertCheckpoint(serverProjection?.checkpoints ?? [], turnCount),
       draftTarget: composerDraftTarget,
@@ -160,14 +173,23 @@ export function useTimelineRewind(input: TimelineRewindInput) {
       const nextPrompt = rewind.prompt;
       promptRef.current = nextPrompt;
       composerRef.current?.resetCursorState({ prompt: nextPrompt, cursor: nextPrompt.length });
+      if (editedText !== undefined && !composerHasDraft) {
+        requestResend(routeThreadKey);
+        return;
+      }
       requestAnimationFrame(() => {
         if (currentRouteThreadKeyRef.current === routeThreadKey) composerRef.current?.focusAtEnd();
       });
     }
   };
   const onRevertToTurnCountStable = useStableCallback(onRevertToTurnCount);
-  const onConfirmRevert = (turnCount: number, messageId: MessageId, restoreFiles: boolean) => {
-    void onRevertToTurnCount(turnCount, messageId, restoreFiles);
+  const onConfirmRevert = (
+    turnCount: number,
+    messageId: MessageId,
+    restoreFiles: boolean,
+    editedText: string | undefined,
+  ) => {
+    void onRevertToTurnCount(turnCount, messageId, restoreFiles, editedText);
   };
   const onConfirmRevertStable = useStableCallback(onConfirmRevert);
 
@@ -215,8 +237,13 @@ export function useTimelineRewind(input: TimelineRewindInput) {
     void onRevertToTurnCountStable(targetTurnCount, messageId);
   };
   const onRevertTimelineTurnStable = useStableCallback(onRevertTimelineTurn);
+  const onEditTimelineMessage = (turnCount: number, messageId: MessageId, text: string) => {
+    void onRevertToTurnCountStable(turnCount, messageId, undefined, text);
+  };
+  const onEditTimelineMessageStable = useStableCallback(onEditTimelineMessage);
   return {
     onConfirmRevertStable,
+    onEditTimelineMessageStable,
     onForkFromRunStable,
     onRevertTimelineTurnStable,
   };

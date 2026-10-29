@@ -1,4 +1,5 @@
 import {
+  interactionModeAllowsEdits,
   type ModelSelection,
   OrchestratorMcpFailure,
   type OrchestratorMcpDelegateTaskInput,
@@ -23,9 +24,9 @@ export function runtimeModeRank(mode: RuntimeMode): number {
   }
 }
 
-/** How much an interaction mode allows: plan, then default. */
+/** How much an interaction mode allows: read-only (Plan, Ask), then modes that edit. */
 export function interactionModeRank(mode: ProviderInteractionMode): number {
-  return mode === "plan" ? 0 : 1;
+  return interactionModeAllowsEdits(mode) ? 1 : 0;
 }
 
 /**

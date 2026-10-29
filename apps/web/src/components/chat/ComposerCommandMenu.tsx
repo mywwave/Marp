@@ -1,3 +1,4 @@
+import { scopeProjectRef } from "@marp/client-runtime/environment";
 import { formatProviderSkillDisplayName } from "@marp/shared/inlineSkills";
 import type { ComposerPathSearchTarget } from "@marp/client-runtime/state/threads";
 import {
@@ -27,8 +28,17 @@ import { memo, useLayoutEffect, useRef } from "react";
 
 import { type ComposerSlashCommand, type ComposerTriggerKind } from "../../composer-logic";
 import { cn } from "~/lib/utils";
+import { useProject, useThreadShell } from "~/state/entities";
+import { useNowMinute } from "../../hooks/useNowMinute";
+import { formatRelativeTimeLabel } from "../../timestampFormat";
+import {
+  hasUnseenCompletion,
+  resolveSidebarStatusFamily,
+  resolveSidebarThreadStatus,
+} from "../Sidebar.logic";
+import { SidebarStatusIndicator } from "../sidebar/SidebarThreadRow";
 import { Badge } from "../ui/badge";
-import { Command, CommandGroup, CommandItem, CommandList } from "../ui/command";
+import { Command, CommandGroup, CommandGroupLabel, CommandItem, CommandList } from "../ui/command";
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
 import { PierreEntryIcon } from "./PierreEntryIcon";
 import { ComposerBanner } from "./ComposerBanner";
@@ -80,6 +90,7 @@ export type ComposerCommandItem =
       thread: ScopedThreadRef;
       label: string;
       description: string;
+      machineLabel: string | null;
     }
   | {
       id: string;
@@ -133,20 +144,23 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
             aria-label={props.triggerKind ? LISTBOX_LABEL_BY_TRIGGER[props.triggerKind] : undefined}
             className="max-h-72 min-h-0 scroll-pb-6"
           >
-            <CommandGroup>
-              {props.items.map((item) => (
-                <ComposerCommandMenuItem
-                  key={item.id}
-                  optionId={composerSuggestionOptionId(props.listId, item.id)}
-                  item={item}
-                  triggerKind={props.triggerKind}
-                  resolvedTheme={props.resolvedTheme}
-                  isActive={props.activeItemId === item.id}
-                  onHighlight={props.onHighlightedItemChange}
-                  onSelect={props.onSelect}
-                />
-              ))}
-            </CommandGroup>
+            {groupComposerCommandItems(props.items).map((group) => (
+              <CommandGroup key={group.key}>
+                {group.label ? <CommandGroupLabel>{group.label}</CommandGroupLabel> : null}
+                {group.items.map((item) => (
+                  <ComposerCommandMenuItem
+                    key={item.id}
+                    optionId={composerSuggestionOptionId(props.listId, item.id)}
+                    item={item}
+                    triggerKind={props.triggerKind}
+                    resolvedTheme={props.resolvedTheme}
+                    isActive={props.activeItemId === item.id}
+                    onHighlight={props.onHighlightedItemChange}
+                    onSelect={props.onSelect}
+                  />
+                ))}
+              </CommandGroup>
+            ))}
           </CommandList>
         ) : (
           <div className="px-5 pt-3.5 pb-7">
@@ -211,9 +225,6 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
           theme={props.resolvedTheme}
         />
       ) : null}
-      {props.item.type === "thread" ? (
-        <MessagesSquareIcon aria-hidden="true" className="size-4 shrink-0 text-secondary-label" />
-      ) : null}
       {props.item.type === "environment" ? (
         <EnvironmentMachineIcon
           kind={props.item.machine}
@@ -228,30 +239,97 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
           className={cn("size-4 shrink-0", pullRequestPresentation.toneClassName)}
         />
       ) : null}
-      <span className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="min-w-0 max-w-[45%] shrink-0 truncate font-sans text-xs font-medium">
-          {isSlashSkill ? (
-            <>
-              <span className="text-secondary-label">/skill:</span>
-              {formatProviderSkillDisplayName(isSlashSkill)}
-            </>
-          ) : (
-            props.item.label
-          )}
+      {props.item.type === "thread" ? (
+        <ComposerThreadItemContent item={props.item} />
+      ) : (
+        <span className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="min-w-0 max-w-[45%] shrink-0 truncate font-sans text-xs font-medium">
+            {isSlashSkill ? (
+              <>
+                <span className="text-secondary-label">/skill:</span>
+                {formatProviderSkillDisplayName(isSlashSkill)}
+              </>
+            ) : (
+              props.item.label
+            )}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-left text-secondary-label text-xs">
+            {props.item.description}
+          </span>
+          {skillSourceKind ? (
+            <SkillSourceBadge
+              kind={skillSourceKind}
+              showSkillSuffix={props.triggerKind === "skill"}
+            />
+          ) : null}
         </span>
-        <span className="min-w-0 flex-1 truncate text-left text-secondary-label text-xs">
-          {props.item.description}
-        </span>
-        {skillSourceKind ? (
-          <SkillSourceBadge
-            kind={skillSourceKind}
-            showSkillSuffix={props.triggerKind === "skill"}
-          />
-        ) : null}
-      </span>
+      )}
     </CommandItem>
   );
 });
+
+/** A thread row: its status, title, project and when it was last active. */
+function ComposerThreadItemContent(props: {
+  item: Extract<ComposerCommandItem, { type: "thread" }>;
+}) {
+  const shell = useThreadShell(props.item.thread);
+  const project = useProject(
+    shell ? scopeProjectRef(props.item.thread.environmentId, shell.projectId) : null,
+  );
+  const nowMinute = useNowMinute();
+  const family = shell
+    ? resolveSidebarStatusFamily({
+        status: resolveSidebarThreadStatus(shell),
+        isUnread: hasUnseenCompletion(shell),
+        isWoke: false,
+      })
+    : "idle";
+  const context = [project?.title, props.item.machineLabel].filter(Boolean).join(" · ");
+  return (
+    <>
+      {family === "idle" ? (
+        <MessagesSquareIcon aria-hidden="true" className="size-4 shrink-0 text-secondary-label" />
+      ) : (
+        <SidebarStatusIndicator family={family} selected={false} />
+      )}
+      <span className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="min-w-0 max-w-[55%] shrink-0 truncate font-sans text-xs font-medium">
+          {props.item.label}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-left text-secondary-label text-xs">
+          {context}
+        </span>
+        {shell ? (
+          <span className="shrink-0 text-secondary-label text-xs">
+            {formatRelativeTimeLabel(
+              shell.latestUserMessageAt ?? shell.updatedAt,
+              Date.parse(`${nowMinute}:00.000Z`),
+            )}
+          </span>
+        ) : null}
+      </span>
+    </>
+  );
+}
+
+const SECTION_LABEL_BY_TYPE: Partial<Record<ComposerCommandItem["type"], string>> = {
+  thread: "Threads",
+  environment: "Machines",
+  path: "Files",
+};
+
+/** Consecutive items of one kind form a group; labels show only when kinds mix. */
+function groupComposerCommandItems(items: ReadonlyArray<ComposerCommandItem>) {
+  const groups: Array<{ key: string; label: string | null; items: ComposerCommandItem[] }> = [];
+  for (const item of items) {
+    const label = SECTION_LABEL_BY_TYPE[item.type] ?? null;
+    const last = groups.at(-1);
+    if (last && last.label === label) last.items.push(item);
+    else groups.push({ key: `${groups.length}:${label ?? ""}`, label, items: [item] });
+  }
+  if (groups.length < 2) return groups.map((group) => ({ ...group, label: null }));
+  return groups;
+}
 
 export function composerSuggestionOptionId(listId: string, itemId: string): string {
   // JSON escapes lone UTF-16 surrogates before URI encoding without losing identity.
@@ -259,7 +337,7 @@ export function composerSuggestionOptionId(listId: string, itemId: string): stri
 }
 
 const LISTBOX_LABEL_BY_TRIGGER: Record<ComposerTriggerKind, string> = {
-  path: "Files and folders",
+  path: "Files, folders, and threads",
   "pull-request": "Pull requests",
   "slash-command": "Commands",
   skill: "Skills",

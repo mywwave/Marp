@@ -18,3 +18,13 @@ function formatWorkingTimer(startIso: string, endIso: string): string | null {
 export function formatWorkingTimerNow(startIso: string): string {
   return formatWorkingTimer(startIso, new Date().toISOString()) ?? "0s";
 }
+
+const PRE_ACTIVITY_SLOW_MS = 20_000;
+
+/** What a turn says before its first thought, tool, or text arrives. */
+export function preActivityLabel(startIso: string | null, nowMs: number): string {
+  const startedAtMs = startIso === null ? Number.NaN : Date.parse(startIso);
+  return Number.isFinite(startedAtMs) && nowMs - startedAtMs >= PRE_ACTIVITY_SLOW_MS
+    ? "Taking a little while…"
+    : "Planning next moves";
+}

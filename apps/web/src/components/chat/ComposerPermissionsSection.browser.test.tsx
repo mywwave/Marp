@@ -130,10 +130,11 @@ function PermissionsChip() {
         <ComposerFooterModeControls
           showInteractionModeToggle={false}
           interactionMode="default"
+          interactionModes={["default"]}
           runtimeMode={mode}
           runtimeModeOptions={options}
           accessDisplay="label"
-          onToggleInteractionMode={() => {}}
+          onInteractionModeChange={() => {}}
           onRuntimeModeChange={setMode}
         />
       )}

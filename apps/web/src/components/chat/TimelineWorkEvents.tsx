@@ -32,7 +32,7 @@ import { ActivityShimmerOverlay } from "./TimelineRowParts";
 import { failedToolIconClassName, ToolActivityIconView } from "./TimelineToolActivityIcon";
 import { workEntryIconName } from "./TimelineWorkEntryRow.logic";
 import { formatWorkingTimerNow } from "./TimelineWorkGroupRows.logic";
-import { WorkLogDetails, WorkLogRow } from "./WorkLog";
+import { WorkLogButton, WorkLogDetails, WorkLogRow } from "./WorkLog";
 import { CommandItemOutput } from "./V2ItemInspector";
 import { TimelineRowCtx, type TimelineWorkEntry } from "./timelineRowContext";
 
@@ -352,9 +352,21 @@ function InlineEditDiff({
   );
 }
 
-export function CommandCard({ workEntry, live, shimmer, expanded, onToggleExpanded }: CardProps) {
+/**
+ * A command step. Inside a multi-step run (`compact`) it is one row (icon, purpose, exit status)
+ * that opens into the full card; alone it is the card.
+ */
+export function CommandCard({
+  workEntry,
+  live,
+  shimmer,
+  expanded,
+  onToggleExpanded,
+  compact = false,
+}: CardProps & { compact?: boolean }) {
   const ctx = use(TimelineRowCtx);
   const [commandExpanded, setCommandExpanded] = useState(false);
+  const [open, setOpen] = useState(false);
   const projectedItem = workEntry.projectedItem;
   const item = projectedItem?.item ?? workEntry.structuredPayload;
   const commandItem = item?.type === "command_execution" ? item : undefined;
@@ -365,38 +377,82 @@ export function CommandCard({ workEntry, live, shimmer, expanded, onToggleExpand
   const header =
     description || (running ? "Running command" : failed ? "Run command" : "Ran command");
   const exitCode = commandItem?.exitCode;
+  const icon = (
+    <span
+      className={cn(
+        "flex size-4 shrink-0 items-center justify-center",
+        running ? "text-info-foreground" : failed ? "text-destructive" : "text-icon-muted",
+      )}
+    >
+      {running ? <Spinner size="sm" /> : <TerminalIcon className="size-4" />}
+    </span>
+  );
+  const status = (
+    <span className="ms-auto flex shrink-0 items-center gap-1 text-xs tabular-nums">
+      {running ? (
+        <span className="text-muted-foreground">
+          <WorkingTimer createdAt={workEntry.createdAt} />
+        </span>
+      ) : failed ? (
+        <span className="text-destructive">
+          {exitCode !== undefined && exitCode !== 0 ? `exit ${exitCode}` : "Failed"}
+        </span>
+      ) : exitCode === 0 ? (
+        <span className="flex items-center gap-0.5 text-muted-foreground" aria-label="exit 0">
+          <CheckIcon aria-hidden className="size-3" />0
+        </span>
+      ) : null}
+    </span>
+  );
+  if (compact && !open) {
+    return (
+      <WorkLogButton
+        data-v2-item-type="command_execution"
+        data-command-row="compact"
+        aria-expanded={false}
+        onClick={() => setOpen(true)}
+        icon={icon}
+        label={
+          <Shimmering active={shimmer && running}>
+            {description || !command ? (
+              <span className="truncate">{header}</span>
+            ) : (
+              <span className="truncate font-mono text-xs">{command}</span>
+            )}
+          </Shimmering>
+        }
+        trailing={<span className="flex shrink-0 pe-1">{status}</span>}
+      />
+    );
+  }
+  const headerContent = (
+    <>
+      {icon}
+      <span className="min-w-0 flex-1 truncate text-secondary-label">
+        <Shimmering active={shimmer && running}>
+          <span className="truncate">{header}</span>
+        </Shimmering>
+      </span>
+      {status}
+    </>
+  );
   return (
     <div className={cardClassName} data-v2-item-type="command_execution">
-      <div className="flex h-8 min-w-0 items-center gap-2 px-3">
-        <span
+      {compact ? (
+        <button
+          type="button"
           className={cn(
-            "flex size-4 shrink-0 items-center justify-center",
-            running ? "text-info-foreground" : failed ? "text-destructive" : "text-icon-muted",
+            "flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 px-3 text-left",
+            cardFocusClassName,
           )}
+          aria-expanded
+          onClick={() => setOpen(false)}
         >
-          {running ? <Spinner size="sm" /> : <TerminalIcon className="size-4" />}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-secondary-label">
-          <Shimmering active={shimmer && running}>
-            <span className="truncate">{header}</span>
-          </Shimmering>
-        </span>
-        <span className="ms-auto flex shrink-0 items-center gap-1 text-xs tabular-nums">
-          {running ? (
-            <span className="text-muted-foreground">
-              <WorkingTimer createdAt={workEntry.createdAt} />
-            </span>
-          ) : failed ? (
-            <span className="text-destructive">
-              {exitCode !== undefined && exitCode !== 0 ? `exit ${exitCode}` : "Failed"}
-            </span>
-          ) : exitCode === 0 ? (
-            <span className="flex items-center gap-0.5 text-muted-foreground" aria-label="exit 0">
-              <CheckIcon aria-hidden className="size-3" />0
-            </span>
-          ) : null}
-        </span>
-      </div>
+          {headerContent}
+        </button>
+      ) : (
+        <div className="flex h-8 min-w-0 items-center gap-2 px-3">{headerContent}</div>
+      )}
       {command ? (
         <button
           type="button"

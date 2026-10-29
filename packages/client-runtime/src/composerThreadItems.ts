@@ -1,6 +1,7 @@
 import type {
   EnvironmentId,
   EnvironmentMachineKind,
+  ProjectId,
   ScopedThreadRef,
   ThreadId,
 } from "@marp/contracts";
@@ -10,9 +11,12 @@ import type { EnvironmentThreadShell } from "./state/models.ts";
 import { threadSearchSubject, type ThreadSearchShell } from "./state/threadSearch.ts";
 
 const COMPOSER_THREAD_RESULT_LIMIT = 5;
+// Above the palette's largest use boost, so within one match class the composer's
+// project always comes first; a better match class elsewhere still wins.
+const CURRENT_PROJECT_BOOST = 3;
 
 export type ComposerThreadCandidate = ThreadSearchShell &
-  Pick<EnvironmentThreadShell, "archivedAt" | "lineage">;
+  Pick<EnvironmentThreadShell, "archivedAt" | "lineage" | "projectId">;
 
 export interface ComposerThreadItem {
   readonly id: string;
@@ -20,13 +24,15 @@ export interface ComposerThreadItem {
   readonly thread: ScopedThreadRef;
   readonly label: string;
   readonly description: string;
+  /** The linked machine the thread is on, or null on the composer's own. */
+  readonly machineLabel: string | null;
 }
 
 /**
  * Threads to reference from the composer, matched and ranked like the command
  * palette, without subagent threads. The agent reads threads on its own server
  * and on the machines it links to, so candidates stay within those, and a linked
- * machine's threads say which machine they are on.
+ * machine's threads say which machine they are on. The composer's project ranks first.
  */
 export function matchComposerThreadItems(input: {
   shells: ReadonlyArray<ComposerThreadCandidate>;
@@ -34,6 +40,8 @@ export function matchComposerThreadItems(input: {
   /** The machines the composer's environment links to, by name. */
   linkedEnvironments: ReadonlyMap<EnvironmentId, string>;
   excludeThreadId: ThreadId | null;
+  /** The composer's project, whose threads rank first. */
+  projectId: ProjectId | null;
   query: string;
   /** Recency is measured against this time. */
   now: number;
@@ -48,24 +56,28 @@ export function matchComposerThreadItems(input: {
       shell.archivedAt === null &&
       shell.lineage.relationshipToParent !== "subagent",
   );
-  return rankSearchItems(candidates, (shell, options) =>
-    scoreThreadSearch(query, threadSearchSubject(shell, null), input.now, {
+  return rankSearchItems(candidates, (shell, options) => {
+    const match = scoreThreadSearch(query, threadSearchSubject(shell, null), input.now, {
       ...options,
       picks: false,
-    }),
-  )
+    });
+    return match !== null && shell.projectId === input.projectId
+      ? { ...match, score: match.score * CURRENT_PROJECT_BOOST }
+      : match;
+  })
     .slice(0, COMPOSER_THREAD_RESULT_LIMIT)
     .map(({ item: shell }) => {
       const machine =
         shell.environmentId === input.environmentId
-          ? undefined
-          : input.linkedEnvironments.get(shell.environmentId);
+          ? null
+          : (input.linkedEnvironments.get(shell.environmentId) ?? null);
       return {
         id: `thread:${shell.environmentId}:${shell.id}`,
         type: "thread",
         thread: { environmentId: shell.environmentId, threadId: shell.id },
         label: shell.title,
-        description: machine === undefined ? "Thread" : `Thread on ${machine}`,
+        description: machine === null ? "Thread" : `Thread on ${machine}`,
+        machineLabel: machine,
       };
     });
 }

@@ -176,6 +176,7 @@ import { mergeProviderInstanceEnvironment } from "@marp/provider-core/server/ins
 import {
   MARP_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH,
   MARP_ORCHESTRATION_INSTRUCTIONS,
+  marpInteractionModeInstructions,
 } from "@marp/provider-core/server/orchestrationInstructions";
 import { buildRuntimeInstructions } from "@marp/provider-core/server/runtimeInstructions";
 import {
@@ -1468,6 +1469,7 @@ export function makeClaudeQueryOptions(input: {
   readonly supportedDialogKinds?: ClaudeQueryOptions["supportedDialogKinds"];
   readonly allowDangerouslySkipPermissions?: boolean;
   readonly appendSystemPromptFileText?: string;
+  readonly modeInstructions?: string;
   // Flag settings, because a user's settings.json env beats the process env in Claude Code.
   readonly toolSearchOverride?: "true";
 }): ClaudeAgentSdkQueryOptions {
@@ -1581,6 +1583,7 @@ export function makeClaudeQueryOptions(input: {
             : MARP_ORCHESTRATION_INSTRUCTIONS +
               CLAUDE_BACKGROUND_WAIT_INSTRUCTIONS +
               (deviceInstructions ? `\n${MARP_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH}\n` : "")),
+        ...(input.modeInstructions === undefined ? [] : [input.modeInstructions]),
         ...launchAppendSystemPrompt,
       ].join("\n\n"),
     },
@@ -2475,6 +2478,9 @@ function permissionModeForClaudeRuntimePolicy(
   if (runtimePolicy.interactionMode === "plan") {
     return "plan";
   }
+  if (runtimePolicy.interactionMode === "ask") {
+    return "dontAsk";
+  }
   if (runtimePolicy.approvalPolicy === "never") {
     switch (sandboxPolicyKindForClaudeRuntimePolicy(runtimePolicy)) {
       case "readOnly":
@@ -2524,7 +2530,11 @@ export interface ClaudeRuntimeQueryPolicy {
   readonly allowedTools?: ReadonlyArray<string>;
   readonly allowDangerouslySkipPermissions?: true;
   readonly installPermissionCallback: boolean;
+  /** Ask, Debug, and Multitask ride on the system prompt, so changing them reopens the query. */
+  readonly modeInstructions?: string;
 }
+
+const CLAUDE_INTERACTION_MODE_TOOLS = { question: "AskUserQuestion", subagent: "Agent" } as const;
 
 interface ClaudeBypassAvailability {
   readonly bypassDisabled: boolean;
@@ -2547,10 +2557,16 @@ export function claudeRuntimeQueryPolicyForRuntimePolicy(
       ? "default"
       : "auto"
     : requestedMode;
+  // Ask is enforced like a read-only sandbox: only read tools exist and dontAsk denies the rest.
   const readOnlyTools =
-    sandboxPolicyKindForClaudeRuntimePolicy(runtimePolicy) === "readOnly"
+    sandboxPolicyKindForClaudeRuntimePolicy(runtimePolicy) === "readOnly" ||
+    runtimePolicy.interactionMode === "ask"
       ? CLAUDE_READ_ONLY_ALLOWED_TOOLS
       : undefined;
+  const modeInstructions = marpInteractionModeInstructions(
+    runtimePolicy.interactionMode,
+    CLAUDE_INTERACTION_MODE_TOOLS,
+  );
   const allowedTools =
     readOnlyTools !== undefined && readOnlyPolicyAllowsGlobalReads(runtimePolicy)
       ? readOnlyTools
@@ -2579,6 +2595,7 @@ export function claudeRuntimeQueryPolicyForRuntimePolicy(
     ...(allowedTools === undefined ? {} : { allowedTools }),
     ...(permissionMode === "bypassPermissions" ? { allowDangerouslySkipPermissions: true } : {}),
     installPermissionCallback,
+    ...(modeInstructions === undefined ? {} : { modeInstructions }),
   };
 }
 
@@ -2645,6 +2662,7 @@ function claudeRuntimeQueryPolicyKey(policy: ClaudeRuntimeQueryPolicy): string {
     allowedTools: policy.allowedTools,
     allowDangerouslySkipPermissions: policy.allowDangerouslySkipPermissions,
     installPermissionCallback: policy.installPermissionCallback,
+    modeInstructions: policy.modeInstructions,
   });
 }
 
@@ -9953,6 +9971,9 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
             onUserDialog,
             supportedDialogKinds: ["resume_return"],
             ...(appendSystemPromptFileText === undefined ? {} : { appendSystemPromptFileText }),
+            ...(queryPolicy.modeInstructions === undefined
+              ? {}
+              : { modeInstructions: queryPolicy.modeInstructions }),
             ...(toolSearchOverride === undefined ? {} : { toolSearchOverride }),
           });
           const querySession = yield* queryRunner

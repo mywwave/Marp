@@ -5,12 +5,18 @@ import type {
   RuntimeMode,
 } from "@marp/contracts";
 import { createModelSelection } from "@marp/shared/model";
-import { ListChecksIcon } from "lucide-react";
 import { type ComponentProps, memo, useId, useRef, useState } from "react";
 
 import type { ContextWindowSnapshot } from "../../lib/contextWindow";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { Menu, MenuPopup, MenuTrigger } from "../ui/menu";
+import {
+  Menu,
+  MenuPopup,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuRadioItemIndicator,
+  MenuTrigger,
+} from "../ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { ComposerControl, ComposerControlIcon } from "./ComposerControl";
 import { focusRequestedPermission, useComposerMenuProps } from "./composerEventScope";
@@ -18,7 +24,7 @@ import { ComposerPrimaryActions } from "./ComposerPrimaryActions";
 import { ContextWindowMeter, ContextWindowMeterPlaceholder } from "./ContextWindowMeter";
 import { resolveModelPickerSelectedModel } from "./ModelPickerContent";
 import { ProviderModelPicker } from "./ProviderModelPicker";
-import { runtimeModeConfig } from "./runtimeModeConfig";
+import { interactionModeConfig, runtimeModeConfig } from "./runtimeModeConfig";
 import { useComposerMenuState } from "./useComposerMenuState";
 
 export type RuntimeModeOption = { mode: RuntimeMode } & (typeof runtimeModeConfig)[RuntimeMode];
@@ -29,13 +35,14 @@ const supervisedRuntimeModeOption = {
 export const ComposerFooterModeControls = memo(function ComposerFooterModeControls(props: {
   showInteractionModeToggle: boolean;
   interactionMode: ProviderInteractionMode;
+  interactionModes: ReadonlyArray<ProviderInteractionMode>;
   runtimeMode: RuntimeMode;
   runtimeModeOptions: ReadonlyArray<RuntimeModeOption>;
   size?: "sm" | "xs";
   hidden?: boolean;
   /** The permissions chip names its mode, or shows only the icon in the compacted row. */
   accessDisplay?: "label" | "icon";
-  onToggleInteractionMode: () => void;
+  onInteractionModeChange: (mode: ProviderInteractionMode) => void;
   onRuntimeModeChange: (mode: RuntimeMode) => void;
 }) {
   const size = props.size ?? "sm";
@@ -47,33 +54,14 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
     props.runtimeModeOptions.find((option) => option.mode === props.runtimeMode) ??
     supervisedRuntimeModeOption;
   const RuntimeModeIcon = runtimeModeOption.icon;
-  const interactionModeTooltip =
-    props.interactionMode === "plan"
-      ? "Plan mode: the agent plans before it changes anything. Click for chat"
-      : "Chat mode. Click to plan first";
-
-  const interactionModeToggle = props.showInteractionModeToggle ? (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <ComposerControl
-            size={size}
-            className="shrink-0 whitespace-nowrap"
-            aria-pressed={props.interactionMode === "plan"}
-            type="button"
-            onClick={props.onToggleInteractionMode}
-            aria-label={interactionModeTooltip}
-          />
-        }
-      >
-        <ComposerControlIcon icon={ListChecksIcon} size={size} />
-        {/* The compacted row (xs) keeps this icon-only, like the other controls there. */}
-        <span data-composer-control-label className={size === "xs" ? "sr-only" : undefined}>
-          {props.interactionMode === "plan" ? "Plan" : "Chat"}
-        </span>
-      </TooltipTrigger>
-      <TooltipPopup side="top">{interactionModeTooltip}</TooltipPopup>
-    </Tooltip>
+  const interactionModeMenu = props.showInteractionModeToggle ? (
+    <ComposerInteractionModeMenu
+      interactionMode={props.interactionMode}
+      interactionModes={props.interactionModes}
+      size={size}
+      {...(props.hidden === undefined ? {} : { hidden: props.hidden })}
+      onInteractionModeChange={props.onInteractionModeChange}
+    />
   ) : null;
 
   // The chip opens the same Permissions toggle used in the effort menu.
@@ -126,11 +114,93 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
 
   return (
     <>
-      {interactionModeToggle}
+      {interactionModeMenu}
       {permissionsChip}
     </>
   );
 });
+
+function ComposerInteractionModeMenu(props: {
+  interactionMode: ProviderInteractionMode;
+  interactionModes: ReadonlyArray<ProviderInteractionMode>;
+  size: "sm" | "xs";
+  hidden?: boolean;
+  onInteractionModeChange: (mode: ProviderInteractionMode) => void;
+}) {
+  const composerFloatingLayerProps = useComposerMenuProps();
+  const [open, setOpen] = useComposerMenuState(props.hidden);
+  const current = interactionModeConfig[props.interactionMode];
+  return (
+    <Menu open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <MenuTrigger
+              render={
+                <ComposerControl
+                  size={props.size}
+                  className="shrink-0 whitespace-nowrap"
+                  aria-label={`Mode: ${current.label}`}
+                />
+              }
+            />
+          }
+        >
+          <ComposerControlIcon icon={current.icon} size={props.size} />
+          {/* The compacted row (xs) keeps this icon-only, like the other controls there. */}
+          <span data-composer-control-label className={props.size === "xs" ? "sr-only" : undefined}>
+            {current.label}
+          </span>
+        </TooltipTrigger>
+        <TooltipPopup side="top">{`${current.label}: ${current.description} Shift+Tab switches modes.`}</TooltipPopup>
+      </Tooltip>
+      <MenuPopup align="start" {...composerFloatingLayerProps}>
+        <ComposerInteractionModeSection
+          interactionMode={props.interactionMode}
+          interactionModes={props.interactionModes}
+          onInteractionModeChange={props.onInteractionModeChange}
+        />
+      </MenuPopup>
+    </Menu>
+  );
+}
+
+/** Interaction modes as a checked list with a line on what each does. Lives inside a Menu. */
+export function ComposerInteractionModeSection(props: {
+  interactionMode: ProviderInteractionMode;
+  interactionModes: ReadonlyArray<ProviderInteractionMode>;
+  onInteractionModeChange: (mode: ProviderInteractionMode) => void;
+}) {
+  return (
+    <div data-composer-interaction-modes className="grid w-72 gap-0.5">
+      <div className="px-2 py-1.5 font-medium text-muted-foreground text-xs">Mode</div>
+      <MenuRadioGroup
+        aria-label="Mode"
+        value={props.interactionMode}
+        onValueChange={(value: ProviderInteractionMode) => {
+          if (value !== props.interactionMode) props.onInteractionModeChange(value);
+        }}
+      >
+        {props.interactionModes.map((mode) => {
+          const option = interactionModeConfig[mode];
+          const OptionIcon = option.icon;
+          return (
+            <MenuRadioItem key={mode} value={mode} closeOnClick>
+              <span className="flex min-w-0 items-center gap-2.5 py-0.5">
+                <OptionIcon aria-hidden="true" className="text-muted-foreground" />
+                <span className="grid min-w-0 flex-1">
+                  <span>{option.label}</span>
+                  <span className="text-muted-foreground text-xs">{option.description}</span>
+                </span>
+                <MenuRadioItemIndicator />
+              </span>
+            </MenuRadioItem>
+          );
+        })}
+      </MenuRadioGroup>
+    </div>
+  );
+}
 
 /**
  * Permission modes as one horizontal toggle, with the shown mode named below.

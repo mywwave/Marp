@@ -2,6 +2,7 @@ import type {
   CustomModelSetting,
   ProviderDriverKind,
   ModelCapabilities,
+  ProviderInteractionMode,
   RuntimeMode,
   ServerProvider,
   ServerProviderAuth,
@@ -87,6 +88,7 @@ export interface ServerProviderPresentation {
   readonly showInteractionModeToggle?: boolean;
   readonly reportsContextWindow?: boolean;
   readonly supportedRuntimeModes?: ReadonlyArray<RuntimeMode>;
+  readonly supportedInteractionModes?: ReadonlyArray<ProviderInteractionMode>;
   readonly supportsConversationRollback?: boolean;
 }
 
@@ -254,6 +256,9 @@ export function buildServerProvider(input: {
     ...(input.presentation.supportedRuntimeModes === undefined
       ? {}
       : { supportedRuntimeModes: [...input.presentation.supportedRuntimeModes] }),
+    ...(input.presentation.supportedInteractionModes === undefined
+      ? {}
+      : { supportedInteractionModes: [...input.presentation.supportedInteractionModes] }),
     enabled: input.enabled,
     installed: input.probe.installed,
     version: input.probe.version,

@@ -14,6 +14,7 @@ import {
 import { resolveWorkGroupScrollAnchor } from "@marp/client-runtime/work-log/scroll-anchor";
 import { observeResize } from "~/lib/observeResize";
 import { observeVisibleAnimation } from "../../lib/visibleAnimation";
+import { tickTextContent } from "../../lib/tickTextContent";
 import { memo, use, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { workEntryDisplayIndicatesToolFailure } from "../../session-logic";
@@ -54,6 +55,7 @@ import {
 } from "./TimelineWorkEntryRow";
 import { toolGroupSummaryIconName, workEntryIconName } from "./TimelineWorkEntryRow.logic";
 import { WorkEventLabel, WorkingTimer } from "./TimelineWorkEvents";
+import { preActivityLabel } from "./TimelineWorkGroupRows.logic";
 
 export const WorkGroupSection = memo(function WorkGroupSection({
   anchorKey,
@@ -84,6 +86,21 @@ export const WorkGroupSection = memo(function WorkGroupSection({
   if (isExpandedToolGroup && nonEmptyEntries.every((entry) => entry.itemType === "reasoning")) {
     return <ReasoningTraceContent entries={nonEmptyEntries} />;
   }
+  if (isExpandedToolGroup && nonEmptyEntries.length <= INLINE_RUN_STEP_LIMIT) {
+    return (
+      <WorkLogList>
+        {nonEmptyEntries.map((workEntry) => (
+          <SimpleWorkEntryRow
+            key={workEntry.id}
+            workEntry={workEntry}
+            workspaceRoot={workspaceRoot}
+            onToggleEntry={onToggleStandaloneEntry}
+            compact
+          />
+        ))}
+      </WorkLogList>
+    );
+  }
   if (isExpandedToolGroup) {
     return (
       <ExpandedWorkGroupEntries
@@ -110,6 +127,12 @@ export const WorkGroupSection = memo(function WorkGroupSection({
     </section>
   );
 });
+
+/**
+ * An open run renders its steps inline: a nested scroller slid them under the run header. Only
+ * very long runs keep the virtualized scroller.
+ */
+const INLINE_RUN_STEP_LIMIT = 50;
 
 const compactWorkEntryHeight = 28;
 
@@ -203,7 +226,7 @@ function ExpandedWorkGroupEntries({
   }, [updateScrollFades]);
 
   const renderEntry = ({ item }: { item: TimelineWorkEntry }) => (
-    <SimpleWorkEntryRow key={item.id} workEntry={item} workspaceRoot={workspaceRoot} />
+    <SimpleWorkEntryRow key={item.id} workEntry={item} workspaceRoot={workspaceRoot} compact />
   );
 
   const updateExpandedContentHeight = () => {
@@ -359,8 +382,15 @@ function CompactingLabel({ createdAt }: { createdAt: string | null }) {
 
 export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "thinking" }> }) {
   const ctx = use(TimelineRowCtx);
-  const { isCompacting, isPreparingWorktree } = use(TimelineRowActivityCtx);
+  const { isCompacting, isPreparingWorktree, awaitingUser } = use(TimelineRowActivityCtx);
   if (isPreparingWorktree || isCompacting) return <WorkLogRow label="" />;
+  if (row.preActivity) {
+    if (awaitingUser) return null;
+    const label = (
+      <span ref={tickTextContent((nowMs) => preActivityLabel(row.createdAt, nowMs), true)} />
+    );
+    return <LiveActivityRow label={label} active shimmer />;
+  }
   // A failed group keeps this disclosure while an approval waits, but nothing is thinking then.
   const live = ctx.pendingApprovals.size === 0;
   const activity = (
@@ -515,7 +545,10 @@ function workEntryShowsAsCard(entry: TimelineWorkEntry): boolean {
   );
 }
 
-/** A live run shows one header with the loading verb, and its live step inside. */
+/** While a run is live, its newest steps stay readable above the live one; older ones fold. */
+const LIVE_PREVIEW_STEPS = 3;
+
+/** A live run shows one header with the loading verb, its newest steps, and its live step. */
 export function LiveWorkEntryTimelineRow({
   row,
 }: {
@@ -540,6 +573,14 @@ export function LiveWorkEntryTimelineRow({
   const toolIsRunning = live && !isReasoning;
   const grouped = row.groupedEntries.length > 1;
   const header = grouped ? workRunHeader(row.groupedEntries, live) : null;
+  const finishedSteps =
+    grouped && !row.expanded
+      ? row.groupedEntries.filter(
+          (entry) => entry.id !== row.entry.id && entry.itemType !== "reasoning",
+        )
+      : [];
+  const previewSteps = finishedSteps.slice(-LIVE_PREVIEW_STEPS);
+  const earlierStepCount = finishedSteps.length - previewSteps.length;
   const action = isReasoning || threadLabel ? null : workEventAction(row.entry, live);
   const stepLabel = isReasoning ? (
     thoughtTitle([row.entry], row.active)
@@ -576,6 +617,23 @@ export function LiveWorkEntryTimelineRow({
           <WorkGroupChevron expanded={row.expanded} />
         </button>
       ) : null}
+      {earlierStepCount > 0 ? (
+        <WorkLogButton
+          aria-expanded={false}
+          onClick={toggleGroup}
+          icon={<span className="size-4" />}
+          label={`${earlierStepCount} earlier ${earlierStepCount === 1 ? "step" : "steps"}`}
+        />
+      ) : null}
+      {previewSteps.map((entry) => (
+        <SimpleWorkEntryRow
+          key={entry.id}
+          workEntry={entry}
+          workspaceRoot={ctx.workspaceRoot}
+          onToggleEntry={(collapsed) => ctx.onToggleWorkEntry(row.id, collapsed)}
+          compact
+        />
+      ))}
       {grouped && row.expanded ? null : workEntryShowsAsCard(row.entry) ? (
         <div key={row.entry.id} className="work-step-enter">
           <SimpleWorkEntryRow
@@ -584,6 +642,7 @@ export function LiveWorkEntryTimelineRow({
             live={toolIsRunning}
             shimmer={toolIsRunning && !grouped}
             onToggleEntry={(collapsed) => ctx.onToggleWorkEntry(row.id, collapsed)}
+            compact={grouped}
           />
         </div>
       ) : (

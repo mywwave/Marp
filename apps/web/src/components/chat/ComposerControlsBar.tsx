@@ -50,9 +50,10 @@ export function ComposerControlsBar(props: {
   planModeUiEnabled: boolean;
   effortDisplay: EffortDisplay;
   interactionMode: ProviderInteractionMode;
+  interactionModes: ReadonlyArray<ProviderInteractionMode>;
   compatibleRuntimeMode: RuntimeMode;
   compatibleRuntimeModeOptions: ReadonlyArray<RuntimeModeOption>;
-  toggleInteractionMode: () => void;
+  handleInteractionModeChange: (mode: ProviderInteractionMode) => void;
   handleRuntimeModeChange: (mode: RuntimeMode) => void;
   composerControlsCollapsed: boolean;
   composerControlsHidden: boolean;
@@ -97,9 +98,10 @@ export function ComposerControlsBar(props: {
     planModeEnabled,
     planModeUiEnabled,
     interactionMode,
+    interactionModes,
     compatibleRuntimeMode,
     compatibleRuntimeModeOptions,
-    toggleInteractionMode,
+    handleInteractionModeChange,
     handleRuntimeModeChange,
     composerControlsCollapsed,
     composerControlsHidden,
@@ -199,12 +201,13 @@ export function ComposerControlsBar(props: {
         <ComposerFooterModeControls
           showInteractionModeToggle={planModeUiEnabled}
           interactionMode={interactionMode}
+          interactionModes={interactionModes}
           runtimeMode={compatibleRuntimeMode}
           runtimeModeOptions={compatibleRuntimeModeOptions}
           size={composerControlsCollapsed ? "xs" : "sm"}
           hidden={composerControlsHidden || restingHiddenBlockCount > 0}
           accessDisplay={accessDisplay}
-          onToggleInteractionMode={toggleInteractionMode}
+          onInteractionModeChange={handleInteractionModeChange}
           onRuntimeModeChange={handleRuntimeModeChange}
         />
       ),
@@ -307,6 +310,7 @@ export function ComposerControlsBar(props: {
         >
           <CompactComposerControlsMenu
             interactionMode={interactionMode}
+            interactionModes={interactionModes}
             runtimeMode={compatibleRuntimeMode}
             runtimeModeOptions={compatibleRuntimeModeOptions}
             size={composerControlsCollapsed ? "xs" : "sm"}
@@ -317,7 +321,7 @@ export function ComposerControlsBar(props: {
             }
             // Permissions join the overflow only when their normal home is in it.
             showPermissions={overflowShowsPermissions}
-            onToggleInteractionMode={toggleInteractionMode}
+            onInteractionModeChange={handleInteractionModeChange}
             onRuntimeModeChange={handleRuntimeModeChange}
           />
         </div>

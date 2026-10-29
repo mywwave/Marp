@@ -155,6 +155,8 @@ type WorkEntryRowProps = {
   /** The run's live step: present-tense verbs, a spinner, and the shimmer when `shimmer`. */
   live?: boolean | undefined;
   shimmer?: boolean | undefined;
+  /** A step inside a multi-step run: commands fold to one row. */
+  compact?: boolean | undefined;
 };
 
 export const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: WorkEntryRowProps) {
@@ -293,6 +295,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
         shimmer={props.shimmer === true}
         expanded={expanded}
         onToggleExpanded={toggleExpanded}
+        compact={props.compact === true}
       />
     );
   }

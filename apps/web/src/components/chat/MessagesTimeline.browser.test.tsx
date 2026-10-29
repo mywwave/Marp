@@ -1,6 +1,6 @@
 import { AudioPreview } from "../files/AudioPreview";
 import { onTestFinished } from "vite-plus/test";
-import { page } from "vite-plus/test/browser";
+import { page, userEvent } from "vite-plus/test/browser";
 import { stubGlobal } from "../../../test/render";
 import {
   EnvironmentId,
@@ -1143,4 +1143,154 @@ it("keeps concurrent approvals actionable outside collapsed work and restores se
   await expect
     .element(screen.getByRole("button", { name: "Open the current tab", exact: true }))
     .toBeVisible();
+});
+
+function checkpointedConversation(userText: string) {
+  const runId = RunId.make("run-edit");
+  return {
+    entries: [
+      message(userText, { runId, inputIntent: "turn_start" }, "user-1"),
+      message("Done", { role: "assistant", runId }, "assistant-1"),
+    ],
+    props: {
+      supportsConversationRollback: true,
+      threadStartCheckpointReady: true,
+      canOperateThread: true,
+      turnDiffSummaries: [
+        {
+          runId,
+          checkpointTurnCount: 1,
+          checkpointRef: "checkpoint-1" as never,
+          status: "ready" as const,
+          files: [],
+          assistantMessageId: MessageId.make("assistant-1"),
+          completedAt: CREATED_AT,
+        },
+      ],
+    } satisfies Partial<TimelineProps>,
+  };
+}
+
+describe("MessagesTimeline inline message edit", () => {
+  it("saves an edit in place and cancels without side effects", async () => {
+    setup();
+    const onEditUserMessage = vi.fn();
+    const { entries, props } = checkpointedConversation("Fix the login bug");
+    await using screen = await renderTimeline(entries, { ...props, onEditUserMessage });
+
+    await click(screen.button("Edit message"));
+    const editor = screen.getByRole("textbox", { name: "Edit message" });
+    await expect.element(editor).toHaveValue("Fix the login bug");
+    await expect.element(editor).toHaveFocus();
+    await userEvent.keyboard(" on Safari{Escape}");
+    await expect.element(editor).not.toBeInTheDocument();
+    expect(onEditUserMessage).not.toHaveBeenCalled();
+    expect(screen.text()).toContain("Fix the login bug");
+    expect(document.activeElement).toBe(screen.button("Edit message"));
+
+    await click(screen.button("Edit message"));
+    await userEvent.keyboard(" on Safari{Enter}");
+    expect(onEditUserMessage).toHaveBeenCalledWith(
+      0,
+      MessageId.make("user-1"),
+      "Fix the login bug on Safari",
+    );
+  });
+
+  it("keeps edit disabled with its reason while the agent works or access is read-only", async () => {
+    setup();
+    const onEditUserMessage = vi.fn();
+    const { entries, props } = checkpointedConversation("Fix the login bug");
+    await using screen = await renderTimeline(entries, {
+      ...props,
+      onEditUserMessage,
+      isWorking: true,
+    });
+    const editButton = screen.button("Edit message");
+    expect(editButton.getAttribute("aria-disabled")).toBe("true");
+    await click(editButton);
+    await editButton.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    expect(screen.container.querySelector("textarea")).toBeNull();
+    await userEvent.hover(editButton);
+    await expect.element(page.getByText("Stop the agent to edit this message")).toBeVisible();
+
+    await screen.rerender(
+      <MessagesTimeline
+        {...baseProps()}
+        {...props}
+        canOperateThread={false}
+        onEditUserMessage={onEditUserMessage}
+        timelineEntries={entries}
+      />,
+    );
+    expect(screen.button("Edit message").getAttribute("aria-disabled")).toBe("true");
+    expect(onEditUserMessage).not.toHaveBeenCalled();
+  });
+});
+
+function liveCommandRun(count: number) {
+  const fixture = makeStreamingTimelineFixture();
+  const user = fixture.visibleTurnItems.find((row) => row.item.id === "live-user-item")!;
+  const command = fixture.visibleTurnItems.find((row) => row.item.id === "history-work")!;
+  if (command.item.type !== "command_execution") throw new Error("Expected a command fixture");
+  const commands = Array.from({ length: count }, (_, index) => {
+    const id = TurnItemId.make(`command-${index}`);
+    const running = index === count - 1;
+    return {
+      ...command,
+      position: 10 + index,
+      sourceItemId: id,
+      item: {
+        ...command.item,
+        id,
+        runId: fixture.runId,
+        ordinal: 10 + index,
+        status: running ? ("running" as const) : ("completed" as const),
+        input: `rg step-${index}`,
+        description: `Search step ${index}`,
+        output: "",
+        exitCode: running ? null : 0,
+        completedAt: running ? null : command.item.completedAt,
+      },
+    };
+  });
+  return {
+    entries: deriveTimelineEntriesFromVisibleTurnItems({
+      visibleTurnItems: [user, ...commands] as never,
+      optimisticMessages: [],
+    }),
+    props: {
+      isWorking: true,
+      activeTurnStartedAt: fixture.time(5),
+      latestRun: {
+        runId: fixture.runId,
+        status: "running",
+        startedAt: fixture.time(5),
+        completedAt: null,
+      },
+    } as Partial<TimelineProps>,
+  };
+}
+
+describe("MessagesTimeline live runs", () => {
+  it("shows a long run's last three steps as one-line commands and folds the rest", async () => {
+    setup();
+    const { entries, props } = liveCommandRun(30);
+    await using screen = await renderTimeline(entries, props);
+    const compactRows = () =>
+      screen.container.querySelectorAll<HTMLElement>('[data-command-row="compact"]');
+
+    await vi.waitFor(() => expect(screen.buttons("26 earlier steps")).toHaveLength(1));
+    expect(screen.text()).toContain("Running…");
+    expect(compactRows()).toHaveLength(4);
+    expect(screen.text()).toContain("Search step 29");
+    expect(screen.text()).not.toContain("Search step 25");
+    expect(screen.buttons("Show output")).toHaveLength(0);
+
+    await click(compactRows()[0]!);
+    expect(screen.buttons("Show output")).toHaveLength(1);
+
+    await click(screen.button("26 earlier steps"));
+    await vi.waitFor(() => expect(compactRows()).toHaveLength(30));
+  });
 });

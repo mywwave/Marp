@@ -1,4 +1,9 @@
-import type { ProviderInteractionMode, RuntimeMode, ThreadId } from "@marp/contracts";
+import {
+  interactionModeAllowsEdits,
+  type ProviderInteractionMode,
+  type RuntimeMode,
+  type ThreadId,
+} from "@marp/contracts";
 import * as Context from "effect/Context";
 import type * as Ref from "effect/Ref";
 
@@ -28,7 +33,8 @@ const runtimeModeRank: Record<RuntimeMode, number> = {
   auto: 2,
   "full-access": 3,
 };
-const interactionModeRank: Record<ProviderInteractionMode, number> = { plan: 0, default: 1 };
+const interactionModeRank = (mode: ProviderInteractionMode) =>
+  interactionModeAllowsEdits(mode) ? 1 : 0;
 
 export const exceededDispatchModeLimit = (
   limit: DispatchModes,
@@ -36,6 +42,6 @@ export const exceededDispatchModeLimit = (
 ): "runtime" | "interaction" | undefined =>
   runtimeModeRank[modes.runtimeMode] > runtimeModeRank[limit.runtimeMode]
     ? "runtime"
-    : interactionModeRank[modes.interactionMode] > interactionModeRank[limit.interactionMode]
+    : interactionModeRank(modes.interactionMode) > interactionModeRank(limit.interactionMode)
       ? "interaction"
       : undefined;

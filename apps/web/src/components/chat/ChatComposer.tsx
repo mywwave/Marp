@@ -937,11 +937,17 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
 
   const selectedPromptEffort = composerProviderState.promptEffort;
   const selectedModelOptionsForDispatch = composerProviderState.modelOptionsForDispatch;
-  const { enabled: planModeUiEnabled, interactionMode } = resolveComposerInteractionMode({
+  const {
+    enabled: planModeUiEnabled,
+    modes: interactionModes,
+    interactionMode,
+  } = resolveComposerInteractionMode({
     planModeEnabled: settings.planModeEnabled,
     provider: selectedProviderStatus,
     interactionMode: requestedInteractionMode,
   });
+  // The /plan commands and plan follow-ups need Plan itself, not just a mode menu.
+  const planModeAvailable = interactionModes.includes("plan");
   const selectedModelSelection: ModelSelection = createModelSelection(
     selectedInstanceId,
     selectedModel,
@@ -1115,10 +1121,11 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     linkedEnvironments,
     gitCwd,
     activeThreadId,
+    activeProjectId,
     pullRequestProjectId,
     pullRequestRepository,
     threadPullRequests,
-    planModeUiEnabled,
+    planModeUiEnabled: planModeAvailable,
     compactSlashCommandAvailable,
     selectedProvider,
     selectedProviderSkills,
@@ -2304,9 +2311,10 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       planModeEnabled={settings.planModeEnabled}
       planModeUiEnabled={planModeUiEnabled}
       interactionMode={interactionMode}
+      interactionModes={interactionModes}
       compatibleRuntimeMode={compatibleRuntimeMode}
       compatibleRuntimeModeOptions={compatibleRuntimeModeOptions}
-      toggleInteractionMode={toggleInteractionMode}
+      handleInteractionModeChange={handleInteractionModeChange}
       handleRuntimeModeChange={handleRuntimeModeChange}
       composerControlsCollapsed={composerControlsCollapsed}
       effortDisplay={settings.effortDisplay}
@@ -3020,7 +3028,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         selectedModel,
         selectedProviderModels,
         interactionMode,
-        interactionModeEnabled: planModeUiEnabled,
+        interactionModeEnabled: planModeAvailable,
       }),
       setMultipleModelSelections,
       validateProviderInput: (providerInput: string) => {
@@ -3087,7 +3095,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       selectedProvider,
       selectedProviderModels,
       interactionMode,
-      planModeUiEnabled,
+      planModeAvailable,
       compactThreadContextStable,
     ],
   );

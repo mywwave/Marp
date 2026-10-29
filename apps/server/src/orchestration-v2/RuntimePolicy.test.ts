@@ -4,6 +4,7 @@ import {
   type OrchestrationV2AppThread,
   ProjectId,
   ProviderInstanceId,
+  type ProviderInteractionMode,
   type RuntimeMode,
   type ServerProvider,
   ThreadId,
@@ -29,6 +30,7 @@ function makeThread(input: {
   readonly now: DateTime.Utc;
   readonly worktreePath: string | null;
   readonly runtimeMode?: RuntimeMode;
+  readonly interactionMode?: ProviderInteractionMode;
 }): OrchestrationV2AppThread {
   const threadId = ThreadId.make("thread:runtime-policy");
   return {
@@ -40,7 +42,7 @@ function makeThread(input: {
     providerInstanceId,
     modelSelection,
     runtimeMode: input.runtimeMode ?? "full-access",
-    interactionMode: "default",
+    interactionMode: input.interactionMode ?? "default",
     branch: null,
     worktreePath: input.worktreePath,
     activeProviderThreadId: null,
@@ -64,11 +66,17 @@ const grokInstanceId = ProviderInstanceId.make("grok");
 const supportedRuntimeModesByInstance = new Map<ProviderInstanceId, ReadonlyArray<RuntimeMode>>([
   [grokInstanceId, ["approval-required", "auto", "full-access"]],
 ]);
+const noModesInstanceId = ProviderInstanceId.make("antigravity");
 const providerInstanceFor = (instanceId: ProviderInstanceId) =>
   ({
     snapshot: {
       getSnapshot: Effect.succeed({
         supportedRuntimeModes: supportedRuntimeModesByInstance.get(instanceId),
+        ...(instanceId === providerInstanceId
+          ? { supportedInteractionModes: ["plan", "ask", "multitask"] }
+          : instanceId === noModesInstanceId
+            ? { showInteractionModeToggle: false }
+            : {}),
       } as ServerProvider),
     },
   }) as ProviderInstance;
@@ -121,6 +129,27 @@ it.layer(layerTest)("RuntimePolicyV2", (it) => {
       assert.equal(yield* modeFor(grokInstanceId, "auto"), "auto");
       assert.equal(yield* modeFor(grokInstanceId, "full-access"), "full-access");
       assert.equal(yield* modeFor(providerInstanceId, "auto-accept-edits"), "auto-accept-edits");
+    }),
+  );
+
+  it.effect("runs an interaction mode the provider does not offer as the nearest it does", () =>
+    Effect.gen(function* () {
+      const policy = yield* RuntimePolicy.RuntimePolicyV2;
+      const now = yield* DateTime.now;
+      const modeFor = (instanceId: ProviderInstanceId, interactionMode: ProviderInteractionMode) =>
+        policy
+          .resolve({
+            thread: makeThread({ now, worktreePath: null, interactionMode }),
+            modelSelection: { instanceId, model: "test-model" },
+          })
+          .pipe(Effect.map((resolved) => resolved.interactionMode));
+
+      assert.equal(yield* modeFor(providerInstanceId, "ask"), "ask");
+      assert.equal(yield* modeFor(providerInstanceId, "debug"), "default");
+      // Ask stays read-only through Plan on providers that predate it.
+      assert.equal(yield* modeFor(grokInstanceId, "ask"), "plan");
+      assert.equal(yield* modeFor(grokInstanceId, "multitask"), "default");
+      assert.equal(yield* modeFor(noModesInstanceId, "plan"), "default");
     }),
   );
 });

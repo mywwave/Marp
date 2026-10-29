@@ -144,7 +144,8 @@ describe("workRunHeader", () => {
     ["thinking while live", [thought("Hmm.")], true, "thought", "Thinking"],
     ["one edit", [edit("src/a.ts")], false, "edit", "Edited a.ts"],
     ["new file", [edit("src/new.ts", "add")], false, "edit", "Created new.ts"],
-    ["edits", [edit("src/a.ts"), edit("src/b.ts")], true, "edit", "Editing 2 files"],
+    ["edits", [edit("src/a.ts"), edit("src/b.ts")], false, "edit", "Edited 2 files"],
+    ["live edits", [edit("src/a.ts"), edit("src/b.ts")], true, "edit", "Editing…"],
     ["deletes", [edit("a.ts", "delete"), edit("b.ts", "delete")], false, "edit", "Deleted 2 files"],
     [
       "one described command",
@@ -155,6 +156,7 @@ describe("workRunHeader", () => {
     ],
     ["one bare command", [command("git status")], true, "shell", "Running git status"],
     ["commands", [command("git status"), command("pnpm test")], false, "shell", "Ran 2 commands"],
+    ["live commands", [command("git status"), command("pnpm test")], true, "shell", "Running…"],
     [
       "monitors",
       [command("tail -f log", { monitor: true })],
@@ -176,7 +178,7 @@ describe("workRunHeader", () => {
       "explore",
       "Explored 3 files, 1 search, 1 command",
     ],
-    ["live exploration", [read("a.ts"), list("src")], true, "explore", "Exploring a.ts, 1 folder"],
+    ["live exploration", [read("a.ts"), list("src")], true, "explore", "Exploring…"],
     [
       "mcp with a read",
       [read("a.ts"), mcp("mcp__linear__get")],

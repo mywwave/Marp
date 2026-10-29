@@ -459,12 +459,13 @@ function fileChangeHeader(
         : "Created"
       : WORK_EVENT_VERBS[kind][live ? "loading" : "completed"];
   const fileCount = Math.max(files.length, 1);
+  if (live && files.length > 1) return `${verb}…`;
   return `${verb} ${files.length === 1 ? pathBaseName(files[0]!) : plural(fileCount, "file")}`;
 }
 
 function shellHeader(entries: ReadonlyArray<WorkLogPresentationEntry>, live: boolean): string {
   const verb = live ? "Running" : "Ran";
-  if (entries.length > 1) return `${verb} ${plural(entries.length, "command")}`;
+  if (entries.length > 1) return live ? "Running…" : `${verb} ${plural(entries.length, "command")}`;
   const [entry] = entries;
   const item = entry?.structuredPayload;
   const description = item?.type === "command_execution" ? item.description?.trim() : undefined;
@@ -544,8 +545,10 @@ export function workRunHeader(
   if (kinds.every((kind) => kind === null || kind === "todos" || kind === "ask")) {
     return { rule: "tools", title: summarizeToolGroup(tools).summary };
   }
+  // A live run's counts would tick up under the reader; it names only the activity.
+  if (live) return { rule: "explore", title: "Exploring…" };
   const parts = explorationParts(tools, kinds);
-  const verb = live ? "Exploring" : "Explored";
+  const verb = "Explored";
   return { rule: "explore", title: parts.length > 0 ? `${verb} ${parts.join(", ")}` : verb };
 }
 

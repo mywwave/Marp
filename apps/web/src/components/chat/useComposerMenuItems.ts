@@ -60,6 +60,7 @@ export function useComposerMenuItems({
   linkedEnvironments,
   gitCwd,
   activeThreadId,
+  activeProjectId,
   pullRequestProjectId,
   pullRequestRepository,
   threadPullRequests,
@@ -76,6 +77,7 @@ export function useComposerMenuItems({
   readonly linkedEnvironments: ReadonlyMap<EnvironmentId, string>;
   readonly gitCwd: string | null;
   readonly activeThreadId: ThreadId | null;
+  readonly activeProjectId: ProjectId | null;
   readonly pullRequestProjectId: ProjectId | null;
   readonly pullRequestRepository: string | null;
   readonly threadPullRequests: ReadonlyArray<ThreadPullRequestLink> | undefined;
@@ -187,6 +189,7 @@ export function useComposerMenuItems({
           environmentId,
           linkedEnvironments,
           excludeThreadId: activeThreadId,
+          projectId: activeProjectId,
           query: composerTrigger.query,
           now,
         }),

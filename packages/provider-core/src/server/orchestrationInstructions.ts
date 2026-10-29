@@ -67,6 +67,49 @@ const MARP_ACP_PLAN_MODE_INSTRUCTIONS = `## Marp interaction mode: Plan
 
 Investigate with read-only actions and do not edit files or otherwise execute the implementation. Resolve discoverable facts before asking questions. When the requirements are decision complete, return a concrete implementation plan and do not start implementing it. Treat this mode as active until Marp supplies a different interaction-mode instruction.`;
 
+/** Native tools a mode instruction names; the mode is offered only where they exist. */
+export interface MarpInteractionModeTools {
+  /** Asks the user a multiple-choice question that Marp shows as a decision card. */
+  readonly question?: string;
+  /** Starts a native subagent; several in one turn run in parallel. */
+  readonly subagent?: string;
+}
+
+const toolName = (name: string | undefined, fallback: string) =>
+  name === undefined ? fallback : `\`${name}\``;
+
+const ACTIVE_UNTIL_CHANGED =
+  "Treat this mode as active until Marp supplies a different interaction-mode instruction.";
+
+/** Mode instructions for Ask, Debug, and Multitask; Chat and Plan use each provider's own. */
+export function marpInteractionModeInstructions(
+  mode: ProviderInteractionMode,
+  tools: MarpInteractionModeTools,
+): string | undefined {
+  switch (mode) {
+    case "ask":
+      return `## Marp interaction mode: Ask
+
+Answer the user's questions without making changes. Read files, search, and run read-only commands as needed. Do not edit files or run anything that changes files, git state, or the environment. When a change would help, describe it and tell the user to switch to Chat to apply it. ${ACTIVE_UNTIL_CHANGED}`;
+    case "debug":
+      return `## Marp interaction mode: Debug
+
+Find the root cause before you fix anything.
+1. Unless the user has already confirmed a reproduction for this issue, read the relevant code, then give numbered reproduction steps and ask with ${toolName(tools.question, "your question tool")} whether they reproduced it. Offer "Issue reproduced, proceed" and "Couldn't reproduce" as options. Stop and wait for the answer.
+2. If they couldn't reproduce it, ask for the details you need. Never fix blind.
+3. Once reproduced, test hypotheses with evidence. Add temporary logging or instrumentation where it helps, and confirm the root cause.
+4. Fix the root cause, remove the temporary instrumentation, and verify. Then summarize the cause, the fix, and how the user can confirm it.
+${ACTIVE_UNTIL_CHANGED}`;
+    case "multitask":
+      return `## Marp interaction mode: Multitask
+
+Split the request into independent subtasks and run them in parallel. Start every independent subtask at once with ${toolName(tools.subagent, "your subagent tool")}, each with a self-contained brief and a scope that does not overlap another's files. Do dependent steps yourself, in order. When they finish, check and integrate their results, resolve conflicts, and give one combined summary. If the work does not split, say so and do it directly. ${ACTIVE_UNTIL_CHANGED}`;
+    case "default":
+    case "plan":
+      return undefined;
+  }
+}
+
 export interface MarpAcpInstructionState {
   readonly interactionMode: ProviderInteractionMode;
   readonly hasMarpMcp: boolean;

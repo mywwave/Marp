@@ -7,7 +7,9 @@ import {
   type PreviewAnnotationPayload,
 } from "@marp/contracts";
 import * as Schema from "effect/Schema";
+import { threadChipCopyTarget } from "@marp/client-runtime/thread-reference";
 import { upgradeLegacyContextMessage } from "@marp/shared/composerContextLegacy";
+import { threadContextRecord } from "@marp/shared/composerContextReferences";
 
 import {
   formatInlineContextReference,
@@ -29,6 +31,7 @@ import {
   terminalContextRecord,
   terminalContextReference,
   terminalContextDraftFromRecord,
+  threadContextReference,
   uploadedAttachmentContextRecord,
 } from "./composerContextRecords";
 
@@ -438,5 +441,17 @@ describe("selectedMessageContextFragment", () => {
 
     expect(fragment).toContain(review.contextId);
     expect(fragment).not.toContain(terminal.contextId);
+  });
+});
+
+describe("threadContextReference", () => {
+  it("writes the same titled reference that Copy thread puts on the clipboard", () => {
+    const ref = { environmentId: EnvironmentId.make("env"), threadId: ThreadId.make("abc-123") };
+    const title = "Fix [login]\nflow";
+    const mention = formatInlineContextReference(
+      threadContextReference(threadContextRecord(ref, title)),
+    );
+    expect(mention).toBe(threadChipCopyTarget(ref, title).value);
+    expect(mention).toBe("[Fix login flow](marp-context://v1/thread/thread_abc-123)");
   });
 });

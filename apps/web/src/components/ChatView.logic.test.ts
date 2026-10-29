@@ -8,6 +8,7 @@ import {
   deriveWorkspaceMutationId,
 } from "./ChatView.logic";
 import { recallCheckoutIsRepo, rememberCheckoutIsRepo } from "./ChatView.logic";
+import { nextComposerInteractionMode, resolveComposerInteractionMode } from "./ChatView.logic";
 import { ProviderDriverKind, type ServerProvider } from "@marp/contracts";
 import { deriveProviderInstanceEntries } from "../providerInstances";
 import { ensureInlineContextReferences } from "../lib/composerContextReferences";
@@ -436,6 +437,54 @@ describe("resolveThreadSwitchTimeline", () => {
         },
       ]),
     ).toBe(false);
+  });
+});
+
+describe("resolveComposerInteractionMode", () => {
+  const claude = { supportedInteractionModes: ["plan", "ask", "debug", "multitask"] } as const;
+
+  it("offers a provider's modes, with Plan only when the Plan setting allows it", () => {
+    expect(
+      resolveComposerInteractionMode({
+        planModeEnabled: false,
+        provider: claude,
+        interactionMode: "plan",
+      }),
+    ).toEqual({
+      enabled: true,
+      modes: ["default", "ask", "debug", "multitask"],
+      interactionMode: "default",
+    });
+    expect(
+      resolveComposerInteractionMode({
+        planModeEnabled: true,
+        provider: claude,
+        interactionMode: "debug",
+      }).modes,
+    ).toEqual(["default", "plan", "ask", "debug", "multitask"]);
+  });
+
+  it("keeps the legacy Plan toggle for providers that declare no modes", () => {
+    expect(
+      resolveComposerInteractionMode({
+        planModeEnabled: false,
+        provider: {},
+        interactionMode: "plan",
+      }),
+    ).toEqual({ enabled: false, modes: ["default"], interactionMode: "default" });
+    expect(
+      resolveComposerInteractionMode({
+        planModeEnabled: true,
+        provider: { showInteractionModeToggle: false },
+        interactionMode: "ask",
+      }),
+    ).toEqual({ enabled: false, modes: ["default"], interactionMode: "default" });
+  });
+
+  it("cycles Shift+Tab through the offered modes and wraps", () => {
+    const modes = ["default", "ask", "multitask"] as const;
+    expect(nextComposerInteractionMode(modes, "default")).toBe("ask");
+    expect(nextComposerInteractionMode(modes, "multitask")).toBe("default");
   });
 });
 

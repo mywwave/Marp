@@ -1,5 +1,16 @@
-import type { RuntimeMode } from "@marp/contracts";
-import { type LucideIcon, PenLineIcon, ShieldIcon, SparklesIcon, ZapIcon } from "lucide-react";
+import type { ProviderInteractionMode, RuntimeMode } from "@marp/contracts";
+import {
+  BugIcon,
+  ListChecksIcon,
+  type LucideIcon,
+  MessageCircleQuestionMarkIcon,
+  MessageSquareIcon,
+  PenLineIcon,
+  ShieldIcon,
+  SparklesIcon,
+  SplitIcon,
+  ZapIcon,
+} from "lucide-react";
 
 export const runtimeModeConfig: Record<
   RuntimeMode,
@@ -40,3 +51,34 @@ export function resolveCompatibleRuntimeMode(
       : runtimeModeOptions;
   return { modes, mode: modes.includes(runtimeMode) ? runtimeMode : (modes[0] ?? runtimeMode) };
 }
+
+export const interactionModeConfig: Record<
+  ProviderInteractionMode,
+  { label: string; description: string; icon: LucideIcon }
+> = {
+  default: {
+    label: "Chat",
+    description: "Work with the agent; it can make changes.",
+    icon: MessageSquareIcon,
+  },
+  plan: {
+    label: "Plan",
+    description: "Plan the work before changing anything.",
+    icon: ListChecksIcon,
+  },
+  ask: {
+    label: "Ask",
+    description: "Answer questions without making edits.",
+    icon: MessageCircleQuestionMarkIcon,
+  },
+  debug: {
+    label: "Debug",
+    description: "Pinpoint the root cause of an issue.",
+    icon: BugIcon,
+  },
+  multitask: {
+    label: "Multitask",
+    description: "Run tasks in parallel with subagents.",
+    icon: SplitIcon,
+  },
+};

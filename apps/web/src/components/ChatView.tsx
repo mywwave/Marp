@@ -657,6 +657,8 @@ export default function ChatView(props: ChatViewProps) {
     );
   // Draft ids survive promotion and expire on navigation, keeping the pending resend scoped correctly.
   const [workLocallyResendDraftId, setWorkLocallyResendDraftId] = useState<DraftId | null>(null);
+  // Thread key whose in-place message edit waits in the composer to be sent.
+  const [editResendThreadKey, setEditResendThreadKey] = useState<string | null>(null);
   const [feedbackSubmissionsByThreadKey, setFeedbackSubmissionsByThreadKey] = useState<
     Record<string, ReadonlyArray<CodexFeedbackSubmission>>
   >({});
@@ -1285,7 +1287,7 @@ export default function ChatView(props: ChatViewProps) {
   const selectedProvider = selectedProviderEntry?.driverKind ?? requestedDriverKind;
   const activeProviderInstanceId = selectedProviderEntry?.instanceId ?? null;
   const activeProviderStatus = selectedProviderEntry?.snapshot ?? null;
-  const { enabled: interactionModeEnabled, interactionMode } = resolveComposerInteractionMode({
+  const { modes: interactionModes, interactionMode } = resolveComposerInteractionMode({
     planModeEnabled: settings.planModeEnabled,
     provider: activeProviderStatus,
     interactionMode:
@@ -2709,26 +2711,31 @@ export default function ChatView(props: ChatViewProps) {
   }, [toggleRightPanelStable, toggleRightPanelMaximizedStable]);
 
   usePasteToFocusComposer(activeThreadId, composerRef);
-  const { onConfirmRevertStable, onForkFromRunStable, onRevertTimelineTurnStable } =
-    useTimelineRewind({
-      environmentId,
-      routeThreadRef,
-      routeThreadKey,
-      currentRouteThreadKeyRef,
-      serverProjection,
-      activeThread,
-      timelineMessages,
-      phase,
-      isSendBusy,
-      isRevertingCheckpoint,
-      supportsConversationRollback,
-      activeEnvironmentUnavailable,
-      activeEnvironmentUnavailableLabel,
-      promptRef,
-      composerRef,
-      composerDraftTarget,
-      setThreadError,
-    });
+  const {
+    onConfirmRevertStable,
+    onEditTimelineMessageStable,
+    onForkFromRunStable,
+    onRevertTimelineTurnStable,
+  } = useTimelineRewind({
+    environmentId,
+    routeThreadRef,
+    routeThreadKey,
+    currentRouteThreadKeyRef,
+    serverProjection,
+    activeThread,
+    timelineMessages,
+    phase,
+    isSendBusy,
+    isRevertingCheckpoint,
+    supportsConversationRollback,
+    activeEnvironmentUnavailable,
+    activeEnvironmentUnavailableLabel,
+    promptRef,
+    composerRef,
+    composerDraftTarget,
+    setThreadError,
+    requestResend: setEditResendThreadKey,
+  });
   const onCompactContext = () => {
     if (compactDisabled) return;
     void sendStandaloneCommand("/compact", "Failed to compact context.");
@@ -2758,7 +2765,7 @@ export default function ChatView(props: ChatViewProps) {
     multipleModelSelections,
     runtimeMode,
     interactionMode,
-    interactionModeEnabled,
+    interactionModes,
     isLocalDraftThread,
     canOverrideServerThreadEnvMode,
     setPendingServerThreadEnvModeEntry,
@@ -2993,6 +3000,20 @@ export default function ChatView(props: ChatViewProps) {
     setDraftThreadContext,
     workLocallyResendReady,
   ]);
+
+  const editResendReady =
+    editResendThreadKey !== null &&
+    !isSendBusy &&
+    !isRevertingCheckpoint &&
+    !threadDetailLoading &&
+    clientSettingsHydrated;
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- sends an in-place edit once the rewind has committed its text to the composer
+  useEffect(() => {
+    if (!editResendReady || sendInFlightRef.current) return;
+    const threadKey = editResendThreadKey;
+    setEditResendThreadKey(null);
+    if (threadKey === routeThreadKey) void onComposerSendStable();
+  }, [editResendReady, editResendThreadKey, onComposerSendStable, routeThreadKey, sendInFlightRef]);
 
   const onExpandTimelineImage = (preview: ExpandedImagePreview) => {
     openExpandedImagePreview(routeThreadKey, preview);
@@ -3434,6 +3455,7 @@ export default function ChatView(props: ChatViewProps) {
                 threadStartCheckpointReady={threadStartCheckpointReady}
                 availableRevertTurnCounts={availableRevertTurnCounts}
                 onRevertToTurnCount={onRevertTimelineTurnStable}
+                onEditUserMessage={onEditTimelineMessageStable}
                 onUseArtifactTemplate={insertArtifactTemplateStable}
                 onSendAppMessage={sendAppMessageStable}
                 isRevertingCheckpoint={isRevertingCheckpoint}

@@ -14,7 +14,8 @@ import { useQuietThreadShell } from "../../state/entities";
 import { useEnvironmentQuery } from "../../state/query";
 import { serverEnvironment } from "../../state/server";
 import { replaceComposerContextReferences } from "@marp/shared/composerContextReferences";
-import { memo, use, useState, type ReactNode } from "react";
+import { memo, use, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import {
   createMessageAttachmentPreviewProjector,
   selectMessageImageResources,
@@ -33,8 +34,8 @@ import {
   EyeIcon,
   type LucideIcon,
   MessagesSquareIcon,
-  Redo2Icon,
   PencilIcon,
+  Redo2Icon,
 } from "lucide-react";
 import { Link as LinkIconNode } from "lucide";
 import { Button, InlineButton } from "../ui/button";
@@ -79,7 +80,14 @@ import {
   TimelineRowTimestamp,
 } from "./TimelineRowParts";
 import { UserMessageContextReferenceChip } from "./UserMessageContextChips";
-import { resolvePreviewAnnotationImage } from "./TimelineUserMessageRow.logic";
+import {
+  editUserMessageBlockedReason,
+  resolvePreviewAnnotationImage,
+} from "./TimelineUserMessageRow.logic";
+import { Textarea } from "../ui/textarea";
+import { useClientSettings } from "../../hooks/useSettings";
+import { composerRequiresModifier } from "../../composer-logic";
+import { recallableComposerPrompt } from "./composerPromptHistory";
 
 const BUBBLE_CHIP_CLASS_NAME =
   "[&_[data-slot=context-chip]]:[--context-chip-ink:var(--context-chip-message,var(--context-chip-accent))]";
@@ -332,6 +340,32 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
   );
   const previewImages = userImages.filter((image) => image.name.startsWith("preview-annotation-"));
   const revertTurnCount = row.revertTurnCount;
+  const activity = use(TimelineRowActivityCtx);
+  const onEditUserMessage = ctx.onEditUserMessage;
+  // Context chips live as links in the text; a plain textarea cannot carry them, so those
+  // messages keep only "Edit from here", which restores them into the composer.
+  const inlineEdit =
+    typeof revertTurnCount === "number" &&
+    onEditUserMessage !== undefined &&
+    userMessage.attribution === null &&
+    resolvedContext.records.length === 0
+      ? {
+          blockedReason: editUserMessageBlockedReason(activity, ctx.canOperateThread),
+          save: (text: string) => onEditUserMessage(revertTurnCount, row.message.id, text),
+        }
+      : null;
+  const [editWidth, setEditWidth] = useState<number | null>(null);
+  const editing = editWidth !== null && inlineEdit !== null;
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const startEditing = () => {
+    if (inlineEdit === null || inlineEdit.blockedReason !== null) return;
+    setEditWidth(bubbleRef.current?.offsetWidth ?? 0);
+  };
+  const stopEditing = () => {
+    flushSync(() => setEditWidth(null));
+    editButtonRef.current?.focus();
+  };
   const chippedAttachmentIds = new Set(
     collectComposerContextReferences(resolvedContext.text).flatMap((occurrence) => {
       const record = asKnownContextRecord(resolvedContext.recordsById.get(occurrence.contextId));
@@ -463,6 +497,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         <UserMessageIntentMarker intent={row.message.inputIntent} />
       ) : null}
       <div
+        ref={bubbleRef}
         className={cn(
           "relative min-w-0 max-w-[80%] rounded-2xl text-message-foreground",
           BUBBLE_CHIP_CLASS_NAME,
@@ -470,6 +505,16 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
           !folded && "p-3",
           folded && expanded && "w-full",
         )}
+        // The editor keeps the bubble's width; 18rem leaves room for its buttons.
+        style={editing ? { width: `max(${editWidth}px, 18rem)` } : undefined}
+        onDoubleClick={
+          inlineEdit !== null && !editing
+            ? () => {
+                window.getSelection()?.removeAllRanges();
+                startEditing();
+              }
+            : undefined
+        }
       >
         {/* Outside the fold so a collapsed message still has a heading to navigate to. */}
         <MessageAuthorHeading>
@@ -628,20 +673,29 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
                 ))}
               </div>
             ) : null}
-            <div onCopyCapture={onBodyCopyCapture}>
-              <CollapsibleUserMessageBody
-                text={resolvedContext.text}
-                renderContextReference={renderContextReference}
-                skills={ctx.skills}
-                markdownCwd={ctx.markdownCwd}
-                collapsible={!folded}
+            {editing ? (
+              <InlineUserMessageEditor
+                initialText={recallableComposerPrompt(row.message.text)}
+                allowEmpty={(row.message.attachments?.length ?? 0) > 0}
+                onCancel={stopEditing}
+                onSave={inlineEdit.save}
               />
-            </div>
+            ) : (
+              <div onCopyCapture={onBodyCopyCapture}>
+                <CollapsibleUserMessageBody
+                  text={resolvedContext.text}
+                  renderContextReference={renderContextReference}
+                  skills={ctx.skills}
+                  markdownCwd={ctx.markdownCwd}
+                  collapsible={!folded}
+                />
+              </div>
+            )}
           </div>
         ) : null}
       </div>
       <UserMessageProjectedStatus row={row} />
-      {!folded || expanded ? (
+      {!editing && (!folded || expanded) ? (
         <div className="flex w-full max-w-[80%] items-center justify-end pe-1 text-xs tabular-nums opacity-0 transition-opacity duration-200 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover:opacity-100">
           <div className="flex shrink-0 items-center gap-2">
             {folded && senderThreadId ? (
@@ -658,6 +712,13 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
               </TooltipPopup>
             </Tooltip>
             <div className="flex items-center gap-0.5">
+              {inlineEdit !== null ? (
+                <EditUserMessageButton
+                  buttonRef={editButtonRef}
+                  blockedReason={inlineEdit.blockedReason}
+                  onEdit={startEditing}
+                />
+              ) : null}
               {typeof revertTurnCount === "number" && (
                 <RevertUserMessageButton turnCount={revertTurnCount} messageId={row.message.id} />
               )}
@@ -726,6 +787,7 @@ function RevertUserMessageButton({
 }) {
   const ctx = use(TimelineRowCtx);
   const activity = use(TimelineRowActivityCtx);
+  const blockedReason = editUserMessageBlockedReason(activity, ctx.canOperateThread);
 
   return (
     <Tooltip>
@@ -735,16 +797,106 @@ function RevertUserMessageButton({
             type="button"
             size="xs"
             variant="ghost"
-            disabled={activity.isRevertingCheckpoint || activity.isWorking}
-            onClick={() => ctx.onRevertToTurnCount(turnCount, messageId)}
+            aria-disabled={blockedReason !== null || undefined}
+            onClick={() => {
+              if (blockedReason === null) ctx.onRevertToTurnCount(turnCount, messageId);
+            }}
             aria-label="Edit from here"
           />
         }
       >
         <PencilIcon className="size-3" />
       </TooltipTrigger>
-      <TooltipPopup side="top">Edit from here</TooltipPopup>
+      <TooltipPopup side="top">{blockedReason ?? "Edit from here in the composer"}</TooltipPopup>
     </Tooltip>
+  );
+}
+
+function EditUserMessageButton({
+  buttonRef,
+  blockedReason,
+  onEdit,
+}: {
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
+  blockedReason: string | null;
+  onEdit: () => void;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            ref={buttonRef}
+            type="button"
+            size="xs"
+            variant="ghost"
+            aria-disabled={blockedReason !== null || undefined}
+            onClick={onEdit}
+            aria-label="Edit message"
+          />
+        }
+      >
+        <PencilIcon className="size-3" />
+      </TooltipTrigger>
+      <TooltipPopup side="top">{blockedReason ?? "Edit message"}</TooltipPopup>
+    </Tooltip>
+  );
+}
+
+function InlineUserMessageEditor(props: {
+  initialText: string;
+  allowEmpty: boolean;
+  onCancel: () => void;
+  onSave: (text: string) => void;
+}) {
+  const [text, setText] = useState(props.initialText);
+  const sendShortcut = useClientSettings((settings) => settings.sendShortcut);
+  const canSave = props.allowEmpty || text.trim().length > 0;
+  const save = () => {
+    if (canSave) props.onSave(text);
+  };
+  const [focusAtEnd] = useState(() => (node: HTMLTextAreaElement | null) => {
+    if (!node) return;
+    node.focus();
+    node.setSelectionRange(node.value.length, node.value.length);
+  });
+  return (
+    <div className="flex flex-col gap-2" data-user-message-editor="true">
+      <Textarea
+        ref={focusAtEnd}
+        size="sm"
+        aria-label="Edit message"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            props.onCancel();
+            return;
+          }
+          if (
+            event.key !== "Enter" ||
+            event.shiftKey ||
+            event.altKey ||
+            event.nativeEvent.isComposing
+          )
+            return;
+          const modifier = event.metaKey || event.ctrlKey;
+          if (!modifier && composerRequiresModifier(sendShortcut, text)) return;
+          event.preventDefault();
+          save();
+        }}
+      />
+      <div className="flex items-center justify-end gap-1">
+        <Button type="button" size="xs" variant="ghost" onClick={props.onCancel}>
+          Cancel
+        </Button>
+        <Button type="button" size="xs" disabled={!canSave} onClick={save}>
+          Save & resend
+        </Button>
+      </div>
+    </div>
   );
 }
 

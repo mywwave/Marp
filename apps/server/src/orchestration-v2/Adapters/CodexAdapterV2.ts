@@ -102,6 +102,7 @@ import { resolveAttachmentPath, resolveAttachmentPathById } from "../../attachme
 import { getCodexServiceTierOptionValue } from "../../codexModelOptions.ts";
 import { ServerConfig } from "../../config.ts";
 import { expandHomePath } from "@marp/provider-core/server/pathExpansion";
+import { marpInteractionModeInstructions } from "@marp/provider-core/server/orchestrationInstructions";
 import { buildCodexAdditionalContext } from "../../provider/CodexDeveloperInstructions.ts";
 import {
   describeMcpElicitation,
@@ -721,6 +722,8 @@ function codexRuntimeModeTurnDefaults(runtimeMode: RuntimeMode): {
   }
 }
 
+const CODEX_INTERACTION_MODE_TOOLS = { subagent: "spawn_agent" } as const;
+
 export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTurnStartParams")(
   function* (input: {
     readonly nativeThreadId: string;
@@ -735,12 +738,16 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
     readonly appContext?: ProviderAdapter.ProviderAdapterV2TurnInput["appContext"];
   }) {
     const runtimeModeDefaults = codexRuntimeModeTurnDefaults(input.runtimePolicy.runtimeMode);
-    const approvalPolicy =
-      input.runtimePolicy.approvalPolicy === undefined
+    // Ask is enforced by Codex's read-only sandbox, with no approval prompt to escalate out of it.
+    const askMode = input.runtimePolicy.interactionMode === "ask";
+    const approvalPolicy = askMode
+      ? "never"
+      : input.runtimePolicy.approvalPolicy === undefined
         ? runtimeModeDefaults.approvalPolicy
         : yield* decodeTurnApprovalPolicy(input.runtimePolicy.approvalPolicy);
-    const sandboxPolicy =
-      input.runtimePolicy.sandboxPolicy === undefined
+    const sandboxPolicy: CodexSchema.V2TurnStartParams__SandboxPolicy | null = askMode
+      ? { type: "readOnly" }
+      : input.runtimePolicy.sandboxPolicy === undefined
         ? runtimeModeDefaults.sandboxPolicy
         : yield* decodeTurnSandboxPolicy(input.runtimePolicy.sandboxPolicy);
     const selectedEffort =
@@ -769,10 +776,18 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
             },
           )
         : undefined;
-    const additionalContext =
-      marpContext === undefined && Object.keys(appContext).length === 0
+    const modeInstructions = marpInteractionModeInstructions(
+      input.runtimePolicy.interactionMode,
+      CODEX_INTERACTION_MODE_TOOLS,
+    );
+    const modeContext =
+      modeInstructions === undefined
         ? undefined
-        : { ...marpContext, ...appContext };
+        : { marp_interaction_mode: { kind: "application" as const, value: modeInstructions } };
+    const additionalContext =
+      marpContext === undefined && modeContext === undefined && Object.keys(appContext).length === 0
+        ? undefined
+        : { ...marpContext, ...modeContext, ...appContext };
     return yield* decodeCodexTurnStartParamsWithCollaborationMode({
       threadId: input.nativeThreadId,
       input: input.codexInput,
@@ -789,7 +804,7 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
       ...(serviceTier === undefined ? {} : { serviceTier }),
       // Codex supplies its own mode instructions; send both modes to clear Plan on exit.
       collaborationMode: {
-        mode: input.runtimePolicy.interactionMode,
+        mode: input.runtimePolicy.interactionMode === "plan" ? "plan" : "default",
         settings: {
           model: input.modelSelection.model,
           ...(effort === undefined ? {} : { reasoning_effort: effort }),

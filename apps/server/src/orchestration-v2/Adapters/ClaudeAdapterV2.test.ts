@@ -438,6 +438,32 @@ describe("ClaudeAdapterV2 runtime query policy", () => {
     });
   });
 
+  it("enforces Ask as read-only even with Full access, and sends each mode's text", () => {
+    const policyFor = (interactionMode: "ask" | "debug" | "multitask") =>
+      ClaudeAdapterV2.claudeRuntimeQueryPolicyForRuntimePolicy(
+        ProviderAdapter.ProviderAdapterV2RuntimePolicy.make({
+          runtimeMode: "full-access",
+          interactionMode,
+          cwd: "/workspace",
+        }),
+      );
+
+    const ask = policyFor("ask");
+    assert.equal(ask.permissionMode, "dontAsk");
+    assert.deepEqual(ask.tools, ClaudeAdapterV2.CLAUDE_READ_ONLY_ALLOWED_TOOLS);
+    assert.isUndefined(ask.allowDangerouslySkipPermissions);
+    assert.include(ask.modeInstructions, "Marp interaction mode: Ask");
+
+    const debug = policyFor("debug");
+    assert.equal(debug.permissionMode, "bypassPermissions");
+    assert.isUndefined(debug.tools);
+    assert.include(debug.modeInstructions, "`AskUserQuestion`");
+
+    const multitask = policyFor("multitask");
+    assert.equal(multitask.permissionMode, "bypassPermissions");
+    assert.include(multitask.modeInstructions, "`Agent`");
+  });
+
   it("maps default full-access policy to Claude bypass permissions", () => {
     const queryPolicy = ClaudeAdapterV2.claudeRuntimeQueryPolicyForRuntimePolicy(
       ProviderAdapter.ProviderAdapterV2RuntimePolicy.make({

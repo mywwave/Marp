@@ -160,6 +160,8 @@ export async function rewindToMessage(input: {
   readonly threadId: ThreadId;
   readonly turnCount: number;
   readonly restoreFiles: boolean;
+  /** Replaces the message's own text, as when it was edited in place. */
+  readonly promptOverride?: string | undefined;
   readonly checkpoint: ReturnType<typeof findRevertCheckpoint>;
   readonly draftTarget: ScopedThreadRef | DraftId;
   readonly composerHasPendingAttachments: boolean;
@@ -219,7 +221,7 @@ export async function rewindToMessage(input: {
       if (result._tag === "Failure") throw squashAtomCommandFailure(result);
     });
     const currentPrompt = store.getComposerDraft(draftTarget)?.prompt ?? "";
-    const restoredPrompt = recallableComposerPrompt(message.text);
+    const restoredPrompt = input.promptOverride ?? recallableComposerPrompt(message.text);
     const nextPrompt =
       restoredPrompt.length === 0
         ? currentPrompt

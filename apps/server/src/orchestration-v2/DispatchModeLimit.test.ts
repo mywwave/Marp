@@ -10,7 +10,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
 import { CodexProviderCapabilitiesV2 } from "./Adapters/CodexAdapterV2.ts";
-import { DispatchModeLimit } from "./DispatchModeLimit.ts";
+import { DispatchModeLimit, exceededDispatchModeLimit } from "./DispatchModeLimit.ts";
 import * as Orchestrator from "./Orchestrator.ts";
 import * as ProjectionStore from "./ProjectionStore.ts";
 import * as ProviderAdapterRegistry from "./ProviderAdapterRegistry.ts";
@@ -55,6 +55,17 @@ const createThread = (threadId: ThreadId) =>
       creationSource: "web",
     });
   });
+
+it("ranks Ask with Plan as read-only, and Debug and Multitask with Chat", () => {
+  const limit = (interactionMode: "plan" | "ask" | "default") =>
+    ({ runtimeMode: "full-access", interactionMode }) as const;
+  const modes = (interactionMode: "ask" | "debug" | "multitask") =>
+    ({ runtimeMode: "full-access", interactionMode }) as const;
+  assert.isUndefined(exceededDispatchModeLimit(limit("plan"), modes("ask")));
+  assert.equal(exceededDispatchModeLimit(limit("ask"), modes("debug")), "interaction");
+  assert.equal(exceededDispatchModeLimit(limit("plan"), modes("multitask")), "interaction");
+  assert.isUndefined(exceededDispatchModeLimit(limit("default"), modes("multitask")));
+});
 
 it.layer(layerTest)("DispatchModeLimit", (it) => {
   it.effect("refuses a limited command on a thread its user raised, and records nothing", () =>

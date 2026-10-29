@@ -24,6 +24,7 @@ import {
   getStartedThreadModelChangeBlockReason,
   deriveLockedProvider,
   makeModelDisabledReason,
+  nextComposerInteractionMode,
 } from "../ChatView.logic";
 interface ComposerSelectionInput {
   readonly environmentId: EnvironmentId;
@@ -41,7 +42,7 @@ interface ComposerSelectionInput {
   readonly multipleModelSelections: ReadonlyArray<ModelSelection> | null;
   readonly runtimeMode: RuntimeMode;
   readonly interactionMode: ProviderInteractionMode;
-  readonly interactionModeEnabled: boolean;
+  readonly interactionModes: ReadonlyArray<ProviderInteractionMode>;
   readonly isLocalDraftThread: boolean;
   readonly canOverrideServerThreadEnvMode: boolean;
   readonly setPendingServerThreadEnvModeEntry: Dispatch<
@@ -72,7 +73,7 @@ export function useComposerSelection(input: ComposerSelectionInput) {
     multipleModelSelections,
     runtimeMode,
     interactionMode,
-    interactionModeEnabled,
+    interactionModes,
     isLocalDraftThread,
     canOverrideServerThreadEnvMode,
     setPendingServerThreadEnvModeEntry,
@@ -101,7 +102,7 @@ export function useComposerSelection(input: ComposerSelectionInput) {
   const handleRuntimeModeChangeStable = useStableCallback(handleRuntimeModeChange);
 
   const handleInteractionModeChange = (mode: ProviderInteractionMode) => {
-    if (mode === "plan" && !interactionModeEnabled) return;
+    if (!interactionModes.includes(mode)) return;
     if (mode === interactionMode) return;
     setComposerDraftInteractionMode(composerDraftTarget, mode);
     if (isLocalDraftThread) {
@@ -111,8 +112,8 @@ export function useComposerSelection(input: ComposerSelectionInput) {
   };
   const handleInteractionModeChangeStable = useStableCallback(handleInteractionModeChange);
   const toggleInteractionMode = () => {
-    if (!interactionModeEnabled) return;
-    handleInteractionModeChange(interactionMode === "plan" ? "default" : "plan");
+    if (interactionModes.length < 2) return;
+    handleInteractionModeChange(nextComposerInteractionMode(interactionModes, interactionMode));
   };
   const toggleInteractionModeStable = useStableCallback(toggleInteractionMode);
   const openProviderSetup = (instanceId: ProviderInstanceId) => {

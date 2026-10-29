@@ -23,3 +23,14 @@ export function resolvePreviewAnnotationImage(input: {
     null
   );
 }
+
+/** Why a past message cannot be edited right now, or null when it can. */
+export function editUserMessageBlockedReason(
+  activity: { readonly isWorking: boolean; readonly isRevertingCheckpoint: boolean },
+  canOperateThread: boolean,
+): string | null {
+  if (!canOperateThread) return "You have view-only access to this thread";
+  if (activity.isRevertingCheckpoint) return "Rewinding the thread…";
+  if (activity.isWorking) return "Stop the agent to edit this message";
+  return null;
+}

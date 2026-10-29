@@ -217,6 +217,37 @@ describe("CodexAdapterV2 runtime policy", () => {
     }),
   );
 
+  it.effect("enforces Ask with a read-only sandbox and sends Marp's mode text", () =>
+    Effect.gen(function* () {
+      const build = (interactionMode: "ask" | "multitask") =>
+        CodexAdapterV2.buildCodexTurnStartParams({
+          nativeThreadId: `native-${interactionMode}`,
+          codexInput: [{ type: "text", text: "test" }],
+          runtimePolicy: {
+            runtimeMode: "full-access",
+            interactionMode,
+            cwd: null,
+            sandboxPolicy: { type: "dangerFullAccess" },
+          },
+          modelSelection: { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.4" },
+        });
+
+      const ask = yield* build("ask");
+      assert.equal(ask.sandboxPolicy?.type, "readOnly");
+      assert.equal(ask.approvalPolicy, "never");
+      assert.equal(ask.collaborationMode?.mode, "default");
+      assert.include(ask.additionalContext?.["marp_interaction_mode"]?.value, "Ask");
+
+      const multitask = yield* build("multitask");
+      assert.equal(multitask.sandboxPolicy?.type, "dangerFullAccess");
+      assert.equal(multitask.collaborationMode?.mode, "default");
+      assert.include(
+        multitask.additionalContext?.["marp_interaction_mode"]?.value,
+        "`spawn_agent`",
+      );
+    }),
+  );
+
   it.effect("sends MCP app model context as untrusted Codex context", () =>
     Effect.gen(function* () {
       const policy = { runtimeMode: "full-access", interactionMode: "default", cwd: null } as const;

@@ -79,6 +79,7 @@ const CODEX_DISCOVERY_MARGIN_MS = 250;
 const CODEX_PRESENTATION = {
   displayName: "Codex",
   showInteractionModeToggle: true,
+  supportedInteractionModes: ["plan", "ask", "multitask"],
   reportsContextWindow: true,
 } as const;
 

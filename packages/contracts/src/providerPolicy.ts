@@ -31,9 +31,19 @@ export const RuntimeMode = Schema.Literals([
 export type RuntimeMode = typeof RuntimeMode.Type;
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
 
-export const ProviderInteractionMode = Schema.Literals(["default", "plan"]);
+export const ProviderInteractionMode = Schema.Literals([
+  "default",
+  "plan",
+  "ask",
+  "debug",
+  "multitask",
+]);
 export type ProviderInteractionMode = typeof ProviderInteractionMode.Type;
 export const DEFAULT_PROVIDER_INTERACTION_MODE: ProviderInteractionMode = "default";
+
+/** Plan and Ask may read and search but never edit; delegation never widens past them. */
+export const interactionModeAllowsEdits = (mode: ProviderInteractionMode): boolean =>
+  mode !== "plan" && mode !== "ask";
 
 export const ProviderRequestKind = Schema.Literals([
   "command",

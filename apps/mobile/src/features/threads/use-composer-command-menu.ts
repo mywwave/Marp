@@ -213,6 +213,7 @@ export function useComposerCommandMenu({
   environments = EMPTY_ENVIRONMENTS,
   linkedEnvironments = NO_LINKED_ENVIRONMENTS,
   currentThreadId = null,
+  currentProjectId = null,
   projectCwd,
   pullRequestProjectId = null,
   pullRequestRepository = null,
@@ -234,6 +235,8 @@ export function useComposerCommandMenu({
   /** The machines `environmentId` links to, by name, whose threads the picker also offers. */
   readonly linkedEnvironments?: ReadonlyMap<EnvironmentId, string>;
   readonly currentThreadId?: ThreadId | null;
+  /** The composer's project, whose threads the `@` picker ranks first. */
+  readonly currentProjectId?: ProjectId | null;
   readonly projectCwd: string | null;
   readonly pullRequestProjectId?: ProjectId | null;
   readonly pullRequestRepository?: string | null;
@@ -464,6 +467,7 @@ export function useComposerCommandMenu({
             environmentId,
             linkedEnvironments,
             excludeThreadId: currentThreadId,
+            projectId: currentProjectId,
             query: trigger.query,
             now,
           })

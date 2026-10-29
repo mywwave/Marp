@@ -537,6 +537,8 @@ type MessagesTimelineRowContent =
       createdAt: string | null;
       groupId?: string;
       expanded?: boolean;
+      /** Nothing of the turn is visible yet, so the row says the agent is planning. */
+      preActivity?: true;
     }
   | {
       kind: "work-toggle";
@@ -2166,10 +2168,13 @@ export function deriveMessagesTimelineRows(input: {
         );
       }
     } else {
+      // The working row opens the active turn; with nothing after it the turn has no visible activity.
+      const preActivity = nextRows.at(-1)?.kind === "working";
       nextRows.push({
         kind: "thinking",
         id: LIVE_ACTIVITY_ROW_ID,
         createdAt: input.activeTurnStartedAt ?? null,
+        ...(preActivity ? { preActivity: true as const } : {}),
       });
     }
   }
@@ -2432,7 +2437,12 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
       );
     case "thinking": {
       const bt = b as typeof a;
-      return a.createdAt === bt.createdAt && a.groupId === bt.groupId && a.expanded === bt.expanded;
+      return (
+        a.createdAt === bt.createdAt &&
+        a.groupId === bt.groupId &&
+        a.expanded === bt.expanded &&
+        a.preActivity === bt.preActivity
+      );
     }
     case "worktree-setup":
       return a.snapshot === (b as typeof a).snapshot;

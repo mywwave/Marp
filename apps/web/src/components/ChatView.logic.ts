@@ -36,6 +36,7 @@ import {
   ProviderDriverKind,
   type ProviderInstanceId,
   type ServerProvider,
+  serverProviderInteractionModes,
   type ScopedProjectRef,
   type ScopedThreadRef,
   type ThreadContextRecord,
@@ -539,19 +540,38 @@ export function resolveComposerProviderSelection(input: {
   };
 }
 
+/** The modes the composer offers for this provider; Plan also needs the Plan mode setting. */
 export function resolveComposerInteractionMode(input: {
   planModeEnabled: boolean;
-  provider: Pick<ServerProvider, "showInteractionModeToggle"> | null | undefined;
+  provider:
+    | Pick<ServerProvider, "showInteractionModeToggle" | "supportedInteractionModes">
+    | null
+    | undefined;
   interactionMode: ProviderInteractionMode;
-}): { enabled: boolean; interactionMode: ProviderInteractionMode } {
-  const enabled =
-    input.planModeEnabled &&
-    input.provider != null &&
-    input.provider.showInteractionModeToggle !== false;
+}): {
+  enabled: boolean;
+  modes: ReadonlyArray<ProviderInteractionMode>;
+  interactionMode: ProviderInteractionMode;
+} {
+  const modes: ReadonlyArray<ProviderInteractionMode> =
+    input.provider == null
+      ? ["default"]
+      : serverProviderInteractionModes(input.provider).filter(
+          (mode) => mode !== "plan" || input.planModeEnabled,
+        );
   return {
-    enabled,
-    interactionMode: enabled ? input.interactionMode : "default",
+    enabled: modes.length > 1,
+    modes,
+    interactionMode: modes.includes(input.interactionMode) ? input.interactionMode : "default",
   };
+}
+
+/** The mode after `current` for Shift+Tab, wrapping around. */
+export function nextComposerInteractionMode(
+  modes: ReadonlyArray<ProviderInteractionMode>,
+  current: ProviderInteractionMode,
+): ProviderInteractionMode {
+  return modes[(modes.indexOf(current) + 1) % modes.length] ?? "default";
 }
 
 export function getAntigravitySendBlockReason(

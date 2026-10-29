@@ -1,4 +1,4 @@
-import { EnvironmentId, ThreadId } from "@marp/contracts";
+import { EnvironmentId, ProjectId, ThreadId } from "@marp/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -17,6 +17,7 @@ function shell(
   return {
     environmentId,
     id: ThreadId.make(id),
+    projectId: ProjectId.make("project-other"),
     title,
     branch: null,
     createdAt: "2026-10-01T00:00:00.000Z",
@@ -48,6 +49,7 @@ it("ranks thread mentions like the palette and leaves out subagent threads", () 
     environmentId,
     linkedEnvironments: new Map(),
     excludeThreadId: null,
+    projectId: null,
     query: "model",
     now: Date.parse("2026-10-23T00:00:00.000Z"),
   });
@@ -65,16 +67,57 @@ it("also offers threads on linked machines, naming the machine, but no other mac
     environmentId,
     linkedEnvironments: new Map([[vps, "Hetzner VPS"]]),
     excludeThreadId: null,
+    projectId: null,
     query: "deploy",
     now: Date.parse("2026-10-23T00:00:00.000Z"),
   });
-  expect(items.map(({ thread, label, description }) => ({ thread, label, description }))).toEqual([
-    { thread: { environmentId, threadId: "here" }, label: "Deploy script", description: "Thread" },
+  expect(
+    items.map(({ thread, label, description, machineLabel }) => ({
+      thread,
+      label,
+      description,
+      machineLabel,
+    })),
+  ).toEqual([
+    {
+      thread: { environmentId, threadId: "here" },
+      label: "Deploy script",
+      description: "Thread",
+      machineLabel: null,
+    },
     {
       thread: { environmentId: vps, threadId: "there" },
       label: "Deploy script",
       description: "Thread on Hetzner VPS",
+      machineLabel: "Hetzner VPS",
     },
+  ]);
+});
+
+it("puts the composer's project first, then recent, and leaves out itself and archived threads", () => {
+  const projectId = ProjectId.make("project-here");
+  const items = matchComposerThreadItems({
+    shells: [
+      shell("other-recent", "Auth refactor", { updatedAt: "2026-10-22T00:00:00.000Z" }),
+      shell("here-old", "Auth tokens", { projectId }),
+      shell("here-recent", "Auth flow", { projectId, updatedAt: "2026-10-22T00:00:00.000Z" }),
+      shell("current", "Auth current", { projectId }),
+      shell("archived", "Auth archive", { projectId, archivedAt: "2026-10-02T00:00:00.000Z" }),
+      shell("mid-word-here", "Reauthorize notes", { projectId }),
+    ],
+    environmentId,
+    linkedEnvironments: new Map(),
+    excludeThreadId: ThreadId.make("current"),
+    projectId,
+    query: "auth",
+    now: Date.parse("2026-10-23T00:00:00.000Z"),
+  });
+  // A word match elsewhere still beats a mid-word match in the composer's project.
+  expect(items.map((item) => item.thread.threadId)).toEqual([
+    "here-recent",
+    "here-old",
+    "other-recent",
+    "mid-word-here",
   ]);
 });
 

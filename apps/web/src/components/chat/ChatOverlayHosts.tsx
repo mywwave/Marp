@@ -182,6 +182,8 @@ export function BranchRestoreConfirmHost(props: {
 interface PendingRevert {
   readonly turnCount: number;
   readonly messageId: MessageId;
+  /** Set when the message was edited in place and should be sent again. */
+  readonly edit?: { readonly text: string; readonly composerHasDraft: boolean };
 }
 
 const revertConfirmAtom = makeThreadOverlayAtom<PendingRevert>("revert-confirm");
@@ -192,14 +194,20 @@ export function openRevertConfirm(threadKey: string, pending: PendingRevert): vo
 
 export function RevertConfirmHost(props: {
   readonly threadKey: string;
-  readonly onConfirm: (turnCount: number, messageId: MessageId, restoreFiles: boolean) => void;
+  readonly onConfirm: (
+    turnCount: number,
+    messageId: MessageId,
+    restoreFiles: boolean,
+    editedText: string | undefined,
+  ) => void;
 }) {
   const pending = useThreadOverlay(revertConfirmAtom, props.threadKey);
   const confirm = (restoreFiles: boolean) => {
     if (pending === null) return;
     closeThreadOverlay(revertConfirmAtom);
-    props.onConfirm(pending.turnCount, pending.messageId, restoreFiles);
+    props.onConfirm(pending.turnCount, pending.messageId, restoreFiles, pending.edit?.text);
   };
+  const edit = pending?.edit;
   return (
     <AlertDialog
       open={pending !== null}
@@ -209,9 +217,13 @@ export function RevertConfirmHost(props: {
     >
       <AlertDialogPopup>
         <AlertDialogHeader>
-          <AlertDialogTitle>Edit from here?</AlertDialogTitle>
+          <AlertDialogTitle>{edit ? "Resend edited message?" : "Edit from here?"}</AlertDialogTitle>
           <AlertDialogDescription>
-            Rewind chat to before this message. Your prompt and attachments return to the composer.
+            {edit === undefined
+              ? "Rewind chat to before this message. Your prompt and attachments return to the composer."
+              : edit.composerHasDraft
+                ? "Rewind chat to before this message and remove everything after it. Your composer has a draft, so the edit and its attachments join it there to send yourself."
+                : "Rewind chat to before this message and remove everything after it, then send your edit with its attachments."}{" "}
             “Revert files too” also undoes your own edits.
           </AlertDialogDescription>
         </AlertDialogHeader>

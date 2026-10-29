@@ -60,6 +60,7 @@ const DEFAULT_CLAUDE_MODEL_CAPABILITIES: ModelCapabilities = createModelCapabili
 const CLAUDE_PRESENTATION = {
   displayName: "Claude",
   showInteractionModeToggle: true,
+  supportedInteractionModes: ["plan", "ask", "debug", "multitask"],
   reportsContextWindow: true,
 } as const;
 function toTitleCaseWords(value: string): string {

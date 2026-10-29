@@ -8,6 +8,7 @@ import {
   ServerObservability,
   ServerProvider,
   ServerProviders,
+  serverProviderInteractionModes,
 } from "./server.ts";
 import { ServerSettings } from "./settings.ts";
 
@@ -69,6 +70,23 @@ describe("server config forward compatibility", () => {
     expect(parsed.usageLimits?.windows).toEqual([
       { id: "primary", kind: "session", label: "Session", usedPercent: 12 },
     ]);
+  });
+
+  it("drops interaction modes this build cannot decode and keeps older snapshots on Chat and Plan", () => {
+    const parsed = decodeServerProvider({
+      ...baseProviderSnapshot,
+      supportedInteractionModes: ["plan", "some-future-mode", "ask"],
+    });
+    expect(serverProviderInteractionModes(parsed)).toEqual(["default", "plan", "ask"]);
+    expect(serverProviderInteractionModes(decodeServerProvider(baseProviderSnapshot))).toEqual([
+      "default",
+      "plan",
+    ]);
+    expect(
+      serverProviderInteractionModes(
+        decodeServerProvider({ ...baseProviderSnapshot, showInteractionModeToggle: false }),
+      ),
+    ).toEqual(["default"]);
   });
 });
 

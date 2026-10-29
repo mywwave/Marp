@@ -24,7 +24,7 @@ import {
 } from "./keybindings.ts";
 import { EditorId, FileManagerRevealKind, RemoteOpenTarget } from "./editor.ts";
 import { ModelCapabilities, ProviderOptionDescriptor } from "./model.ts";
-import { RuntimeMode } from "./providerPolicy.ts";
+import { ProviderInteractionMode, RuntimeMode } from "./providerPolicy.ts";
 import { ProviderDriverKind, ProviderInstanceId } from "./providerInstance.ts";
 import { ServerProviderUsageLimits, UsageLimitSourceSnapshots } from "./providerUsageLimits.ts";
 import { ServerSettings } from "./settings.ts";
@@ -216,6 +216,8 @@ export const ServerProvider = Schema.Struct({
   showInteractionModeToggle: Schema.optional(Schema.Boolean),
   reportsContextWindow: Schema.optional(Schema.Boolean),
   supportedRuntimeModes: Schema.optional(ForwardCompatibleArray(RuntimeMode)),
+  // Absent: Chat, plus Plan when showInteractionModeToggle is not false.
+  supportedInteractionModes: Schema.optional(ForwardCompatibleArray(ProviderInteractionMode)),
   supportsConversationRollback: Schema.optional(Schema.Boolean),
   supportsTextGeneration: Schema.optional(Schema.Boolean),
   setup: Schema.optional(
@@ -266,6 +268,17 @@ export const ServerProvider = Schema.Struct({
   updateState: Schema.optionalKey(ServerProviderUpdateState),
 });
 export type ServerProvider = typeof ServerProvider.Type;
+
+/** The interaction modes a provider offers, Chat first. */
+export function serverProviderInteractionModes(
+  provider: Pick<ServerProvider, "showInteractionModeToggle" | "supportedInteractionModes">,
+): ReadonlyArray<ProviderInteractionMode> {
+  const declared = provider.supportedInteractionModes;
+  if (declared !== undefined && declared.length > 0) {
+    return ["default", ...declared.filter((mode) => mode !== "default")];
+  }
+  return provider.showInteractionModeToggle === false ? ["default"] : ["default", "plan"];
+}
 
 export const ServerProviders = ForwardCompatibleArray(ServerProvider);
 export type ServerProviders = typeof ServerProviders.Type;

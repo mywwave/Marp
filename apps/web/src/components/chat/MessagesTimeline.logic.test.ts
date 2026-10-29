@@ -19,6 +19,7 @@ import {
   type TimelineEntry,
 } from "../../session-logic";
 import { makeStreamingTimelineFixture } from "../../test-fixtures";
+import { preActivityLabel } from "./TimelineWorkGroupRows.logic";
 import type { TurnDiffSummary } from "../../types";
 import { describe, expect, it } from "vite-plus/test";
 import { EnvironmentId, MessageId, RunId } from "@marp/contracts";
@@ -2418,7 +2419,13 @@ describe("deriveMessagesTimelineRows", () => {
     const runningActivityRow = runningRows.find((row) => row.id === "live-activity-row");
     const completedActivityRow = completedRows.find((row) => row.id === "live-activity-row");
 
-    expect(initialActivityRow).toMatchObject({ kind: "thinking" });
+    expect(initialActivityRow).toMatchObject({ kind: "thinking", preActivity: true });
+    expect(preActivityLabel("2026-01-01T00:00:00Z", Date.parse("2026-01-01T00:00:19Z"))).toBe(
+      "Planning next moves",
+    );
+    expect(preActivityLabel("2026-01-01T00:00:00Z", Date.parse("2026-01-01T00:00:20Z"))).toBe(
+      "Taking a little while…",
+    );
     expect(runningActivityRow).toMatchObject({ kind: "work-live", active: true });
     expect(completedActivityRow).toMatchObject({ kind: "work-live", active: true });
     expect(failedRows.some((row) => row.kind === "work-live")).toBe(false);
@@ -2438,6 +2445,7 @@ describe("deriveMessagesTimelineRows", () => {
     ]);
     expect(declinedRows.find((row) => row.kind === "work-live")).toMatchObject({ active: false });
     expect(declinedRows.at(-1)).toMatchObject({ kind: "thinking", id: "live-activity-row" });
+    expect(declinedRows.at(-1)).not.toHaveProperty("preActivity");
     expect(initialRows.filter((row) => row.id === "live-activity-row")).toHaveLength(1);
     expect(runningRows.filter((row) => row.id === "live-activity-row")).toHaveLength(1);
     expect(completedRows.filter((row) => row.id === "live-activity-row")).toHaveLength(1);

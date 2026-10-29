@@ -3,7 +3,10 @@ import {
   OrchestrationV2AppThread,
   ProjectId,
   ProviderInstanceId,
+  type ProviderInteractionMode,
   type RuntimeMode,
+  type ServerProvider,
+  serverProviderInteractionModes,
 } from "@marp/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -71,6 +74,19 @@ function providerRuntimeMode(
     : "approval-required";
 }
 
+/** A mode the provider does not offer runs as Chat; Ask keeps read-only through Plan where offered. */
+function providerInteractionMode(
+  interactionMode: ProviderInteractionMode,
+  provider:
+    | Pick<ServerProvider, "showInteractionModeToggle" | "supportedInteractionModes">
+    | undefined,
+): ProviderInteractionMode {
+  if (provider === undefined) return interactionMode;
+  const supported = serverProviderInteractionModes(provider);
+  if (supported.includes(interactionMode)) return interactionMode;
+  return interactionMode === "ask" && supported.includes("plan") ? "plan" : "default";
+}
+
 export const layerFromProjectStore: Layer.Layer<
   RuntimePolicyV2,
   never,
@@ -83,10 +99,7 @@ export const layerFromProjectStore: Layer.Layer<
     return RuntimePolicyV2.of({
       resolve: Effect.fn("RuntimePolicyV2.resolve")(function* (input) {
         const instance = yield* providerInstances.getInstance(input.modelSelection.instanceId);
-        const supportedRuntimeModes =
-          instance === undefined
-            ? undefined
-            : (yield* instance.snapshot.getSnapshot).supportedRuntimeModes;
+        const snapshot = instance === undefined ? undefined : yield* instance.snapshot.getSnapshot;
         const cwd =
           input.thread.worktreePath ??
           (yield* projects.get(input.thread.projectId).pipe(
@@ -113,8 +126,11 @@ export const layerFromProjectStore: Layer.Layer<
             ),
           ));
         return ProviderAdapter.ProviderAdapterV2RuntimePolicy.make({
-          runtimeMode: providerRuntimeMode(input.thread.runtimeMode, supportedRuntimeModes),
-          interactionMode: input.thread.interactionMode,
+          runtimeMode: providerRuntimeMode(
+            input.thread.runtimeMode,
+            snapshot?.supportedRuntimeModes,
+          ),
+          interactionMode: providerInteractionMode(input.thread.interactionMode, snapshot),
           cwd,
         });
       }),
