@@ -23,6 +23,7 @@ import {
   type ToolGroupSummaryKind,
 } from "@marp/client-runtime/work-log/presentation";
 import {
+  workEventKind,
   workRunHeader,
   type WorkRunHeaderRule,
 } from "@marp/client-runtime/work-log/event-presentation";
@@ -664,6 +665,11 @@ type MessagesTimelineRowContent =
       status: MarpStatusUpdate;
     }
   | {
+      kind: "unread-divider";
+      id: string;
+      createdAt: string;
+    }
+  | {
       kind: "mcp-app";
       id: string;
       createdAt: string;
@@ -672,6 +678,43 @@ type MessagesTimelineRowContent =
       revision: string;
       mcpApp: McpAppReference;
     };
+
+/** The user's visit mark when the thread opened, and the newest activity it then had. */
+export interface TimelineUnreadMark {
+  readonly seenAt: string;
+  readonly until: string;
+}
+
+/**
+ * "New" goes before the first row the user had not seen when the thread opened. Activity that
+ * arrives while they watch is not unread, and a thread that is all new gets no divider.
+ */
+export function withUnreadDivider(
+  rows: MessagesTimelineRow[],
+  mark: TimelineUnreadMark | null,
+): MessagesTimelineRow[] {
+  if (mark === null) return rows;
+  const seenMs = Date.parse(mark.seenAt);
+  const untilMs = Date.parse(mark.until);
+  if (Number.isNaN(seenMs) || Number.isNaN(untilMs) || untilMs <= seenMs) return rows;
+  let sawSeen = false;
+  for (const [index, row] of rows.entries()) {
+    const { createdAt } = row;
+    const createdMs = createdAt === null ? NaN : Date.parse(createdAt);
+    if (createdAt === null || Number.isNaN(createdMs)) continue;
+    if (createdMs <= seenMs) {
+      sawSeen = true;
+      continue;
+    }
+    if (!sawSeen || createdMs > untilMs) return rows;
+    return [
+      ...rows.slice(0, index),
+      { kind: "unread-divider", id: "unread-divider", createdAt },
+      ...rows.slice(index),
+    ];
+  }
+  return rows;
+}
 
 export interface StableMessagesTimelineRowsState {
   byId: Map<string, MessagesTimelineRow>;
@@ -689,6 +732,21 @@ function workEntryStatusUpdate(entry: WorkLogEntry): MarpStatusUpdate | undefine
 
 function workGroupId(timelineEntryId: string): string {
   return `work-group:${timelineEntryId}`;
+}
+
+/** A run whose live steps the user opened keeps them open once it settles and folds. */
+export function runHasExpandedWorkGroup(
+  timelineEntries: ReadonlyArray<TimelineEntry>,
+  runId: RunId,
+  expandedWorkGroupIds: ReadonlySet<string>,
+): boolean {
+  if (expandedWorkGroupIds.size === 0) return false;
+  return timelineEntries.some(
+    (entry) =>
+      entry.kind === "work" &&
+      entry.entry.runId === runId &&
+      expandedWorkGroupIds.has(workGroupId(entry.id)),
+  );
 }
 
 function expandedWorkGroupRow(
@@ -759,7 +817,11 @@ function foldedWorkSummary(
     if (entry.entry.projectedItem?.item.deferredWork) return null;
     if (workEntryIsVisibleInGroup(entry.entry, true)) work.push(entry.entry);
   }
-  return work.some((entry) => entry.itemType !== "reasoning") ? workRunHeader(work).title : null;
+  return work.some(
+    (entry) => entry.itemType !== "reasoning" && entry.itemType !== "assistant_message",
+  )
+    ? workRunHeader(work).title
+    : null;
 }
 
 interface TurnFold {
@@ -1425,6 +1487,97 @@ function settleSupersededReasoning(entries: ReadonlyArray<TimelineEntry>) {
   });
 }
 
+const BRIEF_EXPLORATION_MAX_STEPS = 2;
+
+/** One or two reads read better as their own rows than behind an "Explored" header. */
+function runIsBriefExploration(entries: ReadonlyArray<WorkLogEntry>): boolean {
+  const steps = entries.filter((entry) => entry.itemType !== "assistant_message");
+  return (
+    steps.length > 0 &&
+    steps.length <= BRIEF_EXPLORATION_MAX_STEPS &&
+    steps.every((entry) => {
+      const kind = workEventKind(entry);
+      return kind === "read" || kind === "list";
+    })
+  );
+}
+
+const RUN_TEXT_MAX_CHARS = 100;
+const RUN_TEXT_MAX_LINES = 2;
+
+function workEntryJoinsRun(
+  entry: TimelineEntry | undefined,
+  runId: RunId,
+  attemptId: string | undefined,
+): boolean {
+  return (
+    entry?.kind === "work" &&
+    entry.entry.runId === runId &&
+    entry.attempt?.id === attemptId &&
+    entry.entry.sourceActivityKind !== "context-compaction" &&
+    entry.entry.sourceActivityKind !== "runtime.error" &&
+    entry.entry.tone !== "error" &&
+    entry.entry.itemType !== "error" &&
+    entry.entry.itemType !== "system_notice" &&
+    entry.entry.itemType !== "notification" &&
+    entry.entry.itemType !== "todo_list" &&
+    entry.entry.questionAnswer === undefined &&
+    workEntryStatusUpdate(entry.entry) === undefined
+  );
+}
+
+const runTextEntries = new WeakMap<TimelineEntry, TimelineEntry>();
+
+/**
+ * Short assistant text between two steps of one turn joins their run as a text row instead of
+ * splitting it. Longer text, and the settled turn's final answer, keep their own rows.
+ */
+function absorbShortAssistantText(
+  entries: ReadonlyArray<TimelineEntry>,
+  liveRunId: RunId | null,
+): ReadonlyArray<TimelineEntry> {
+  const terminalIds = deriveTerminalAssistantMessageIds(entries);
+  return entries.map((entry, index) => {
+    if (entry.kind !== "message") return entry;
+    const { message } = entry;
+    const runId = message.runId;
+    const text = message.text.trim();
+    if (
+      message.role !== "assistant" ||
+      message.streaming ||
+      runId === null ||
+      (terminalIds.has(message.id) && runId !== liveRunId) ||
+      text.length === 0 ||
+      text.length > RUN_TEXT_MAX_CHARS ||
+      text.split("\n").length > RUN_TEXT_MAX_LINES ||
+      !workEntryJoinsRun(entries[index - 1], runId, entry.attempt?.id) ||
+      !workEntryJoinsRun(entries[index + 1], runId, entry.attempt?.id)
+    ) {
+      return entry;
+    }
+    let absorbed = runTextEntries.get(entry);
+    if (!absorbed) {
+      absorbed = {
+        id: entry.id,
+        kind: "work",
+        createdAt: entry.createdAt,
+        ...(entry.attempt ? { attempt: entry.attempt } : {}),
+        entry: {
+          id: entry.id,
+          createdAt: entry.createdAt,
+          runId,
+          label: text,
+          detail: text,
+          tone: "info",
+          itemType: "assistant_message",
+        },
+      };
+      runTextEntries.set(entry, absorbed);
+    }
+    return absorbed;
+  });
+}
+
 function timelineRowEntries(
   input: Pick<
     MessagesTimelineRowsInput,
@@ -1435,7 +1588,10 @@ function timelineRowEntries(
     ? deriveUnsettledRunId(input.latestRun ?? null, input.runningRunId ?? null)
     : null;
   return withoutSubagentDelegationRows(
-    settleSupersededReasoning(withLatestTodoLists(input.timelineEntries, liveRunId)),
+    absorbShortAssistantText(
+      settleSupersededReasoning(withLatestTodoLists(input.timelineEntries, liveRunId)),
+      liveRunId,
+    ),
   );
 }
 
@@ -2003,6 +2159,19 @@ export function deriveMessagesTimelineRows(input: {
                 ? summarizeToolGroup(visibleGroupedEntries).summary
                 : singleToolCallLabel(singleEntry),
           });
+        } else if (runIsBriefExploration(visibleGroupedEntries)) {
+          for (const [entryIndex, entry] of visibleGroupedEntries.entries()) {
+            nextRows.push({
+              kind: "work",
+              id: entryIndex === 0 ? timelineEntry.id : entry.id,
+              createdAt: entry.createdAt,
+              groupedEntries: [entry],
+              isExpandedToolGroup: false,
+              ...(workLogEntryIsToolLike(entry)
+                ? { displayLabel: singleToolCallLabel(entry) }
+                : {}),
+            });
+          }
         } else {
           const groupId = workGroupId(timelineEntry.id);
           const expanded = input.expandedWorkGroupIds?.has(groupId) ?? false;
@@ -2604,6 +2773,9 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
       const bh = b as typeof a;
       return a.createdAt === bh.createdAt && htmlRenderReferencesEqual(a.htmlRender, bh.htmlRender);
     }
+
+    case "unread-divider":
+      return a.createdAt === (b as typeof a).createdAt;
 
     case "mcp-app": {
       const bm = b as typeof a;

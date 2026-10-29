@@ -3,6 +3,7 @@ import { WorkLogButton, WorkLogList, WorkLogRow } from "./WorkLog";
 import type { WorktreeSetupSnapshot } from "@marp/contracts";
 import { type ToolActivityIcon } from "@marp/contracts";
 import {
+  thoughtBody,
   thoughtTitle,
   workEventAction,
   workEventActionText,
@@ -55,6 +56,7 @@ import {
   useThreadReadTarget,
   threadReadLabel,
   ThreadReadLabel,
+  LiveThoughtBody,
   ReasoningTraceContent,
   SimpleWorkEntryRow,
 } from "./TimelineWorkEntryRow";
@@ -607,6 +609,8 @@ export function LiveWorkEntryTimelineRow({
   const approvalResolved = useApprovalResolved(pendingApproval !== undefined, () =>
     ctx.onToggleWorkEntry(row.id, true),
   );
+  // A streaming thought shows its body until the next step starts, unless the user closed it.
+  const [thoughtToggle, setThoughtToggle] = useState<{ id: string; open: boolean } | null>(null);
   if (pendingApproval) return <TimelinePendingApprovalRow approval={pendingApproval} />;
 
   const failed = workEntryDisplayIndicatesToolFailure(row.entry);
@@ -615,12 +619,27 @@ export function LiveWorkEntryTimelineRow({
   const live = row.active && !awaitingUser;
   const isReasoning = row.entry.itemType === "reasoning";
   const toolIsRunning = live && !isReasoning;
+  const thoughtText =
+    isReasoning && live && row.entry.toolLifecycleStatus === "inProgress"
+      ? (row.entry.detail?.trim() ?? "")
+      : "";
+  const thoughtOpen = thoughtToggle?.id === row.entry.id ? thoughtToggle.open : true;
+  const toggleThought = () => {
+    const open = !thoughtOpen;
+    setThoughtToggle({ id: row.entry.id, open });
+    // What the user chose while it streamed is how the finished thought opens.
+    if (open) ctx.workGroupViewState.expandedEntries.add(row.entry.id);
+    else ctx.workGroupViewState.expandedEntries.delete(row.entry.id);
+  };
   const grouped = row.groupedEntries.length > 1;
   const header = grouped ? workRunHeader(row.groupedEntries, live) : null;
+  // A finished thought stays in the run as its closed "Thought for Ns" row.
   const finishedSteps =
     grouped && !row.expanded
       ? row.groupedEntries.filter(
-          (entry) => entry.id !== row.entry.id && entry.itemType !== "reasoning",
+          (entry) =>
+            entry.id !== row.entry.id &&
+            (entry.itemType !== "reasoning" || thoughtBody(entry.detail).length > 0),
         )
       : [];
   const previewSteps = finishedSteps.slice(-LIVE_PREVIEW_STEPS);
@@ -709,8 +728,8 @@ export function LiveWorkEntryTimelineRow({
             stepEnters && "live-enter",
           )}
           aria-label={failed ? `${stepText}, tool call failed` : undefined}
-          aria-expanded={row.expanded}
-          onClick={toggleGroup}
+          aria-expanded={thoughtText ? thoughtOpen : row.expanded}
+          onClick={thoughtText ? toggleThought : toggleGroup}
         >
           <LiveActivityRow
             label={stepLabel}
@@ -728,6 +747,9 @@ export function LiveWorkEntryTimelineRow({
           ) : null}
         </button>
       )}
+      {thoughtText && thoughtOpen && !(grouped && row.expanded) ? (
+        <LiveThoughtBody text={thoughtText} />
+      ) : null}
     </div>
   );
 }

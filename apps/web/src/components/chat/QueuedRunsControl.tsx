@@ -10,7 +10,7 @@ import type {
   ThreadId,
 } from "@marp/contracts";
 import { resolveUserMessagePresentation } from "@marp/client-runtime/user-message";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUpIcon,
   CalendarClockIcon,
@@ -43,6 +43,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import type { TimestampFormat } from "@marp/contracts/settings";
 import { GuestMessageName } from "./guestMessageStyle";
 import { TimelineRowTimestamp } from "./TimelineRowParts";
+import { showFirstSteerHint } from "./firstSteerHint";
 import { FoldedMessageHeader, useScheduledTaskTitle } from "./TimelineUserMessageRow";
 
 export interface EditQueuedRunRequest {
@@ -120,6 +121,7 @@ export function QueuedRunsControl({
   const promote = useAtomCommand(threadEnvironment.promoteQueuedRun);
   const resume = useAtomCommand(threadEnvironment.resumeThreadQueue);
   const cancel = useAtomCommand(threadEnvironment.cancelQueuedRun);
+  const navigate = useNavigate();
   const [showAll, setShowAll] = useState(false);
   const queueListId = useId();
   const [busyRunId, setBusyRunId] = useState<RunId | null>(null);
@@ -194,10 +196,11 @@ export function QueuedRunsControl({
         input: { threadId: props.threadId, runId: queuedRunId },
       });
     } else if (activeRun !== null) {
-      await promote({
+      const result = await promote({
         environmentId: props.environmentId,
         input: { threadId: props.threadId, queuedRunId, targetRunId: activeRun.id },
       });
+      if (result._tag === "Success") showFirstSteerHint(navigate);
     }
     steerInFlightRef.current = false;
     setBusyRunId(null);
@@ -305,7 +308,7 @@ export function QueuedRunsControl({
               aria-current={isEditing ? "true" : undefined}
               data-closing={closing || undefined}
               inert={closing}
-              className="group/queued flex w-full flex-col items-end gap-1 rounded-2xl transition-opacity duration-fast ease-out outline-none starting:opacity-0 focus-visible:ring-2 focus-visible:ring-ring/70 data-closing:animate-fade-out motion-reduce:transition-none"
+              className="group/queued flex w-full flex-col items-end gap-1 rounded-2xl transition-opacity duration-fast ease-out outline-none starting:opacity-0 focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-inset data-closing:animate-fade-out motion-reduce:transition-none"
             >
               <QueuedMessage
                 environmentId={props.environmentId}

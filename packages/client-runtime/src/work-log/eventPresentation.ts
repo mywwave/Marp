@@ -446,6 +446,12 @@ function formatThoughtDuration(ms: number): string | null {
   return seconds < 60 ? `${seconds}s` : formatDuration(ms);
 }
 
+function thoughtsDuration(entries: ReadonlyArray<WorkLogPresentationEntry>): string | null {
+  return formatThoughtDuration(
+    entries.reduce((total, entry) => total + reasoningDurationMs(entry.structuredPayload), 0),
+  );
+}
+
 /** "Thinking" while live, the reasoning's own heading when it has one, else how long it took. */
 export function thoughtTitle(
   entries: ReadonlyArray<WorkLogPresentationEntry>,
@@ -456,10 +462,24 @@ export function thoughtTitle(
     const heading = thoughtHeading(entry.detail);
     if (heading) return heading;
   }
-  const duration = formatThoughtDuration(
-    entries.reduce((total, entry) => total + reasoningDurationMs(entry.structuredPayload), 0),
-  );
+  const duration = thoughtsDuration(entries);
   return duration ? `Thought for ${duration}` : "Thought briefly";
+}
+
+/** The duration shown after a heading title; null when the title already says how long, or live. */
+export function thoughtTitleDuration(
+  entries: ReadonlyArray<WorkLogPresentationEntry>,
+  live = false,
+): string | null {
+  if (live || !entries.some((entry) => thoughtHeading(entry.detail))) return null;
+  return thoughtsDuration(entries);
+}
+
+/** The reasoning after its heading line: what opening the thought shows. */
+export function thoughtBody(text: string | undefined): string {
+  if (!text) return "";
+  const match = THOUGHT_HEADING.exec(text);
+  return (match ? text.slice(match[0].length) : text).trim();
 }
 
 export type WorkRunHeaderRule =
@@ -560,7 +580,10 @@ export function workRunHeader(
   live = false,
 ): WorkRunHeader {
   const reasoning = entries.filter((entry) => entry.itemType === "reasoning");
-  const tools = entries.filter((entry) => entry.itemType !== "reasoning");
+  // Short assistant text that joined the run is narration, not a step.
+  const tools = entries.filter(
+    (entry) => entry.itemType !== "reasoning" && entry.itemType !== "assistant_message",
+  );
   if (tools.length === 0) return { rule: "thought", title: thoughtTitle(reasoning, live) };
   const kinds = tools.map(workEventKind);
   if (tools.every((entry) => toolGroupAction(entry) === "browser")) {

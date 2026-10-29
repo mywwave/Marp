@@ -31,7 +31,9 @@ import {
   deriveMessagesTimelineRowsWithState,
   shouldCollapseUserMessage,
   resolveAssistantMessageCopyState,
+  runHasExpandedWorkGroup,
   type MessagesTimelineRow,
+  withUnreadDivider,
   workEntryDisplayLabel,
 } from "./MessagesTimeline.logic";
 
@@ -1136,6 +1138,121 @@ describe("deriveMessagesTimelineRows", () => {
     ]);
   });
 
+  describe("an open settled turn", () => {
+    const runId = RunId.make("turn-1");
+    const at = (second: number) => `2026-01-01T00:00:${String(second).padStart(2, "0")}Z`;
+    const step = (id: string, second: number, fields: Record<string, unknown>) => ({
+      id: `${id}-entry`,
+      kind: "work" as const,
+      createdAt: at(second),
+      entry: {
+        id,
+        createdAt: at(second),
+        runId,
+        label: "Step",
+        tone: "tool" as const,
+        toolLifecycleStatus: "completed" as const,
+        ...fields,
+      },
+    });
+    const command = (id: string, second: number) =>
+      step(id, second, { itemType: "command_execution", command: `pnpm ${id}` });
+    const read = (id: string, second: number) =>
+      step(id, second, { requestKind: "file-read", toolTitle: `${id}.ts` });
+    const assistant = (id: string, second: number, text: string) => ({
+      id: `${id}-entry`,
+      kind: "message" as const,
+      createdAt: at(second),
+      message: {
+        id: id as never,
+        role: "assistant" as const,
+        text,
+        runId,
+        createdAt: at(second),
+        updatedAt: at(second),
+        streaming: false,
+      },
+    });
+    const derive = (timelineEntries: ReadonlyArray<TimelineEntry>) =>
+      deriveMessagesTimelineRows({
+        timelineEntries,
+        expandedRunIds: new Set([runId]),
+        isWorking: false,
+        activeTurnStartedAt: null,
+        turnDiffSummaries: [],
+        supportsConversationRollback: false,
+      });
+    const stepIds = (rows: ReadonlyArray<MessagesTimelineRow>) =>
+      rows.flatMap((row) =>
+        row.kind === "work" ? [row.groupedEntries.map((entry) => entry.id)] : [],
+      );
+
+    it.each([
+      ["short text joins the run", "Now the lint.", true],
+      ["two short lines join the run", "Tests pass.\nNow the lint.", true],
+      ["three lines split the run", "Tests pass.\nNow the lint.\nThen types.", false],
+      [
+        "long text splits the run",
+        `Tests pass. ${"Next I will run the linter. ".repeat(4)}`,
+        false,
+      ],
+    ])("%s", (_name, text, joins) => {
+      const rows = derive([
+        command("test", 1),
+        assistant("between", 2, text),
+        command("lint", 3),
+        assistant("final", 5, "Both pass."),
+      ]);
+      expect(stepIds(rows)).toEqual(
+        joins ? [["test", "between-entry", "lint"]] : [["test"], ["lint"]],
+      );
+      expect(rows.some((row) => row.id === "between-entry" && row.kind === "message")).toBe(!joins);
+      expect(rows.some((row) => row.id === "final-entry" && row.kind === "message")).toBe(true);
+    });
+
+    it("keeps a short final answer out of the run, even with work after it", () => {
+      const rows = derive([command("test", 1), assistant("final", 2, "Done."), command("lint", 3)]);
+      expect(rows.some((row) => row.id === "final-entry" && row.kind === "message")).toBe(true);
+    });
+
+    it.each([
+      [2, [["a"], ["b"]]],
+      [3, [["a", "b", "c"]]],
+    ])("shows %i reads as a group only from three", (count, expected) => {
+      const reads = ["a", "b", "c"].slice(0, count).map((id, index) => read(id, index + 1));
+      const rows = derive([...reads, assistant("final", 5, "Read them.")]);
+      expect(stepIds(rows)).toEqual(expected);
+    });
+
+    it("keeps two commands grouped", () => {
+      const rows = derive([command("test", 1), command("lint", 2), assistant("final", 5, "Ok.")]);
+      expect(stepIds(rows)).toEqual([["test", "lint"]]);
+    });
+  });
+
+  it("carries a live run the user opened past the end of its turn", () => {
+    const runId = RunId.make("turn-1");
+    const entries: TimelineEntry[] = [
+      {
+        id: "work-entry",
+        kind: "work",
+        createdAt: "2026-01-01T00:00:01Z",
+        entry: {
+          id: "work",
+          createdAt: "2026-01-01T00:00:01Z",
+          runId,
+          label: "Ran command",
+          tone: "tool",
+        },
+      },
+    ];
+    expect(runHasExpandedWorkGroup(entries, runId, new Set(["work-group:work-entry"]))).toBe(true);
+    expect(runHasExpandedWorkGroup(entries, runId, new Set(["work-group:other"]))).toBe(false);
+    expect(
+      runHasExpandedWorkGroup(entries, RunId.make("turn-2"), new Set(["work-group:work-entry"])),
+    ).toBe(false);
+  });
+
   it.each([1, 2, 3])("folds %i completed activities after the terminal response", (count) => {
     const runId = RunId.make("turn-1");
     const timelineEntries = [
@@ -2238,7 +2355,7 @@ describe("deriveMessagesTimelineRows", () => {
           message: {
             id: "assistant-commentary" as never,
             role: "assistant",
-            text: "Starting another command.",
+            text: "The first search is still running, so I am starting a second one over the generated sources to compare.",
             runId: "turn-1" as never,
             createdAt: "2026-01-01T00:00:06Z",
             updatedAt: "2026-01-01T00:00:06Z",
@@ -4476,6 +4593,30 @@ describe("subagent continued by a later turn", () => {
       `turn-fold:${run2}`,
       "closing-2",
     ]);
+  });
+});
+
+describe("withUnreadDivider", () => {
+  const at = (second: number) => `2026-01-01T00:00:${String(second).padStart(2, "0")}Z`;
+  const row = (id: string, second: number | null): MessagesTimelineRow =>
+    second === null
+      ? { kind: "working", id, createdAt: null }
+      : { kind: "status-update", id, createdAt: at(second), status: { summary: id } as never };
+  const rows = [row("a", 1), row("b", 3), row("live", null), row("c", 5), row("d", 7)];
+  const ids = (result: ReadonlyArray<MessagesTimelineRow>) => result.map((entry) => entry.id);
+
+  it.each([
+    ["before the first row since the visit", 2, 9, ["a", "unread-divider", "b", "live", "c", "d"]],
+    ["past rows without a time", 4, 9, ["a", "b", "live", "unread-divider", "c", "d"]],
+    ["nowhere when nothing is new", 8, 9, ["a", "b", "live", "c", "d"]],
+    ["nowhere when everything is new", 0, 9, ["a", "b", "live", "c", "d"]],
+    ["nowhere for activity that arrived while watching", 4, 4, ["a", "b", "live", "c", "d"]],
+  ])("goes %s", (_name, seen, until, expected) => {
+    expect(ids(withUnreadDivider(rows, { seenAt: at(seen), until: at(until) }))).toEqual(expected);
+  });
+
+  it("returns the rows untouched without a mark", () => {
+    expect(withUnreadDivider(rows, null)).toBe(rows);
   });
 });
 

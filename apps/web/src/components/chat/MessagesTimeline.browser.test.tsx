@@ -14,6 +14,7 @@ import {
   ThreadId,
 } from "@marp/contracts";
 import type { LegendListRef } from "@legendapp/list/react";
+import * as DateTime from "effect/DateTime";
 import { createRef, Profiler, StrictMode, type ComponentProps, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
 
@@ -1376,7 +1377,106 @@ function liveCommandRun(count: number) {
   };
 }
 
+function liveThought(stage: "thinking" | "next-step") {
+  const fixture = makeStreamingTimelineFixture();
+  const user = fixture.visibleTurnItems.find((row) => row.item.id === "live-user-item")!;
+  const command = fixture.visibleTurnItems.find((row) => row.item.id === "history-work")!;
+  if (command.item.type !== "command_execution") throw new Error("Expected a command fixture");
+  const thinking = stage === "thinking";
+  const reasoningId = TurnItemId.make("live-thought");
+  const reasoning = {
+    ...user,
+    position: 10,
+    sourceItemId: reasoningId,
+    item: {
+      ...command.item,
+      type: "reasoning" as const,
+      id: reasoningId,
+      runId: fixture.runId,
+      ordinal: 10,
+      text: "**Planning the fix**\n\nReading the session code.",
+      streaming: thinking,
+      status: thinking ? ("running" as const) : ("completed" as const),
+      startedAt: DateTime.makeUnsafe(fixture.time(6)),
+      completedAt: thinking ? null : DateTime.makeUnsafe(fixture.time(14)),
+    },
+  };
+  const nextId = TurnItemId.make("live-command");
+  const next = {
+    ...command,
+    position: 11,
+    sourceItemId: nextId,
+    item: {
+      ...command.item,
+      id: nextId,
+      runId: fixture.runId,
+      ordinal: 11,
+      status: "running" as const,
+      input: "pnpm test",
+      description: "Run the tests",
+      output: "",
+      exitCode: null,
+      completedAt: null,
+    },
+  };
+  return deriveTimelineEntriesFromVisibleTurnItems({
+    visibleTurnItems: (thinking ? [user, reasoning] : [user, reasoning, next]) as never,
+    optimisticMessages: [],
+  });
+}
+
 describe("MessagesTimeline live runs", () => {
+  const liveProps = () => {
+    const fixture = makeStreamingTimelineFixture();
+    return {
+      ...baseProps(),
+      isWorking: true,
+      activeTurnStartedAt: fixture.time(5),
+      latestRun: {
+        runId: fixture.runId,
+        status: "running",
+        startedAt: fixture.time(5),
+        completedAt: null,
+      },
+    } as TimelineProps;
+  };
+
+  it("streams a thought's body while it thinks and closes it when the next step starts", async () => {
+    setup();
+    const props = liveProps();
+    await using screen = await renderElement(
+      <MessagesTimeline {...props} timelineEntries={liveThought("thinking")} />,
+    );
+    await vi.waitFor(() => expect(screen.text()).toContain("Reading the session code."));
+
+    await screen.rerender(
+      <MessagesTimeline {...props} timelineEntries={liveThought("next-step")} />,
+    );
+    await vi.waitFor(() => expect(screen.text()).toContain("Planning the fix"));
+    expect(screen.text()).toContain("8s");
+    expect(screen.text()).not.toContain("Reading the session code.");
+  });
+
+  it("keeps a thought open once done when the user opened it while it streamed", async () => {
+    setup();
+    const props = liveProps();
+    await using screen = await renderElement(
+      <MessagesTimeline {...props} timelineEntries={liveThought("thinking")} />,
+    );
+    await vi.waitFor(() => expect(screen.text()).toContain("Reading the session code."));
+    const thinking = () => screen.button(/^Thinking/);
+    await click(thinking());
+    expect(screen.text()).not.toContain("Reading the session code.");
+    await click(thinking());
+    expect(screen.text()).toContain("Reading the session code.");
+
+    await screen.rerender(
+      <MessagesTimeline {...props} timelineEntries={liveThought("next-step")} />,
+    );
+    await vi.waitFor(() => expect(screen.text()).toContain("Planning the fix"));
+    expect(screen.text()).toContain("Reading the session code.");
+  });
+
   it("shows a long run's last three steps as one-line commands and folds the rest", async () => {
     setup();
     const { entries, props } = liveCommandRun(30);

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { applyCommandOutputFrame, EMPTY_COMMAND_OUTPUT } from "./commandOutput.ts";
+import {
+  applyCommandOutputFrame,
+  commandOutputPreview,
+  EMPTY_COMMAND_OUTPUT,
+} from "./commandOutput.ts";
 
 describe("applyCommandOutputFrame", () => {
   it("continues an escape and a redraw split across appends", () => {
@@ -20,5 +24,22 @@ describe("applyCommandOutputFrame", () => {
     // The colour opened before the redraw survives it.
     expect(view.output.text).toBe("install\n\u001b[0;32m100%\u001b[0m\n");
     expect(view.running).toBe(true);
+  });
+});
+
+describe("commandOutputPreview", () => {
+  it.each([
+    ["", ""],
+    ["one\ntwo\n\n", "one\ntwo"],
+    ["1\n2\n3\n4\n5\n6\n7\n", "3\n4\n5\n6\n7"],
+    ["\u001b[0;32mok\u001b[0m\n", "ok"],
+  ])("keeps the last five plain lines %#", (text, preview) => {
+    expect(commandOutputPreview(text)).toBe(preview);
+  });
+
+  it("bounds one long line to the newest 2,000 characters", () => {
+    const preview = commandOutputPreview(`${"a".repeat(3_000)}z`);
+    expect(preview).toHaveLength(2_000);
+    expect(preview.endsWith("z")).toBe(true);
   });
 });

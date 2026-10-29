@@ -43,6 +43,7 @@ import { Skeleton } from "../ui/skeleton";
 import { Spinner } from "../ui/spinner";
 import { toastManager } from "../ui/toast";
 import { DiffStatLabel } from "./DiffStatLabel";
+import { CommandOutputTail, useCommandOutputStreaming } from "./CommandOutputPanel";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { ShellCommandBlock } from "./ShellCommandBlock";
 import { ActivityShimmerOverlay, useSpinnerFinished } from "./TimelineRowParts";
@@ -616,6 +617,23 @@ export function CommandCard({
   const failed = workEntryDisplayIndicatesToolFailure(workEntry);
   const running = live && !failed;
   const finished = useSpinnerFinished(running);
+  // A failed command keeps the tail it showed while running; a success folds back to its header.
+  const [sawRunning, setSawRunning] = useState(running);
+  if (running && !sawRunning) setSawRunning(true);
+  const environmentStreamsOutput = useCommandOutputStreaming(ctx.activeThreadEnvironmentId);
+  const tail =
+    projectedItem &&
+    commandItem &&
+    !expanded &&
+    (running || (failed && sawRunning)) &&
+    (ctx.turnItemSource !== undefined || environmentStreamsOutput) ? (
+      <CommandOutputTail
+        environmentId={ctx.activeThreadEnvironmentId}
+        threadId={projectedItem.sourceThreadId}
+        itemId={projectedItem.sourceItemId}
+        source={ctx.turnItemSource?.commandOutput}
+      />
+    ) : null;
   const description = commandItem?.description?.trim();
   const header =
     description || (running ? "Running command" : failed ? "Run command" : "Ran command");
@@ -676,7 +694,16 @@ export function CommandCard({
       trailing={<span className="flex shrink-0 pe-1">{status}</span>}
     />
   ) : null;
-  if (compactRow && !open) return compactRow;
+  if (compactRow && !open) {
+    return tail ? (
+      <>
+        {compactRow}
+        {tail}
+      </>
+    ) : (
+      compactRow
+    );
+  }
   const headerContent = (
     <>
       {icon}
@@ -722,6 +749,7 @@ export function CommandCard({
           </span>
         </button>
       ) : null}
+      {tail}
       {projectedItem && commandItem ? (
         <div className="flex items-center gap-1 px-2 pb-1.5">
           <Button

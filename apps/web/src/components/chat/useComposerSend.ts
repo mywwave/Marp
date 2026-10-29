@@ -41,6 +41,7 @@ import { createModelSelection } from "@marp/shared/model";
 import { type SetStateAction, useLayoutEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "@tanstack/react-router";
+import { showFirstSteerHint } from "./firstSteerHint";
 import {
   isAtomCommandInterrupted,
   settlePromise,
@@ -1336,6 +1337,9 @@ export function useComposerSend(input: ComposerSendInput) {
         failure = startResult;
       } else {
         turnStartSucceeded = true;
+        if (phase === "running" && turnDispatchMode === "steer" && !shouldQueueBehindActiveRun) {
+          showFirstSteerHint(navigate);
+        }
         setKeepFullHistory(routeThreadKey, false);
         clearUsageLimitsFor(routeThreadKey);
         if (turnUsesAttachmentUploads) {

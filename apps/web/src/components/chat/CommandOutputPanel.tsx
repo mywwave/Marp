@@ -1,4 +1,7 @@
-import type { CommandOutputView } from "@marp/client-runtime/state/command-output";
+import {
+  commandOutputPreview,
+  type CommandOutputView,
+} from "@marp/client-runtime/state/command-output";
 import type { EnvironmentId, ThreadId, TurnItemId } from "@marp/contracts";
 import { TERMINAL_PALETTES, terminalOutputSpans } from "@marp/shared/terminalOutput";
 import { useLayoutEffect, useRef } from "react";
@@ -15,6 +18,35 @@ const FOLLOW_SLACK_PX = 8;
 export function useCommandOutputStreaming(environmentId: EnvironmentId): boolean {
   return (
     useServerConfigs().get(environmentId)?.environment.capabilities.commandOutputStreaming === true
+  );
+}
+
+/**
+ * A command card's newest output lines, shown without a click while it runs (and after it fails).
+ * Like the panel, it subscribes only while mounted.
+ */
+export function CommandOutputTail(props: {
+  readonly environmentId: EnvironmentId;
+  readonly threadId: ThreadId;
+  readonly itemId: TurnItemId;
+  readonly source?: TurnItemSource["commandOutput"] | undefined;
+}) {
+  const input = { threadId: props.threadId, itemId: props.itemId };
+  const { data } = useEnvironmentQuery<CommandOutputView, unknown>(
+    props.source
+      ? props.source(input)
+      : orchestrationEnvironment.v2.commandOutput({ environmentId: props.environmentId, input }),
+  );
+  const preview = commandOutputPreview(data?.output.text ?? "");
+  if (preview.length === 0) return null;
+  return (
+    <div
+      aria-live="off"
+      data-command-output-tail
+      className="flex max-h-[200px] flex-col justify-end overflow-hidden px-3 pb-1.5 font-mono text-xs leading-5 break-all whitespace-pre-wrap text-muted-foreground"
+    >
+      {preview}
+    </div>
   );
 }
 

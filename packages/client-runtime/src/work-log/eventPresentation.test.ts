@@ -7,7 +7,9 @@ import {
   WORK_EVENT_VERBS,
   fileEditFailureReason,
   fileEditSummary,
+  thoughtBody,
   thoughtTitle,
+  thoughtTitleDuration,
   workEventAction,
   workEventActionText,
   workRunHeader,
@@ -155,6 +157,24 @@ describe("thoughtTitle", () => {
     [[thought("Still going.")], true, "Thinking"],
   ] as const)("titles %#", (entries, live, title) => {
     expect(thoughtTitle(entries, live)).toBe(title);
+  });
+
+  it.each([
+    [[thought("**Planning the fix**\n\nThe token expires.", 12)], false, "12s"],
+    [[thought("**Planning the fix**\n\nThe token expires.", 0.2)], false, null],
+    [[thought("**Planning the fix**\n\nThe token expires.", 12)], true, null],
+    [[thought("Looking at the session code.", 8)], false, null],
+  ] as const)("keeps a heading's duration as trailing text %#", (entries, live, duration) => {
+    expect(thoughtTitleDuration(entries, live)).toBe(duration);
+  });
+
+  it.each([
+    ["**Planning the fix**\n\nThe token expires.", "The token expires."],
+    ["**Planning the fix**", ""],
+    ["## Planning\n", ""],
+    ["No heading here.", "No heading here."],
+  ])("separates the body from the heading %#", (text, body) => {
+    expect(thoughtBody(text)).toBe(body);
   });
 });
 

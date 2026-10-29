@@ -25,12 +25,14 @@ import {
 } from "@marp/client-runtime/work-log/item-detail";
 import { claudeSkillInvocation } from "@marp/shared/toolActivity";
 import {
+  thoughtBody,
   thoughtTitle,
+  thoughtTitleDuration,
   workEventAction,
   workEventActionText,
   workEventIsFileChange,
 } from "@marp/client-runtime/work-log/event-presentation";
-import { memo, use, useState, type KeyboardEvent } from "react";
+import { memo, use, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
   workEntryDisplayIndicatesToolFailure,
   workEntrySignalsSevereFailure,
@@ -126,6 +128,59 @@ const toolCallExpandedBodyClassName =
 
 const stopRowToggle = (e: { stopPropagation: () => void }) => e.stopPropagation();
 
+/** A live thought's body under its "Thinking" label: about six muted lines, following the tail. */
+export function LiveThoughtBody({ text }: { text: string }) {
+  const ctx = use(TimelineRowCtx);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- pins the clipped body to its newest line and marks overflow for the fade after each commit
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    scroller.scrollTop = scroller.scrollHeight;
+    scroller.toggleAttribute("data-overflowing", scroller.scrollHeight > scroller.clientHeight);
+  });
+  return (
+    <div
+      ref={scrollerRef}
+      aria-live="off"
+      className="ms-7 max-h-[8.5rem] overflow-hidden pb-1 data-overflowing:mask-t-from-75%"
+    >
+      <ChatMarkdown
+        className="text-muted-foreground"
+        text={text}
+        cwd={ctx.markdownCwd}
+        threadRef={ctx.threadRef ?? undefined}
+        skills={ctx.skills}
+        isStreaming
+        headingLevelOffset={MESSAGE_HEADING_LEVEL}
+        onUseArtifactTemplate={ctx.onUseArtifactTemplate}
+        onImageExpand={ctx.onImageExpand}
+        lineBreaks
+      />
+    </div>
+  );
+}
+
+/** Short assistant text that joined a run: it reads as narration between the run's steps. */
+function RunTextRow({ text }: { text: string }) {
+  const ctx = use(TimelineRowCtx);
+  return (
+    <div className="py-1 text-sm" data-v2-item-type="assistant_message">
+      <ChatMarkdown
+        className="text-foreground/80"
+        text={text}
+        cwd={ctx.markdownCwd}
+        threadRef={ctx.threadRef ?? undefined}
+        skills={ctx.skills}
+        isStreaming={false}
+        headingLevelOffset={MESSAGE_HEADING_LEVEL}
+        onUseArtifactTemplate={ctx.onUseArtifactTemplate}
+        onImageExpand={ctx.onImageExpand}
+      />
+    </div>
+  );
+}
+
 export function ReasoningTraceContent({ entries }: { entries: ReadonlyArray<TimelineWorkEntry> }) {
   const ctx = use(TimelineRowCtx);
   const { isWorking, latestRunId } = use(TimelineRowActivityCtx);
@@ -184,6 +239,9 @@ export const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: WorkEn
     );
   }
   if (item?.type === "todo_list") return <TimelinePlanCard workEntry={props.workEntry} />;
+  if (props.workEntry.itemType === "assistant_message") {
+    return <RunTextRow text={props.workEntry.detail ?? props.workEntry.label} />;
+  }
   const childThreadId =
     item?.type === "notification" ? notificationChildThreadId(item.source) : undefined;
   if (item?.type !== "notification" || childThreadId === undefined) {
@@ -217,8 +275,12 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       ? notificationChildThreadId(workEntry.projectedItem.item.source)
       : undefined;
   const groupView = use(WorkGroupViewCtx);
+  // A thought the user opened while it streamed stays open once it is done.
   const [expanded, setExpanded] = useState(
-    () => groupView?.state.expandedEntries.has(workEntry.id) ?? false,
+    () =>
+      (
+        groupView?.state ?? (workEntry.itemType === "reasoning" ? ctx.workGroupViewState : null)
+      )?.expandedEntries.has(workEntry.id) ?? false,
   );
   const toggleExpanded = () => {
     const next = !expanded;
@@ -334,9 +396,11 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
   const questionHeading = workEntry.questionAnswer
     ? getQuestionTextPreview(workEntry.questionAnswer)
     : "";
+  const thinking = workEntry.toolLifecycleStatus === "inProgress";
   const previewText = isReasoning
-    ? thoughtTitle([workEntry], workEntry.toolLifecycleStatus === "inProgress")
+    ? thoughtTitle([workEntry], thinking)
     : questionHeading || (displayLabel ?? workEntryDisplayLabel(workEntry, workspaceRoot));
+  const thoughtDuration = isReasoning ? thoughtTitleDuration([workEntry], thinking) : null;
   const answerPreview =
     workEntry.questionAnswer && hasQuestionAnswer(workEntry.questionAnswer)
       ? getQuestionAnswerPreview(workEntry.questionAnswer)
@@ -391,7 +455,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       : workEntry.projectedItem === undefined
         ? canExpand
         : isReasoning
-          ? Boolean(workEntry.detail?.trim())
+          ? thoughtBody(workEntry.detail).length > 0
           : Boolean(
               viewedImage ||
               workEntry.questionAnswer ||
@@ -480,6 +544,9 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
                 previewText
               )}
             </span>
+            {thoughtDuration ? (
+              <span className="shrink-0 text-muted-foreground tabular-nums">{thoughtDuration}</span>
+            ) : null}
             {answerPreview ? (
               <span
                 className={cn(

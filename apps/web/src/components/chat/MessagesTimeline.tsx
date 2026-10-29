@@ -85,7 +85,10 @@ import {
   isTimelineMinimapRowVisible,
   resolveTimelineMinimapVisibleRange,
   resolveTimelineMinimapHitStripWidth,
+  runHasExpandedWorkGroup,
   timelineTurnFoldRunIdsByEntryId,
+  withUnreadDivider,
+  type TimelineUnreadMark,
   type MessagesTimelineRow,
   type TimelineLatestRun,
 } from "./MessagesTimeline.logic";
@@ -313,6 +316,8 @@ interface MessagesTimelineProps {
   emptyPlaceholderInset: number;
   topFadeEnabled?: boolean;
   historyControls?: MessagesTimelineHistoryControls | undefined;
+  /** The thread's visit mark and newest activity, read once when the thread opens for "New". */
+  unread?: { readonly seenAt: string | null; readonly updatedAt: string } | undefined;
   findExpanded?: boolean;
   findQuery?: string;
   activeFindMatch?: ThreadFindMatch | null;
@@ -409,6 +414,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
   emptyPlaceholderInset,
   topFadeEnabled = false,
   historyControls,
+  unread,
 }: MessagesTimelineProps) {
   const listIdentityKey = displayThreadKey ?? routeThreadKey;
   // Snapshot restore positions on identity changes; ongoing scroll writes must not move them.
@@ -579,7 +585,12 @@ const ConversationTimeline = memo(function ConversationTimeline({
       previousRunId !== undefined
     ) {
       if (latestRun.runId === previousRunId) {
-        if (observedLatestRun.status === "running" && latestRun.status === "interrupted") {
+        if (
+          (observedLatestRun.status === "running" && latestRun.status === "interrupted") ||
+          (observedLatestRun.status !== "completed" &&
+            latestRun.status === "completed" &&
+            runHasExpandedWorkGroup(timelineEntries, latestRun.runId, expandedWorkGroupIds))
+        ) {
           setExpandedRunIds((existing) => new Set(existing).add(latestRun.runId));
         }
       } else {
@@ -702,7 +713,35 @@ const ConversationTimeline = memo(function ConversationTimeline({
     availableRevertTurnCounts,
     worktreeSetup,
   });
-  const rows = useStableRows(rawRows, listIdentityKey);
+  // The visit tracker advances the live mark at once, so "New" reads the mark from the opening.
+  const [unreadState, setUnreadState] = useState<{
+    readonly identity: string;
+    readonly mark: TimelineUnreadMark | null;
+    readonly runId: RunId | undefined;
+    readonly leftEnd: boolean;
+  } | null>(null);
+  if (unreadState?.identity !== listIdentityKey && unread !== undefined) {
+    setUnreadState({
+      identity: listIdentityKey,
+      mark: unread.seenAt === null ? null : { seenAt: unread.seenAt, until: unread.updatedAt },
+      runId: latestRun?.runId,
+      leftEnd: false,
+    });
+  } else if (
+    unreadState?.identity === listIdentityKey &&
+    unreadState.mark !== null &&
+    latestRun?.runId !== undefined &&
+    latestRun.runId !== unreadState.runId
+  ) {
+    // The next turn retires the divider.
+    setUnreadState(
+      unreadState.runId === undefined
+        ? { ...unreadState, runId: latestRun.runId }
+        : { ...unreadState, mark: null },
+    );
+  }
+  const unreadMark = unreadState?.identity === listIdentityKey ? unreadState.mark : null;
+  const rows = withUnreadDivider(useStableRows(rawRows, listIdentityKey), unreadMark);
   const listSettling = identityChanged || settlingListIdentity === listIdentityKey;
   rowEnterGate.observe(listIdentityKey, rows, listSettling);
   // oxlint-disable-next-line marp/no-unreasoned-state-sync -- starts the mount window of rows appended in this commit, read by rows mounting later
@@ -980,6 +1019,20 @@ const ConversationTimeline = memo(function ConversationTimeline({
     const isAtEnd = rememberPosition(liveFollowEnabled && !anchoredEndSpace);
     if (isAtEnd !== undefined && !citationPositioning) {
       onIsAtEndChange(isAtEnd);
+    }
+    // Reading down to the end after scrolling away from it marks the new activity seen.
+    if (isAtEnd !== undefined && unreadMark !== null) {
+      setUnreadState((state) =>
+        state === null || state.mark === null
+          ? state
+          : !isAtEnd
+            ? state.leftEnd
+              ? state
+              : { ...state, leftEnd: true }
+            : state.leftEnd
+              ? { ...state, mark: null }
+              : state,
+      );
     }
     scheduleMinimapRefresh();
   };
@@ -1468,6 +1521,20 @@ function getItemType(item: MessagesTimelineRow) {
   return `message:${item.message.role}:${lengthBucket}`;
 }
 
+function UnreadDividerRow() {
+  return (
+    <div
+      role="separator"
+      aria-label="New since your last visit"
+      className="flex items-center gap-2 text-xs font-medium text-primary"
+    >
+      <span aria-hidden className="h-px flex-1 bg-primary/40" />
+      New
+      <span aria-hidden className="h-px flex-1 bg-primary/40" />
+    </div>
+  );
+}
+
 const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: TimelineRow }) {
   const { rowEnter } = use(TimelineRowCtx);
   const [enter] = useState(() => rowEnter.claim(row.id, performance.now()));
@@ -1502,6 +1569,7 @@ const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: Time
                 row.kind === "attempt-fold" ||
                 row.kind === "html-render" ||
                 row.kind === "status-update" ||
+                row.kind === "unread-divider" ||
                 row.kind === "tool-media" ||
                 row.kind === "mcp-app"
               ? "pb-2"
@@ -1555,6 +1623,7 @@ const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: Time
       {row.kind === "proposed-plan" ? <ProposedPlanTimelineRow row={row} /> : null}
       {row.kind === "html-render" ? <HtmlRenderTimelineRow row={row} /> : null}
       {row.kind === "status-update" ? <TimelineStatusUpdateRow row={row} /> : null}
+      {row.kind === "unread-divider" ? <UnreadDividerRow /> : null}
       {row.kind === "tool-media" ? <ToolMediaTimelineRow row={row} /> : null}
       {row.kind === "mcp-app" ? <McpAppTimelineRow row={row} /> : null}
       {row.kind === "working" ? <WorkingTimelineRow row={row} /> : null}
