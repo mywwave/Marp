@@ -6,15 +6,15 @@ import {
   type ProviderOptionSelection,
   type ScopedThreadRef,
   type ServerProviderModel,
-} from "@t3tools/contracts";
-import type { EffortDisplay } from "@t3tools/contracts/settings";
+} from "@marp/contracts";
+import type { EffortDisplay } from "@marp/contracts/settings";
 import {
   buildExplicitProviderOptionSelectionsFromDescriptors,
   getProviderOptionCurrentValue,
   getProviderOptionDescriptors,
   isClaudeUltrathinkPrompt,
   normalizeModelSlug,
-} from "@t3tools/shared/model";
+} from "@marp/shared/model";
 import type { ReactNode } from "react";
 
 import type { DraftId } from "../../composerDraftStore";
@@ -67,14 +67,13 @@ type TraitsRenderInput = {
   effortDisplay?: EffortDisplay;
   extraMenuContent?: ReactNode;
   extraMenuOwnsModeShortcut?: boolean;
-  extraMenuHint?: string;
 };
 
 export function getComposerPromptInjectionState(prompt: string): ComposerPromptInjectionState {
   return isClaudeUltrathinkPrompt(prompt) ? "ultrathink" : "none";
 }
 
-/** Cursor ACP can default Fast to true; T3 requires a user selection. */
+/** Cursor ACP can default Fast to true; Marp requires a user selection. */
 export function withImplicitFastModeDefault(
   caps: ModelCapabilities,
   modelOptions: ReadonlyArray<ProviderOptionSelection> | null | undefined,
@@ -240,7 +239,6 @@ function renderTraitsControl(
     effortDisplay,
     extraMenuContent,
     extraMenuOwnsModeShortcut,
-    extraMenuHint,
   } = input;
   const hasTarget = threadRef !== undefined || draftId !== undefined;
   const { selections: resolvedModelOptions } = resolveComposerOptionSelections(
@@ -283,7 +281,6 @@ function renderTraitsControl(
       {...(effortDisplay ? { effortDisplay } : {})}
       {...(extraMenuContent ? { extraMenuContent } : {})}
       {...(extraMenuOwnsModeShortcut ? { extraMenuOwnsModeShortcut } : {})}
-      {...(extraMenuHint ? { extraMenuHint } : {})}
     />
   );
 }

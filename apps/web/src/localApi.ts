@@ -1,4 +1,4 @@
-import type { ConfirmDialogOptions, ContextMenuItem, LocalApi } from "@t3tools/contracts";
+import type { ConfirmDialogOptions, ContextMenuItem, LocalApi } from "@marp/contracts";
 
 import { requestConfirmDialog } from "./confirmDialog";
 import { dismissContextMenu, showContextMenuFallback } from "./contextMenuFallback";
@@ -40,21 +40,12 @@ export function createLocalApi(): LocalApi {
       },
     },
     contextMenu: {
+      // Desktop uses the DOM menu too: native menus cannot carry icons, shortcuts or the theme.
       show: async <T extends string>(
         items: readonly ContextMenuItem<T>[],
         position?: { x: number; y: number },
-      ): Promise<T | null> => {
-        if (window.desktopBridge) {
-          return window.desktopBridge.showContextMenu(items, position) as Promise<T | null>;
-        }
-        return showContextMenuFallback(items, position);
-      },
-      // Unlike native menus, the DOM fallback needs dismissal when underlying state disappears.
-      close: async () => {
-        if (!window.desktopBridge) {
-          dismissContextMenu();
-        }
-      },
+      ): Promise<T | null> => showContextMenuFallback(items, position),
+      close: async () => dismissContextMenu(),
     },
     persistence: {
       getClientSettings: async () => {

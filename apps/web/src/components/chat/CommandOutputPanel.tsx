@@ -1,12 +1,13 @@
-import type { CommandOutputView } from "@t3tools/client-runtime/state/command-output";
-import type { EnvironmentId, ThreadId, TurnItemId } from "@t3tools/contracts";
-import { TERMINAL_PALETTES, terminalOutputSpans } from "@t3tools/shared/terminalOutput";
+import type { CommandOutputView } from "@marp/client-runtime/state/command-output";
+import type { EnvironmentId, ThreadId, TurnItemId } from "@marp/contracts";
+import { TERMINAL_PALETTES, terminalOutputSpans } from "@marp/shared/terminalOutput";
 import { useLayoutEffect, useRef } from "react";
 
 import { useTheme } from "../../hooks/useTheme";
 import { useServerConfigs } from "../../state/entities";
 import { orchestrationEnvironment } from "../../state/orchestration";
 import { useEnvironmentQuery } from "../../state/query";
+import { MessageCopyButton } from "./MessageCopyButton";
 import type { TurnItemSource } from "./timelineRowContext";
 
 const FOLLOW_SLACK_PX = 8;
@@ -28,6 +29,7 @@ export function CommandOutputPanel(props: {
   readonly threadId: ThreadId;
   readonly itemId: TurnItemId;
   readonly source?: TurnItemSource["commandOutput"] | undefined;
+  readonly copyable?: boolean;
 }) {
   const input = { threadId: props.threadId, itemId: props.itemId };
   const { data, error } = useEnvironmentQuery<CommandOutputView, unknown>(
@@ -40,7 +42,7 @@ export function CommandOutputPanel(props: {
   const text = data?.output.text ?? "";
   const { resolvedTheme } = useTheme();
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- pins the output scroller's scrollTop to the bottom after each commit while the user follows
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- pins the output scroller's scrollTop to the bottom after each commit while the user follows
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (element && followRef.current) element.scrollTop = element.scrollHeight;
@@ -55,6 +57,11 @@ export function CommandOutputPanel(props: {
   const spans = terminalOutputSpans(text, TERMINAL_PALETTES[resolvedTheme]);
   return (
     <div>
+      {props.copyable ? (
+        <div className="flex justify-end">
+          <MessageCopyButton text={text} label="Copy output" size="icon-xs" variant="ghost" />
+        </div>
+      ) : null}
       {data?.output.truncated ? (
         <div className="text-muted-foreground italic">Earlier output not shown</div>
       ) : null}

@@ -5,25 +5,31 @@ import {
   getQuestionAnswerText,
   getQuestionTextPreview,
   hasQuestionAnswer,
-} from "@t3tools/client-runtime/work-log/user-input";
+} from "@marp/client-runtime/work-log/user-input";
 import {
   ORCHESTRATION_V2_WORKSPACE_PREPARATION_FAILURE_CODE,
   type EnvironmentId,
   ThreadId,
-} from "@t3tools/contracts";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+} from "@marp/contracts";
+import { scopeThreadRef } from "@marp/client-runtime/environment";
 import { Link } from "@tanstack/react-router";
-import { notificationChildThreadId } from "@t3tools/client-runtime/state/thread-execution";
+import { notificationChildThreadId } from "@marp/client-runtime/state/thread-execution";
 import {
   resolveViewedImageAsset,
   toolGroupAction,
   workEntryViewedImagePath,
-} from "@t3tools/client-runtime/work-log/presentation";
+} from "@marp/client-runtime/work-log/presentation";
 import {
   turnItemHasDetail,
   turnItemNeedsDetailFetch,
-} from "@t3tools/client-runtime/work-log/item-detail";
-import { claudeSkillInvocation } from "@t3tools/shared/toolActivity";
+} from "@marp/client-runtime/work-log/item-detail";
+import { claudeSkillInvocation } from "@marp/shared/toolActivity";
+import {
+  thoughtTitle,
+  workEventAction,
+  workEventActionText,
+  workEventIsFileChange,
+} from "@marp/client-runtime/work-log/event-presentation";
 import { memo, use, useState, type KeyboardEvent } from "react";
 import {
   workEntryDisplayIndicatesToolFailure,
@@ -64,8 +70,8 @@ import {
   workEntryRawCommand,
   buildToolCallExpandedBody,
   workEntryIconName,
-  remarkThoughtPreview,
 } from "./TimelineWorkEntryRow.logic";
+import { CommandCard, FileEditRow, WorkEventLabel } from "./TimelineWorkEvents";
 
 export function useThreadReadTarget(entry: TimelineWorkEntry, environmentId: EnvironmentId) {
   const rawThreadId = threadReadTargetId(entry);
@@ -125,7 +131,7 @@ export function ReasoningTraceContent({ entries }: { entries: ReadonlyArray<Time
       {entries.map((entry) => (
         <ChatMarkdown
           key={entry.id}
-          className="text-foreground"
+          className="text-muted-foreground"
           text={entry.detail ?? ""}
           cwd={ctx.markdownCwd}
           threadRef={ctx.threadRef ?? undefined}
@@ -146,6 +152,9 @@ type WorkEntryRowProps = {
   workspaceRoot: string | undefined;
   displayLabel?: string | undefined;
   onToggleEntry?: ((collapsed: boolean) => void) | undefined;
+  /** The run's live step: present-tense verbs, a spinner, and the shimmer when `shimmer`. */
+  live?: boolean | undefined;
+  shimmer?: boolean | undefined;
 };
 
 export const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: WorkEntryRowProps) {
@@ -263,6 +272,30 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       </WorkLogRow>
     );
   }
+  const action = workEventAction(workEntry, props.live === true);
+  const cardItem = workEntry.projectedItem?.item ?? workEntry.structuredPayload;
+  if (cardItem?.type === "file_change" && workEventIsFileChange(action?.kind ?? null)) {
+    return (
+      <FileEditRow
+        workEntry={workEntry}
+        live={props.live === true}
+        shimmer={props.shimmer === true}
+        expanded={expanded}
+        onToggleExpanded={toggleExpanded}
+      />
+    );
+  }
+  if (cardItem?.type === "command_execution" && action?.kind === "shell") {
+    return (
+      <CommandCard
+        workEntry={workEntry}
+        live={props.live === true}
+        shimmer={props.shimmer === true}
+        expanded={expanded}
+        onToggleExpanded={toggleExpanded}
+      />
+    );
+  }
   const iconConfig = workToneIcon(workEntry.tone);
   const showWarningIndicator = workEntry.sourceActivityKind === "runtime.warning";
   const showFailedIndicator =
@@ -281,12 +314,9 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
   const questionHeading = workEntry.questionAnswer
     ? getQuestionTextPreview(workEntry.questionAnswer)
     : "";
-  const previewText =
-    isReasoning && expanded
-      ? workEntry.toolLifecycleStatus === "inProgress"
-        ? "Thinking"
-        : "Thought"
-      : questionHeading || (displayLabel ?? workEntryDisplayLabel(workEntry, workspaceRoot));
+  const previewText = isReasoning
+    ? thoughtTitle([workEntry], workEntry.toolLifecycleStatus === "inProgress")
+    : questionHeading || (displayLabel ?? workEntryDisplayLabel(workEntry, workspaceRoot));
   const answerPreview =
     workEntry.questionAnswer && hasQuestionAnswer(workEntry.questionAnswer)
       ? getQuestionAnswerPreview(workEntry.questionAnswer)
@@ -367,7 +397,11 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
         ? "text-secondary-label"
         : "text-foreground/80";
   const threadLabel = isReasoning ? null : threadReadLabel(previewText, threadTarget);
-  const accessiblePreview = [threadLabel?.text ?? previewText, answerPreview]
+  const actionLabel = !threadLabel && !questionHeading && action ? action : null;
+  const accessiblePreview = [
+    threadLabel?.text ?? (actionLabel ? workEventActionText(actionLabel) : previewText),
+    answerPreview,
+  ]
     .filter(Boolean)
     .join(": ");
   const accessibleDisplayText = showFailedIndicator
@@ -414,19 +448,8 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
             <span
               className={cn(answerPreview ? "min-w-0" : "min-w-0 flex-1", "truncate", headingClass)}
             >
-              {isReasoning && !expanded ? (
-                <ChatMarkdown
-                  inline
-                  text={workEntry.detail ?? previewText}
-                  cwd={ctx.markdownCwd}
-                  parseRawHtml={false}
-                  extraRemarkPlugins={[
-                    [
-                      remarkThoughtPreview,
-                      workEntry.toolLifecycleStatus === "inProgress" ? "Thinking" : "Thought",
-                    ],
-                  ]}
-                />
+              {actionLabel ? (
+                <WorkEventLabel action={actionLabel} workspaceRoot={workspaceRoot} />
               ) : threadLabel ? (
                 <ThreadReadLabel
                   label={threadLabel}
@@ -564,7 +587,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
 function QuestionAnswerHistory({
   answer,
 }: {
-  answer: import("@t3tools/contracts").UserInputAttachmentAnswerPayload;
+  answer: import("@marp/contracts").UserInputAttachmentAnswerPayload;
 }) {
   const { activeThreadEnvironmentId } = use(TimelineRowCtx);
   const attachments = Object.values(answer.attachmentsByQuestionId).flat();

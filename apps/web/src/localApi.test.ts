@@ -1,4 +1,4 @@
-import { type ConfirmDialogOptions, type ContextMenuItem } from "@t3tools/contracts";
+import { type ConfirmDialogOptions, type ContextMenuItem } from "@marp/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 const showContextMenuFallbackMock =
@@ -70,5 +70,18 @@ describe("LocalApi", () => {
     const { createLocalApi } = await import("./localApi");
 
     await expect(createLocalApi().dialogs.confirm("Delete this thread?")).resolves.toBe(false);
+  });
+
+  it("opens and closes the themed DOM menu on desktop too", async () => {
+    Object.defineProperty(testWindow(), "desktopBridge", { configurable: true, value: {} });
+    showContextMenuFallbackMock.mockResolvedValue("rename");
+    const { createLocalApi } = await import("./localApi");
+    const api = createLocalApi();
+    const items = [{ id: "rename", label: "Rename", shortcut: "F2" }];
+
+    await expect(api.contextMenu.show(items, { x: 4, y: 8 })).resolves.toBe("rename");
+    expect(showContextMenuFallbackMock).toHaveBeenCalledWith(items, { x: 4, y: 8 });
+    await api.contextMenu.close();
+    expect(dismissContextMenuMock).toHaveBeenCalledTimes(1);
   });
 });

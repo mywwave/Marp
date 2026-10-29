@@ -173,7 +173,7 @@ Files: `threadActionMenu.logic.ts`, `Sidebar.tsx`, `localApi.ts`, `contextMenuFa
 - **SB-114** Confirms: archive asks `Archive thread "{title}"?` only if enabled (default off). Delete asks `Delete thread "{title}"?` / "This permanently clears conversation history for this thread." (default on). Settings › Confirmations — `Sidebar.tsx:2736-2790`, `packages/contracts/src/settings.ts:416-417` ⟶ ✓ #default
 - **SB-115** Multi-select menu (right-click within the selection): "Unpin (N)"; "Settle (N)"; "Snooze (N)" › presets + "Custom…"; "Regenerate titles (N)" / "Regenerating… (N)"; "Mark unread (N)"; "Delete (N)" with confirm "Delete N threads?" / "This permanently clears conversation history for these threads." — `Sidebar.tsx:2194-2451`, `Sidebar.logic.ts:594-617` ⟶ ✓ #default
 - **SB-116** Draft menu: "Copy" › "Path"/"Branch"; "Project settings"; "Discard draft" (destructive) — `threadActionMenu.logic.ts:38-67`, `Sidebar.tsx:2453-2502` ⟶ ✓ #default
-- **SB-117** Desktop shows native OS menus/confirms through the bridge. Web uses a DOM fallback menu that is dismissed when its state disappears — `localApi.ts:42-58`, `contextMenuFallback.ts:235` ⟶ ✓ #default
+- **SB-117** Every client, desktop included, uses the DOM menu (icons, key hints, flips inside the window); it is dismissed when its state disappears. Thread rows show their single-key hints (F2, P, S, Z, Del/⌫) via `withSidebarRowShortcuts` — `localApi.ts`, `contextMenuFallback.ts`, `threadActionMenu.logic.ts` ⟶ ✓ #default
 - **SB-118** Copy feedback toasts: "Path copied" / "Branch copied" / "Thread ID copied" (value as description); "Path unavailable" — "This thread does not have a workspace path to copy." — `Sidebar.tsx:914-968,2712-2735` ⟶ ✓ #default
 
 ## 11. Multi-select

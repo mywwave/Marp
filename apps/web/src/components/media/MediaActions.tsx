@@ -1,13 +1,7 @@
-import {
-  formatFilePathForClipboard,
-  type MediaActionId,
-} from "@t3tools/client-runtime/media-actions";
-import {
-  mediaReferenceFileName,
-  type MediaReference,
-} from "@t3tools/client-runtime/media-reference";
-import { resolveAssetUrl } from "@t3tools/client-runtime/state/assets";
-import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import { formatFilePathForClipboard, type MediaActionId } from "@marp/client-runtime/media-actions";
+import { mediaReferenceFileName, type MediaReference } from "@marp/client-runtime/media-reference";
+import { resolveAssetUrl } from "@marp/client-runtime/state/assets";
+import { settlePromise, squashAtomCommandFailure } from "@marp/client-runtime/state/runtime";
 import {
   AuthFilesystemReadScope,
   type AssetResource,
@@ -15,7 +9,7 @@ import {
   type EnvironmentId,
   sessionGrantsScope,
   type SessionGrantInput,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import { AsyncResult } from "effect/reactivity";
 import { useRef, useState, type ReactElement } from "react";
 
@@ -139,19 +133,25 @@ export function MediaActions({
         typeof ClipboardItem !== "undefined";
       const items: ContextMenuItem<MediaActionId>[] = [];
       if (reference?.kind === "file") {
-        items.push({ id: "copy-full-path", label: "Copy full path" });
+        items.push({ id: "copy-full-path", label: "Copy full path", icon: "copy" });
         if (reference.relativePath)
-          items.push({ id: "copy-relative-path", label: "Copy relative path" });
+          items.push({ id: "copy-relative-path", label: "Copy relative path", icon: "copy" });
       } else if (reference?.kind === "url") {
-        items.push({ id: "copy-url", label: "Copy URL" });
+        items.push({ id: "copy-url", label: "Copy URL", icon: "copy" });
       }
       if (source.onOpenFile)
-        items.push({ id: "open-file", label: "Open in file viewer", disabled: !canReadMedia });
-      items.push({ id: "save", label: `Save ${noun}`, disabled: unavailable });
+        items.push({
+          id: "open-file",
+          label: "Open in file viewer",
+          icon: "file",
+          disabled: !canReadMedia,
+        });
+      items.push({ id: "save", label: `Save ${noun}`, icon: "download", disabled: unavailable });
       if (source.kind === "image") {
         items.push({
           id: "copy-image",
           label: "Copy image",
+          icon: "image",
           disabled: unavailable || !canCopyImage,
         });
       }

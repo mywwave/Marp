@@ -1,5 +1,6 @@
-import type { ContextMenuItem } from "@t3tools/contracts";
-import type { SnoozePreset } from "@t3tools/client-runtime/state/thread-settled";
+import type { ContextMenuItem } from "@marp/contracts";
+import type { SnoozePreset } from "@marp/client-runtime/state/thread-settled";
+import { isMacPlatform } from "@marp/shared/keybindings";
 
 export type ThreadActionMenuId =
   | "new-thread-on-branch"
@@ -259,4 +260,38 @@ export function buildThreadActionMenuItems(
             }
           : item,
       );
+}
+
+/**
+ * Hints for the single keys a focused sidebar row answers to (resolveSidebarRowKeyCommand).
+ * S wakes a snoozed thread before it settles one, and Z only opens Snooze.
+ */
+export function withSidebarRowShortcuts(
+  items: ReadonlyArray<ContextMenuItem<ThreadActionMenuId>>,
+  input: { readonly isSnoozed: boolean; readonly platform: string },
+): ReadonlyArray<ContextMenuItem<ThreadActionMenuId>> {
+  const shortcutFor = (id: ThreadActionMenuId): string | undefined => {
+    switch (id) {
+      case "rename":
+        return "F2";
+      case "pin":
+      case "unpin":
+        return "P";
+      case "snooze":
+        return "Z";
+      case "unsnooze":
+        return "S";
+      case "settle":
+      case "unsettle":
+        return input.isSnoozed ? undefined : "S";
+      case "delete":
+        return isMacPlatform(input.platform) ? "⌫" : "Del";
+      default:
+        return undefined;
+    }
+  };
+  return items.map((item) => {
+    const shortcut = shortcutFor(item.id);
+    return shortcut === undefined ? item : { ...item, shortcut };
+  });
 }

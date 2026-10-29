@@ -7,6 +7,7 @@ import {
 } from "./ContextWindowMeter.logic";
 import { Minimize2Icon } from "lucide-react";
 import { composerFloatingLayerProps } from "./composerEventScope";
+import { ComposerControl } from "./ComposerControl";
 
 function formatPercentage(value: number | null): string | null {
   if (value === null || !Number.isFinite(value)) {
@@ -28,7 +29,7 @@ export function ContextWindowMeter(props: {
   const { usage, modelDisplayName, onCompact, compactDisabled, compactDisabledReason } = props;
   const usedPercentage = formatPercentage(usage.usedPercentage);
   const normalizedPercentage = Math.max(0, Math.min(100, usage.usedPercentage ?? 0));
-  const radius = 9.75;
+  const radius = 6.5;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference * (1 - normalizedPercentage / 100);
   const totalProcessedTokens = usage.totalProcessedTokens ?? null;
@@ -45,45 +46,43 @@ export function ContextWindowMeter(props: {
         delay={150}
         closeDelay={onCompact ? 150 : 0}
         render={
-          <Button
-            size="icon-sm"
-            variant="ghost-muted"
-            className="size-7"
+          <ComposerControl
+            className="tabular-nums"
             aria-label={
               usage.maxTokens !== null && usedPercentage
                 ? `Context window ${usedPercentage} used`
                 : `Context window ${formatContextWindowTokens(usage.usedTokens)} tokens used`
             }
           >
-            <span className="relative flex size-5 items-center justify-center">
-              <svg
-                viewBox="0 0 24 24"
-                className="-rotate-90 absolute inset-0 size-full transform-gpu mx-0!"
-                aria-hidden="true"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r={radius}
-                  fill="none"
-                  className="stroke-muted-foreground/24"
-                  strokeWidth="3"
-                />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r={radius}
-                  fill="none"
-                  stroke={usageColor}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={dashOffset}
-                  className="transition-[stroke-dashoffset,stroke] duration-500 ease-out motion-reduce:transition-none"
-                />
-              </svg>
-            </span>
-          </Button>
+            <svg
+              viewBox="0 0 16 16"
+              className="-rotate-90 mx-0! size-4 transform-gpu"
+              aria-hidden="true"
+            >
+              <circle
+                cx="8"
+                cy="8"
+                r={radius}
+                fill="none"
+                className="stroke-muted-foreground/24"
+                strokeWidth="2.5"
+              />
+              <circle
+                cx="8"
+                cy="8"
+                r={radius}
+                fill="none"
+                stroke={usageColor}
+                strokeWidth="2.5"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                className="transition-[stroke-dashoffset,stroke] duration-500 ease-out motion-reduce:transition-none"
+              />
+            </svg>
+            {usage.maxTokens !== null && usedPercentage ? (
+              <span data-composer-control-label>{usedPercentage}</span>
+            ) : null}
+          </ComposerControl>
         }
       />
       <PopoverPopup
@@ -97,7 +96,7 @@ export function ContextWindowMeter(props: {
       >
         <div className="flex flex-col gap-2 p-(--floating-content-inset)">
           <div className="flex items-center justify-between gap-3">
-            <div className="font-medium text-muted-foreground text-xs">Context Window</div>
+            <div className="font-medium text-muted-foreground text-xs">Context window</div>
             {usage.maxTokens !== null && usedPercentage ? (
               <div className="text-secondary-label text-2xs tabular-nums">
                 <span>{usedPercentage}</span>
@@ -112,6 +111,9 @@ export function ContextWindowMeter(props: {
                 {formatContextWindowTokens(usage.usedTokens)}
               </div>
             )}
+          </div>
+          <div className="text-pretty text-secondary-label text-2xs">
+            How much of the model's memory this thread uses.
           </div>
           {usage.maxTokens !== null ? (
             <div
@@ -175,5 +177,5 @@ export function ContextWindowMeter(props: {
 }
 
 export function ContextWindowMeterPlaceholder() {
-  return <span aria-hidden="true" className="size-7 shrink-0" />;
+  return <span aria-hidden="true" className="h-7 w-14 shrink-0" />;
 }

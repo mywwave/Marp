@@ -1,17 +1,17 @@
 import type { ToolCallDiffTarget } from "../../diffPanelStore";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentProject } from "@marp/client-runtime/state/shell";
 import type { ThreadPreviewState } from "../../previewStateStore";
-import { formatFilePathForClipboard } from "@t3tools/client-runtime/media-actions";
-import { resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
+import { formatFilePathForClipboard } from "@marp/client-runtime/media-actions";
+import { resolvePathLinkTarget } from "@marp/shared/fileLinks";
 import { resolveExplicitDiffOpenOnActivate } from "../ChatView.logic";
 import { useStableCallback } from "../../hooks/useStableCallback";
-import { type ScopedThreadRef, type RunId } from "@t3tools/contracts";
-import { scopedThreadKey } from "@t3tools/client-runtime/environment";
+import { type ScopedThreadRef, type RunId } from "@marp/contracts";
+import { scopedThreadKey } from "@marp/client-runtime/environment";
 import { useEffect } from "react";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@marp/client-runtime/state/runtime";
 import { useDiffPanelStore } from "../../diffPanelStore";
 import { type ThreadPanelPresentation } from "../../rightPanelLayout";
 import {
@@ -60,6 +60,7 @@ interface RightPanelActionsInput {
   readonly explicitDiffOpenRef: { current: ScopedThreadRef | null };
   readonly onDiffPanelOpen: (() => void) | undefined;
   readonly closeRightPanelSurface: (surface: RightPanelSurface) => void;
+  readonly latestChangesRunId: RunId | undefined;
 }
 
 /**
@@ -92,6 +93,7 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     activeProjectCwd,
     explicitDiffOpenRef,
     onDiffPanelOpen,
+    latestChangesRunId,
   } = input;
 
   const openPreview = useAtomCommand(previewEnvironment.open, { reportFailure: false });
@@ -313,7 +315,7 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     onDiffPanelOpen?.();
   });
   const onOpenTurnDiffStable = useStableCallback(onOpenTurnDiff);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to the preview action bus to toggle the preview panel
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- subscribes to the preview action bus to toggle the preview panel
   useEffect(
     () =>
       subscribePreviewAction((action) => {
@@ -333,6 +335,10 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
       if (!event.repeat) closeRightPanelSurface(activeRightPanelSurface);
     },
     "diff.toggle": () => onToggleDiff(),
+    "diff.reviewTurn": () => {
+      if (latestChangesRunId === undefined) return false;
+      onOpenTurnDiff(latestChangesRunId);
+    },
   } satisfies ChatShortcutCommands;
 
   return {

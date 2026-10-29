@@ -109,7 +109,7 @@ import {
   type WorkGroupViewState,
   type TimelineRow,
 } from "./timelineRowContext";
-import { TimelineRowTimestamp, ActivityShimmerOverlay } from "./TimelineRowParts";
+import { ActivityShimmerOverlay } from "./TimelineRowParts";
 import {
   WorkGroupSection,
   WorkingTimelineRow,
@@ -1652,7 +1652,7 @@ function TurnFoldTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "turn-
         data-scroll-anchor-ignore
         onClick={toggle}
         aria-busy={loading}
-        className="relative flex h-7 w-full cursor-pointer select-none items-center gap-2 rounded-lg px-1 text-left text-sm text-muted-foreground tabular-nums transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
+        className="relative flex h-8 w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 text-left text-sm text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-secondary-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
       >
         <ChevronRightIcon
           aria-hidden
@@ -1666,12 +1666,9 @@ function TurnFoldTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "turn-
           {row.title}
           {error ? ` · ${error}` : ""}
         </span>
-        <TimelineRowTimestamp
-          createdAt={row.createdAt}
-          timestampFormat={ctx.timestampFormat}
-          className="ms-auto"
-        />
-        {row.duration ? <span className="ms-auto shrink-0">{row.duration}</span> : null}
+        {row.duration ? (
+          <span className="ms-auto shrink-0 tabular-nums">{row.duration}</span>
+        ) : null}
       </button>
       {loading ? <WorkHistorySkeleton /> : null}
     </div>

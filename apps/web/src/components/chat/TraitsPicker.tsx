@@ -6,7 +6,7 @@ import {
   selectableProviderOptionChoices,
   REASONING_SELECT_DESCRIPTOR_IDS,
   ULTRATHINK_PROMPT_PREFIX,
-} from "@t3tools/client-runtime/model-traits";
+} from "@marp/client-runtime/model-traits";
 import {
   type ModelSelection,
   type ProviderDriverKind,
@@ -15,17 +15,17 @@ import {
   type ProviderOptionSelection,
   type ScopedThreadRef,
   type ServerProviderModel,
-} from "@t3tools/contracts";
-import type { EffortDisplay } from "@t3tools/contracts/settings";
+} from "@marp/contracts";
+import type { EffortDisplay } from "@marp/contracts/settings";
 import {
   buildProviderOptionSelectionsFromDescriptors,
   getProviderOptionCurrentLabel,
   getProviderOptionDescriptors,
   isClaudeUltrathinkPrompt,
   normalizeModelSlug,
-} from "@t3tools/shared/model";
+} from "@marp/shared/model";
 import { memo, type ReactNode, useRef } from "react";
-import { GaugeIcon, ZapIcon } from "lucide-react";
+import { BrainIcon, GaugeIcon, ZapIcon } from "lucide-react";
 import {
   Menu,
   MenuGroup,
@@ -325,8 +325,6 @@ interface TraitsMenuContentProps {
   extraMenuContent?: ReactNode;
   /** This trigger also answers composer.mode (while the permissions chip is hidden). */
   extraMenuOwnsModeShortcut?: boolean;
-  /** Extra tooltip text naming what else the menu holds. */
-  extraMenuHint?: string;
 }
 
 export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
@@ -545,7 +543,6 @@ export const TraitsPicker = memo(function TraitsPicker({
   effortDisplay = "label",
   extraMenuContent,
   extraMenuOwnsModeShortcut,
-  extraMenuHint,
   size = "sm",
   hidden = false,
   disabled = false,
@@ -598,7 +595,7 @@ export const TraitsPicker = memo(function TraitsPicker({
   const isCodexStyle = provider === "codex";
   // In the composer the glyph has no word, so the tooltip and label name the control.
   const triggerDescription = isComposerOwned
-    ? [`Effort: ${triggerLabel}`, speedLabel, extraMenuHint].filter(Boolean).join(" · ")
+    ? [`Effort: ${triggerLabel}`, speedLabel].filter(Boolean).join(" · ")
     : triggerLabel;
   const effortGlyph =
     isComposerOwned &&
@@ -650,12 +647,6 @@ export const TraitsPicker = memo(function TraitsPicker({
                       ? "min-w-0 max-w-40 shrink justify-start overflow-hidden whitespace-nowrap sm:max-w-48"
                       : "shrink-0 whitespace-nowrap",
                     triggerClassName,
-                    // Effort reads on from the model name, "Opus 5.5 High", at about the space
-                    // inside the name: this cancels the model chip's end padding and the row gap.
-                    isComposerOwned && (effortWord !== null ? "-ms-1 ps-0" : "-ms-1 ps-0.5"),
-                    // The word is muted next to the model name and brightens like it on hover.
-                    effortWord !== null &&
-                      "text-muted-foreground hover:text-foreground data-pressed:text-foreground data-popup-open:text-foreground",
                   )}
                 />
               }
@@ -665,22 +656,17 @@ export const TraitsPicker = memo(function TraitsPicker({
           {effortGlyph ? (
             <span className="flex items-center gap-1.5">
               {effortWord === null ? (
-                <EffortGlyph count={effortGlyph.count} filled={effortGlyph.filled} size={size} />
-              ) : null}
-              {effortWord !== null ? (
                 <>
-                  <span data-composer-control-label>{effortWord}</span>
-                  {/* Icon-only footers hide labels and reveal this instead. */}
-                  <GaugeIcon
-                    aria-hidden="true"
-                    data-composer-control-compact-icon
-                    className="invisible absolute size-3.5"
-                  />
+                  <EffortGlyph count={effortGlyph.count} filled={effortGlyph.filled} size={size} />
+                  <span data-composer-control-label className="sr-only">
+                    {triggerLabel}
+                  </span>
                 </>
               ) : (
-                <span data-composer-control-label className="sr-only">
-                  {triggerLabel}
-                </span>
+                <>
+                  <ComposerControlIcon icon={BrainIcon} size={size} />
+                  <span data-composer-control-label>{effortWord}</span>
+                </>
               )}
               {speedLabel === "Fast" || speedLabel === "Ultrafast" ? (
                 <FastBolt ultra={speedLabel === "Ultrafast"} />

@@ -1,4 +1,4 @@
-import type { ContextMenuItem } from "@t3tools/contracts";
+import type { ContextMenuItem } from "@marp/contracts";
 
 type ExternalLinkContextMenuAction =
   | "open-in-preview"
@@ -24,9 +24,9 @@ const FAILURE_OPERATION_BY_ACTION = {
 } as const satisfies Record<ExternalLinkContextMenuAction, ExternalLinkContextMenuFailureOperation>;
 
 const EXTERNAL_LINK_CONTEXT_MENU_ITEMS = [
-  { id: "open-in-preview", label: "Open in integrated browser" },
-  { id: "open-external", label: "Open in system browser" },
-  { id: "copy-link", label: "Copy Link" },
+  { id: "open-in-preview", label: "Open in integrated browser", icon: "globe" },
+  { id: "open-external", label: "Open in system browser", icon: "external-link" },
+  { id: "copy-link", label: "Copy Link", icon: "copy" },
 ] as const satisfies readonly ContextMenuItem<ExternalLinkContextMenuAction>[];
 
 function externalLinkContextMenuItems(options: {
@@ -42,6 +42,7 @@ function externalLinkContextMenuItems(options: {
       id: options.threadLinkAction,
       label:
         options.threadLinkAction === "link-to-thread" ? "Link to thread" : "Unlink from thread",
+      icon: options.threadLinkAction === "link-to-thread" ? "link" : "unlink",
     },
     ...items,
   ];

@@ -115,19 +115,12 @@ class FakeElement {
     return matches;
   }
 
-  getBoundingClientRect() {
-    const left = Number.parseInt(this.style.left ?? "0", 10) || 0;
-    const top = Number.parseInt(this.style.top ?? "0", 10) || 0;
-    const width = this.tagName === "div" ? 180 : 140;
-    const height = this.tagName === "div" ? 120 : 28;
-    return {
-      left,
-      top,
-      width,
-      height,
-      right: left + width,
-      bottom: top + height,
-    };
+  get offsetWidth() {
+    return this.tagName === "div" ? 180 : 140;
+  }
+
+  get offsetHeight() {
+    return this.tagName === "div" ? 120 : 28;
   }
 }
 

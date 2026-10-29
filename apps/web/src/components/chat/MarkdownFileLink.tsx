@@ -1,10 +1,10 @@
-import { formatFilePathForClipboard } from "@t3tools/client-runtime/media-actions";
+import { formatFilePathForClipboard } from "@marp/client-runtime/media-actions";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId, ScopedThreadRef } from "@t3tools/contracts";
+} from "@marp/client-runtime/state/runtime";
+import type { EnvironmentId, ScopedThreadRef } from "@marp/contracts";
 import { memo, type MouseEvent as ReactMouseEvent } from "react";
 
 import { readLocalApi } from "../../localApi";
@@ -249,13 +249,21 @@ export const MarkdownFileLink = memo(function MarkdownFileLink({
       const copyItems = markdownFileCopyMenuItems({ targetPath, workspaceRelativePath });
       const clicked = await api.contextMenu.show(
         [
-          ...(onOpenMedia ? ([{ id: "preview-media", label: "Preview media" }] as const) : []),
-          ...(onOpen ? ([{ id: "open", label: openInEditorMenuLabel }] as const) : []),
-          ...(onOpenInBrowser
-            ? ([{ id: "open-in-browser", label: "Open in integrated browser" }] as const)
+          ...(onOpenMedia
+            ? ([{ id: "preview-media", label: "Preview media", icon: "image" }] as const)
             : []),
-          ...(onReveal && revealLabel ? ([{ id: "reveal", label: revealLabel }] as const) : []),
-          ...copyItems.map(({ id, label }) => ({ id, label })),
+          ...(onOpen
+            ? ([{ id: "open", label: openInEditorMenuLabel, icon: "file" }] as const)
+            : []),
+          ...(onOpenInBrowser
+            ? ([
+                { id: "open-in-browser", label: "Open in integrated browser", icon: "globe" },
+              ] as const)
+            : []),
+          ...(onReveal && revealLabel
+            ? ([{ id: "reveal", label: revealLabel, icon: "folder-tree" }] as const)
+            : []),
+          ...copyItems.map(({ id, label }) => ({ id, label, icon: "copy" })),
         ] as const,
         position,
       );

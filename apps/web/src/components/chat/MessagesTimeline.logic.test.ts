@@ -1080,6 +1080,61 @@ describe("deriveMessagesTimelineRows", () => {
     ).toBeDefined();
   });
 
+  it("shows a single-run turn's steps under its open fold without repeating the header", () => {
+    const runId = RunId.make("turn-1");
+    const at = (second: number) => `2026-01-01T00:00:${String(second).padStart(2, "0")}Z`;
+    const command = (id: string, second: number, input: string) => ({
+      id: `${id}-entry`,
+      kind: "work" as const,
+      createdAt: at(second),
+      entry: {
+        id,
+        createdAt: at(second),
+        runId,
+        label: "Ran command",
+        tone: "tool" as const,
+        itemType: "command_execution" as const,
+        command: input,
+      },
+    });
+    const assistant = (id: string, second: number, text: string) => ({
+      id: `${id}-entry`,
+      kind: "message" as const,
+      createdAt: at(second),
+      message: {
+        id: id as never,
+        role: "assistant" as const,
+        text,
+        runId,
+        createdAt: at(second),
+        updatedAt: at(second),
+        streaming: false,
+      },
+    });
+    const rows = deriveMessagesTimelineRows({
+      timelineEntries: [
+        assistant("assistant-first", 1, "Checking the build."),
+        command("test", 2, "pnpm test"),
+        command("lint", 3, "pnpm lint"),
+        assistant("assistant-final", 5, "Both pass."),
+      ],
+      expandedRunIds: new Set([runId]),
+      isWorking: false,
+      activeTurnStartedAt: null,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    });
+
+    const fold = rows.find((row) => row.kind === "turn-fold");
+    expect(fold?.kind === "turn-fold" && fold.title).toBe("Ran 2 commands");
+    expect(rows.some((row) => row.kind === "work-toggle")).toBe(false);
+    const steps = rows.find((row) => row.kind === "work" && row.isExpandedToolGroup);
+    expect(steps?.kind === "work" && steps.groupedEntries.map((entry) => entry.id)).toEqual([
+      "test",
+      "lint",
+    ]);
+  });
+
   it.each([1, 2, 3])("folds %i completed activities after the terminal response", (count) => {
     const runId = RunId.make("turn-1");
     const timelineEntries = [
@@ -1680,60 +1735,6 @@ describe("deriveMessagesTimelineRows", () => {
     expect(rows.some((row) => row.kind === "thinking")).toBe(false);
   });
 
-  it("carries the latest thought on the live row while a later tool runs", () => {
-    type WorkEntry = Extract<
-      Parameters<typeof deriveMessagesTimelineRows>[0]["timelineEntries"][number],
-      { kind: "work" }
-    >;
-    const work = (
-      id: string,
-      at: string,
-      fields: Omit<WorkEntry["entry"], "id" | "createdAt" | "runId" | "label">,
-    ): WorkEntry => ({
-      id: `${id}-entry`,
-      kind: "work",
-      createdAt: at,
-      entry: { id, createdAt: at, runId: "turn-1" as never, label: id, ...fields },
-    });
-    const rows = deriveMessagesTimelineRows({
-      timelineEntries: [
-        work("old-thought", "2026-01-01T00:00:01Z", {
-          itemType: "reasoning",
-          detail: "First idea.",
-          tone: "thinking" as const,
-          toolLifecycleStatus: "completed" as const,
-        }),
-        work("new-thought", "2026-01-01T00:00:02Z", {
-          itemType: "reasoning",
-          detail: "Found the cause.",
-          tone: "thinking" as const,
-          toolLifecycleStatus: "completed" as const,
-        }),
-        work("running-command", "2026-01-01T00:00:03Z", {
-          command: "rg cause",
-          requestKind: "command",
-          tone: "tool" as const,
-          toolLifecycleStatus: "inProgress" as const,
-        }),
-      ],
-      latestRun: {
-        runId: "turn-1" as never,
-        status: "running",
-        startedAt: "2026-01-01T00:00:00Z",
-        completedAt: null,
-      },
-      isWorking: true,
-      activeTurnStartedAt: "2026-01-01T00:00:00Z",
-      turnDiffSummaries: [],
-      supportsConversationRollback: false,
-    });
-
-    expect(rows.find((row) => row.kind === "work-live")).toMatchObject({
-      entry: { id: "running-command" },
-      thought: { id: "new-thought" },
-    });
-  });
-
   it("keeps an actually running tool in the shared activity row", () => {
     const rows = deriveMessagesTimelineRows({
       timelineEntries: [
@@ -1937,7 +1938,7 @@ describe("deriveMessagesTimelineRows", () => {
     expect(shape(expanded)).toEqual([
       "user:launch",
       "fold:Worked for 8.0s",
-      "work-toggle",
+      "work",
       "assistant:launch-answer",
       "user:resume",
       "fold:Worked for 8.0s",
@@ -2679,7 +2680,7 @@ describe("v2 run and attempt history", () => {
       "user-entry",
       "turn-fold:turn-1",
       "assistant-thought-entry",
-      "work-toggle:work-entry-1",
+      "work-group:work-entry-1:details",
       "thread-created-entry",
       "assistant-final-entry",
     ]);

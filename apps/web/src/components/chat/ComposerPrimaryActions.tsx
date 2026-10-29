@@ -120,16 +120,13 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   const alternateAction = alternateComposerDispatchAction(followUpBehavior);
   const isSendDisabled = !canOperateThread || sendDisabledReason !== null;
 
-  const renderStopGenerationButton = (insidePendingAction: boolean) => (
+  const stopGenerationButton = (
     <Tooltip key="interrupt">
       <TooltipTrigger
         render={
           <button
             type="button"
-            className={cn(
-              "flex shrink-0 cursor-pointer items-center justify-center rounded-full bg-destructive/90 text-white shadow-xs shadow-destructive/24 inset-shadow-control-highlight transition-colors duration-150 hover:bg-destructive active:inset-shadow-control-pressed active:shadow-none [&_svg]:pointer-events-none",
-              insidePendingAction ? "size-8 sm:size-7" : "size-8 sm:h-8 sm:w-8",
-            )}
+            className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-surface-hover text-foreground transition-[background-color,scale] duration-150 hover:bg-input active:scale-[0.94] [&_svg]:pointer-events-none"
             {...pointerFocusProps}
             disabled={!canOperateThread}
             onClick={() => {
@@ -139,18 +136,18 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           />
         }
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-          <rect x="2" y="2" width="8" height="8" rx="1.5" />
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
+          <rect width="10" height="10" rx="2" />
         </svg>
       </TooltipTrigger>
-      <TooltipPopup>Interrupt</TooltipPopup>
+      <TooltipPopup>Stop</TooltipPopup>
     </Tooltip>
   );
 
   if (pendingAction) {
     return (
       <div className={cn("flex items-center justify-end", compact ? "gap-1.5" : "gap-2")}>
-        {canInterrupt ? renderStopGenerationButton(true) : null}
+        {canInterrupt ? stopGenerationButton : null}
         {pendingAction.questionIndex > 0 ? (
           compact ? (
             <Button
@@ -256,7 +253,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   }
 
   if (canInterrupt && !hasSendableContent && !isEditingQueuedMessage) {
-    return renderStopGenerationButton(false);
+    return stopGenerationButton;
   }
 
   const showResume = canResume && !hasSendableContent && !isEditingQueuedMessage;
@@ -278,16 +275,17 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           : isRunning
             ? "Steer message"
             : "Submit message";
-  const submitStatus = isEnvironmentUnavailable
-    ? "Environment disconnected"
-    : (sendDisabledReason ??
-      (isPreparingWorktree
+  const submitStatus =
+    sendDisabledReason ??
+    (isEnvironmentUnavailable
+      ? "Environment disconnected"
+      : isPreparingWorktree
         ? "Preparing worktree"
         : isSendBusy
           ? isEditingQueuedMessage
             ? "Updating queued message"
             : "Submitting message"
-          : null));
+          : null);
   const submitTooltip =
     submitStatus ??
     (compactsBeforeSend
@@ -300,8 +298,8 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
     <button
       type={showResume ? "button" : "submit"}
       className={cn(
-        "relative isolate flex h-9 w-9 items-center justify-center overflow-hidden rounded-full shadow-xs transition-all duration-150 enabled:cursor-pointer enabled:inset-shadow-control-highlight hover:scale-105 active:inset-shadow-control-pressed active:shadow-none disabled:pointer-events-none disabled:shadow-none disabled:hover:scale-100 sm:h-8 sm:w-8 [&_svg]:pointer-events-none",
-        "bg-message-action text-message-action-foreground enabled:shadow-message-action/24 hover:bg-message-action-hover disabled:bg-foreground/12 disabled:text-muted-foreground",
+        "relative isolate flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full transition-[background-color,color,scale] duration-150 enabled:cursor-pointer active:scale-[0.94] disabled:pointer-events-none [&_svg]:pointer-events-none",
+        "bg-message-action text-message-action-foreground hover:bg-message-action-hover disabled:bg-surface-hover disabled:text-placeholder",
       )}
       {...pointerFocusProps}
       onClick={showResume ? onResume : onSubmitMessage}

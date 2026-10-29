@@ -11,7 +11,7 @@ import {
   TurnItemId,
   ScheduledTaskId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@marp/contracts";
 import type { LegendListRef } from "@legendapp/list/react";
 import { createRef, Profiler, StrictMode, type ComponentProps, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
@@ -25,8 +25,6 @@ import {
   type PendingApproval,
   deriveTimelineEntriesFromVisibleTurnItems,
 } from "../../session-logic";
-import { remarkThoughtPreview } from "./TimelineWorkEntryRow.logic";
-import { parseMarkdownWithMath } from "@t3tools/shared/markdownMath";
 import { collectThreadFindRanges } from "./threadFindHighlights";
 import { toastManager } from "../ui/toast";
 import type { CitedHistory } from "./citationProcedure";
@@ -359,22 +357,22 @@ describe("MessagesTimeline messages", () => {
 
   it("renders unsafe user HTML as inert source text", async () => {
     const source =
-      '<script>globalThis.__t3Xss = 1</script><img src="x" onerror="globalThis.__t3Xss = 2">';
+      '<script>globalThis.__marpXss = 1</script><img src="x" onerror="globalThis.__marpXss = 2">';
     await using screen = await renderTimeline([message(source)]);
     expect(screen.text()).toContain(source);
     expect(screen.container.querySelector("script, img")).toBeNull();
-    expect((globalThis as { __t3Xss?: number }).__t3Xss).toBeUndefined();
+    expect((globalThis as { __marpXss?: number }).__marpXss).toBeUndefined();
   });
 
   it("renders sanitized raw HTML in assistant messages", async () => {
     await using screen = await renderTimeline([
       message(
         [
-          '<details onclick="globalThis.__t3Xss = 1">',
+          '<details onclick="globalThis.__marpXss = 1">',
           "<summary>Safe details</summary>",
-          "<script>globalThis.__t3Xss = 2</script>",
-          '<img src="x" onerror="globalThis.__t3Xss = 3">',
-          '<a href="javascript:globalThis.__t3Xss = 4">Unsafe link</a>',
+          "<script>globalThis.__marpXss = 2</script>",
+          '<img src="x" onerror="globalThis.__marpXss = 3">',
+          '<a href="javascript:globalThis.__marpXss = 4">Unsafe link</a>',
           "</details>",
         ].join(""),
         { role: "assistant" },
@@ -387,7 +385,7 @@ describe("MessagesTimeline messages", () => {
     expect(screen.container.querySelector("script, [onclick], [onerror]")).toBeNull();
     expect(screen.container.innerHTML).not.toContain("javascript:");
     await click(screen.button("Safe details"));
-    expect((globalThis as { __t3Xss?: number }).__t3Xss).toBeUndefined();
+    expect((globalThis as { __marpXss?: number }).__marpXss).toBeUndefined();
   });
 });
 
@@ -609,7 +607,7 @@ describe("MessagesTimeline agent messages", () => {
     expect(screen.text()).not.toContain("drops the index");
   });
 
-  it("leaves messages sent by T3 Code as full bubbles", async () => {
+  it("leaves messages sent by Marp as full bubbles", async () => {
     setup();
     await using screen = await renderTimeline([
       message(AGENT_MESSAGE, { createdBy: "agent", creationSource: "server" }),
@@ -901,25 +899,6 @@ describe("MessagesTimeline thread find", () => {
       expect(top).toBeGreaterThanOrEqual(bounds.top);
       expect(top).toBeLessThan(bounds.bottom);
     });
-  });
-});
-
-describe("compact reasoning math", () => {
-  it("keeps formulas while flattening compact reasoning previews", () => {
-    const tree = parseMarkdownWithMath("## Reasoning\n\nUse **norm** $|x|$ and \\[x^2\\]");
-    remarkThoughtPreview("Reasoning")(tree);
-    expect(tree.children.map((node) => node.type)).toEqual([
-      "text",
-      "inlineMath",
-      "text",
-      "inlineMath",
-    ]);
-    expect(tree.children.map((node) => ("value" in node ? node.value : null))).toEqual([
-      "Reasoning Use norm ",
-      "|x|",
-      " and ",
-      "x^2",
-    ]);
   });
 });
 

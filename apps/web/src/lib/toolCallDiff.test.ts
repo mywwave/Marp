@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { getRenderablePatch, resolveFileDiffPath } from "./diffRendering";
-import { toolCallDiff } from "./toolCallDiff";
+import { toolCallDiff, toolCallFileDiff } from "./toolCallDiff";
 
 describe("toolCallDiff", () => {
   it("renders recorded hunks without reading a repository, including renamed paths", () => {
@@ -128,5 +128,26 @@ describe("toolCallDiff", () => {
         toolCallDiff({ fileName: "a.ts", ...(diffStr === undefined ? {} : { diffStr }) }).patch,
       ).toBe(diffStr);
     }
+  });
+});
+
+describe("toolCallFileDiff", () => {
+  it("numbers lines from a recorded patch", () => {
+    const result = toolCallFileDiff({
+      fileName: "a.ts",
+      diffStr: "@@ -4,2 +4,2 @@\n ctx\n-old\n+new\n",
+    });
+    expect(result?.lineNumbers).toBe(true);
+    expect(result?.fileDiff.hunks[0]?.additionStart).toBe(4);
+  });
+
+  it("diffs recorded snippets without line numbers", () => {
+    const result = toolCallFileDiff({ fileName: "a.ts", oldStr: "a\nb", newStr: "a\nc" });
+    expect(result?.lineNumbers).toBe(false);
+    expect(result?.fileDiff.hunks[0]).toMatchObject({ additionLines: 1, deletionLines: 1 });
+  });
+
+  it("has nothing to show without recorded changes", () => {
+    expect(toolCallFileDiff({ fileName: "a.ts" })).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
-import type { OrchestrationV2TurnItem } from "@t3tools/contracts";
+import type { OrchestrationV2TurnItem } from "@marp/contracts";
+import { parseDiffFromFile, type FileDiffMetadata } from "@pierre/diffs";
 import { getRenderablePatch, resolveFileDiffPath } from "./diffRendering";
 
 type FileChange = Extract<OrchestrationV2TurnItem, { type: "file_change" }>;
@@ -73,5 +74,31 @@ export function toolCallDiff(
           { label: "Recorded content after", text: after.text },
         ].filter((entry): entry is { label: string; text: string } => entry.text !== undefined),
     truncated: diff.truncated || before.truncated || after.truncated,
+  };
+}
+
+/**
+ * One edit as a renderable file diff. Recorded before/after snippets are not whole files, so
+ * their line numbers would lie; `lineNumbers` is false for them.
+ */
+export function toolCallFileDiff(
+  item: Pick<FileChange, "diffStr" | "fileName" | "changes" | "oldStr" | "newStr">,
+): { readonly fileDiff: FileDiffMetadata; readonly lineNumbers: boolean } | null {
+  const diff = toolCallDiff(item);
+  const parsed = getRenderablePatch(diff.patch, "timeline-edit");
+  if (parsed?.kind === "files" && parsed.files[0]) {
+    return { fileDiff: parsed.files[0], lineNumbers: true };
+  }
+  const [before, after] = [
+    diff.content.find((entry) => entry.label === "Recorded content before")?.text,
+    diff.content.find((entry) => entry.label === "Recorded content after")?.text,
+  ];
+  if (before === undefined && after === undefined) return null;
+  return {
+    fileDiff: parseDiffFromFile(
+      { name: item.fileName, contents: before ?? "" },
+      { name: item.fileName, contents: after ?? "" },
+    ),
+    lineNumbers: false,
   };
 }

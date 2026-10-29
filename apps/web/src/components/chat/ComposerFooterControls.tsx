@@ -3,9 +3,9 @@ import type {
   ProviderInstanceId,
   ProviderInteractionMode,
   RuntimeMode,
-} from "@t3tools/contracts";
-import { createModelSelection } from "@t3tools/shared/model";
-import { BotIcon, PencilRulerIcon } from "lucide-react";
+} from "@marp/contracts";
+import { createModelSelection } from "@marp/shared/model";
+import { ListChecksIcon } from "lucide-react";
 import { type ComponentProps, memo, useId, useRef, useState } from "react";
 
 import type { ContextWindowSnapshot } from "../../lib/contextWindow";
@@ -33,10 +33,8 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
   runtimeModeOptions: ReadonlyArray<RuntimeModeOption>;
   size?: "sm" | "xs";
   hidden?: boolean;
-  /** How the permissions chip shows: hidden while the thread matches the user's default. */
-  accessDisplay?: "label" | "icon" | "hidden";
-  /** Draw the icon in the label color, not muted (the mode differs from the user's default). */
-  emphasized?: boolean;
+  /** The permissions chip names its mode, or shows only the icon in the compacted row. */
+  accessDisplay?: "label" | "icon";
   onToggleInteractionMode: () => void;
   onRuntimeModeChange: (mode: RuntimeMode) => void;
 }) {
@@ -51,8 +49,8 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
   const RuntimeModeIcon = runtimeModeOption.icon;
   const interactionModeTooltip =
     props.interactionMode === "plan"
-      ? "Plan mode. Click to return to normal build mode"
-      : "Default mode. Click to enter plan mode";
+      ? "Plan mode: the agent plans before it changes anything. Click for chat"
+      : "Chat mode. Click to plan first";
 
   const interactionModeToggle = props.showInteractionModeToggle ? (
     <Tooltip>
@@ -68,25 +66,10 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
           />
         }
       >
-        {props.interactionMode === "plan" ? (
-          <ComposerControlIcon
-            icon={PencilRulerIcon}
-            size={size}
-            className="text-current opacity-100"
-          />
-        ) : (
-          <ComposerControlIcon
-            icon={BotIcon}
-            size={size}
-            opticalSize={size === "xs" ? "default" : "large"}
-          />
-        )}
+        <ComposerControlIcon icon={ListChecksIcon} size={size} />
         {/* The compacted row (xs) keeps this icon-only, like the other controls there. */}
-        <span
-          data-composer-control-label
-          className={size === "xs" ? "sr-only" : "sr-only sm:not-sr-only"}
-        >
-          {props.interactionMode === "plan" ? "Plan" : "Build"}
+        <span data-composer-control-label className={size === "xs" ? "sr-only" : undefined}>
+          {props.interactionMode === "plan" ? "Plan" : "Chat"}
         </span>
       </TooltipTrigger>
       <TooltipPopup side="top">{interactionModeTooltip}</TooltipPopup>
@@ -112,26 +95,22 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
                   ref={permissionsChipRef}
                   data-composer-shortcut="composer.mode"
                   size={size}
-                  // Mirrors the effort chip's trailing pe-1 so both gaps around the bars match.
-                  className="ps-1.5"
                   aria-label={`Permissions: ${runtimeModeOption.label}`}
                 />
               }
             />
           }
         >
-          <ComposerControlIcon
-            icon={RuntimeModeIcon}
-            size={size}
-            // Match the label, not full foreground: the chip's presence already marks the mode.
-            {...(props.emphasized ? { className: "text-current" } : {})}
-          />
+          <ComposerControlIcon icon={RuntimeModeIcon} size={size} />
           <span
             data-composer-control-label
             className={accessDisplay === "icon" ? "sr-only" : undefined}
           >
             {runtimeModeOption.label}
           </span>
+          {props.runtimeMode === "full-access" ? (
+            <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-warning" />
+          ) : null}
         </TooltipTrigger>
         <TooltipPopup side="top">{permissionsTooltip}</TooltipPopup>
       </Tooltip>
@@ -147,8 +126,8 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
 
   return (
     <>
-      {accessDisplay === "hidden" ? null : permissionsChip}
       {interactionModeToggle}
+      {permissionsChip}
     </>
   );
 });

@@ -397,8 +397,10 @@ function terminalSelectionMenuItems(options?: {
   return [
     ...(options?.canAddToChat === false
       ? []
-      : ([{ id: "add-to-chat", label: "Add to chat" }] satisfies ContextMenuItem<"add-to-chat">[])),
-    { id: "copy", label: "Copy" },
+      : ([
+          { id: "add-to-chat", label: "Add to chat", icon: "message-square-plus" },
+        ] satisfies ContextMenuItem<"add-to-chat">[])),
+    { id: "copy", label: "Copy", icon: "copy" },
   ];
 }
 
@@ -413,9 +415,14 @@ function terminalContextMenuItems(options: {
       ...item,
       disabled: !hasSelection,
     })),
-    { id: "paste", label: "Paste", ...(options.readOnly ? { disabled: true } : {}) },
+    {
+      id: "paste",
+      label: "Paste",
+      icon: "clipboard",
+      ...(options.readOnly ? { disabled: true } : {}),
+    },
     { id: "select-all", label: "Select all" },
-    { id: "scroll-to-bottom", label: "Jump to latest" },
+    { id: "scroll-to-bottom", label: "Jump to latest", icon: "arrow-down" },
   ];
 }
 

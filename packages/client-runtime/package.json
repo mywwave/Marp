@@ -1,5 +1,5 @@
 {
-  "name": "@t3tools/client-runtime",
+  "name": "@marp/client-runtime",
   "private": true,
   "type": "module",
   "exports": {
@@ -131,9 +131,9 @@
       "types": "./src/voice-input/index.ts",
       "default": "./src/voice-input/index.ts"
     },
-    "./t3ToolSummary": {
-      "types": "./src/t3ToolSummary.ts",
-      "default": "./src/t3ToolSummary.ts"
+    "./marpToolSummary": {
+      "types": "./src/marpToolSummary.ts",
+      "default": "./src/marpToolSummary.ts"
     },
     "./relay": {
       "types": "./src/relay/index.ts",
@@ -379,6 +379,10 @@
       "types": "./src/work-log/userInput.ts",
       "default": "./src/work-log/userInput.ts"
     },
+    "./work-log/event-presentation": {
+      "types": "./src/work-log/eventPresentation.ts",
+      "default": "./src/work-log/eventPresentation.ts"
+    },
     "./work-log/item-detail": {
       "types": "./src/work-log/itemDetail.ts",
       "default": "./src/work-log/itemDetail.ts"
@@ -513,19 +517,19 @@
     "test": "vp test run"
   },
   "dependencies": {
+    "@marp/contracts": "workspace:*",
+    "@marp/provider-acp-registry": "workspace:*",
+    "@marp/provider-core": "workspace:*",
+    "@marp/provider-cursor": "workspace:*",
+    "@marp/provider-fx": "workspace:*",
+    "@marp/provider-grok": "workspace:*",
+    "@marp/provider-muse": "workspace:*",
+    "@marp/provider-opencode": "workspace:*",
+    "@marp/provider-pi": "workspace:*",
+    "@marp/shared": "workspace:*",
+    "@marp/source-control-core": "workspace:*",
+    "@marp/source-control-definitions": "workspace:*",
     "@pierre/diffs": "catalog:",
-    "@t3tools/contracts": "workspace:*",
-    "@t3tools/provider-acp-registry": "workspace:*",
-    "@t3tools/provider-core": "workspace:*",
-    "@t3tools/provider-cursor": "workspace:*",
-    "@t3tools/provider-fx": "workspace:*",
-    "@t3tools/provider-grok": "workspace:*",
-    "@t3tools/provider-muse": "workspace:*",
-    "@t3tools/provider-opencode": "workspace:*",
-    "@t3tools/provider-pi": "workspace:*",
-    "@t3tools/shared": "workspace:*",
-    "@t3tools/source-control-core": "workspace:*",
-    "@t3tools/source-control-definitions": "workspace:*",
     "effect": "catalog:",
     "jszip": "3.10.1",
     "three": "0.180.0"

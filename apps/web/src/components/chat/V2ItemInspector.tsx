@@ -1,15 +1,15 @@
 import type { ToolCallDiffTarget } from "../../diffPanelStore";
-import type { EnvironmentId, OrchestrationV2ProjectedTurnItem } from "@t3tools/contracts";
+import type { EnvironmentId, OrchestrationV2ProjectedTurnItem } from "@marp/contracts";
 import {
   toolCallLines,
   turnItemDetailRevision,
   turnItemNeedsDetailFetch,
   turnItemOutputImages,
   turnItemOutputText,
-} from "@t3tools/client-runtime/work-log/item-detail";
-import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
-import { isJavaScriptReplTool } from "@t3tools/shared/toolActivity";
-import { ExternalLinkIcon } from "lucide-react";
+} from "@marp/client-runtime/work-log/item-detail";
+import { formatDiffCount } from "@marp/client-runtime/diff-count";
+import { isJavaScriptReplTool } from "@marp/shared/toolActivity";
+import { CircleCheckIcon, CircleDotIcon, CircleIcon, ExternalLinkIcon } from "lucide-react";
 import { memo, type ReactNode, Suspense, use } from "react";
 
 import { useRenderedAppearance } from "../../hooks/useTheme";
@@ -23,6 +23,7 @@ import ChatMarkdown from "../ChatMarkdown";
 import { ChatMarkdownAssetImage } from "./ChatMarkdownMedia";
 import { RenderErrorBoundary } from "../RenderErrorBoundary";
 import { CommandOutputPanel, useCommandOutputStreaming } from "./CommandOutputPanel";
+import { MessageCopyButton } from "./MessageCopyButton";
 import { resolveExternalWebLinkHref } from "./externalLinkContextMenu";
 import type { ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ShellCommandBlock } from "./ShellCommandBlock";
@@ -192,6 +193,49 @@ export function FetchedToolOutput(props: {
   );
 }
 
+/** A command's output alone, for the terminal card; it streams when the environment can. */
+export function CommandItemOutput(props: {
+  readonly projectedItem: OrchestrationV2ProjectedTurnItem;
+  readonly environmentId: EnvironmentId;
+  readonly source?: TurnItemSource | undefined;
+}) {
+  const environmentStreamsOutput = useCommandOutputStreaming(props.environmentId);
+  const streams = props.source !== undefined || environmentStreamsOutput;
+  const { output } = useFetchedTurnItem(
+    props.projectedItem,
+    props.environmentId,
+    props.source,
+    streams,
+  );
+  return (
+    <div className={cn("space-y-1.5", monoClassName)}>
+      {streams ? (
+        <CommandOutputPanel
+          environmentId={props.environmentId}
+          threadId={props.projectedItem.sourceThreadId}
+          itemId={props.projectedItem.sourceItemId}
+          source={props.source?.commandOutput}
+          copyable
+        />
+      ) : (
+        <>
+          {output.output ? (
+            <div className="flex justify-end">
+              <MessageCopyButton
+                text={output.output}
+                label="Copy output"
+                size="icon-xs"
+                variant="ghost"
+              />
+            </div>
+          ) : null}
+          <ToolOutput {...output} />
+        </>
+      )}
+    </div>
+  );
+}
+
 function ToolCallBody(
   props: ToolOutputState & {
     readonly command?: string;
@@ -246,7 +290,7 @@ export const V2ItemInspector = memo(function V2ItemInspector(props: V2ItemInspec
   return (
     <div className="space-y-2 text-xs" data-v2-item-inspector={item.type}>
       {item.type === "reasoning" && item.text ? (
-        <div className="rounded-md border border-border/45 bg-muted/15 p-2 italic text-muted-foreground">
+        <div className="rounded-field bg-muted p-3 text-muted-foreground">
           <ChatMarkdown
             text={item.text}
             cwd={props.cwd}
@@ -403,14 +447,32 @@ export const V2ItemInspector = memo(function V2ItemInspector(props: V2ItemInspec
       {item.type === "system_notice" ? <StructuredValue value={item.message} /> : null}
       {item.type === "error" ? <StructuredValue value={item.failure.message} /> : null}
       {item.type === "todo_list" ? (
-        <StructuredValue
-          value={item.steps
-            .map(
-              (step) =>
-                `${step.status === "completed" ? "✓" : step.status === "running" ? "◉" : "○"} ${step.text}`,
-            )
-            .join("\n")}
-        />
+        <ul aria-label="To-dos" className="space-y-0.5 rounded-field bg-muted px-3 py-2 text-sm">
+          {item.steps.map((step, index) => (
+            // oxlint-disable-next-line react/no-array-index-key -- steps have no id and keep their order
+            <li key={index} className="flex min-h-7 items-start gap-2">
+              <span className="flex h-6 shrink-0 items-center">
+                {step.status === "completed" ? (
+                  <CircleCheckIcon aria-label="Done" className="size-4 text-success" />
+                ) : step.status === "running" ? (
+                  <CircleDotIcon aria-label="In progress" className="size-4 text-foreground" />
+                ) : (
+                  <CircleIcon aria-label="To do" className="size-4 text-icon-muted" />
+                )}
+              </span>
+              <span
+                className={cn(
+                  "min-w-0 py-0.5 leading-5",
+                  step.status === "completed"
+                    ? "text-muted-foreground line-through"
+                    : "text-foreground",
+                )}
+              >
+                {step.text}
+              </span>
+            </li>
+          ))}
+        </ul>
       ) : null}
     </div>
   );

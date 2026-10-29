@@ -9,6 +9,78 @@ const ICON_PATHS: Record<string, ReadonlyArray<{ tag: string; attrs: Record<stri
     { tag: "path", attrs: { d: "M10 12h4" } },
   ],
   check: [{ tag: "path", attrs: { d: "M20 6 9 17l-5-5" } }],
+  "arrow-down": [
+    { tag: "path", attrs: { d: "M12 5v14" } },
+    { tag: "path", attrs: { d: "m19 12-7 7-7-7" } },
+  ],
+  "at-sign": [
+    { tag: "circle", attrs: { cx: "12", cy: "12", r: "4" } },
+    { tag: "path", attrs: { d: "M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8" } },
+  ],
+  "chevron-down": [{ tag: "path", attrs: { d: "m6 9 6 6 6-6" } }],
+  clipboard: [
+    { tag: "rect", attrs: { width: "8", height: "4", x: "8", y: "2", rx: "1", ry: "1" } },
+    {
+      tag: "path",
+      attrs: {
+        d: "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2",
+      },
+    },
+  ],
+  download: [
+    { tag: "path", attrs: { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" } },
+    { tag: "path", attrs: { d: "m7 10 5 5 5-5" } },
+    { tag: "path", attrs: { d: "M12 15V3" } },
+  ],
+  "external-link": [
+    { tag: "path", attrs: { d: "M15 3h6v6" } },
+    { tag: "path", attrs: { d: "M10 14 21 3" } },
+    { tag: "path", attrs: { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" } },
+  ],
+  file: [
+    { tag: "path", attrs: { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" } },
+    { tag: "path", attrs: { d: "M14 2v4a2 2 0 0 0 2 2h4" } },
+  ],
+  globe: [
+    { tag: "circle", attrs: { cx: "12", cy: "12", r: "10" } },
+    { tag: "path", attrs: { d: "M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" } },
+    { tag: "path", attrs: { d: "M2 12h20" } },
+  ],
+  image: [
+    { tag: "rect", attrs: { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" } },
+    { tag: "circle", attrs: { cx: "9", cy: "9", r: "2" } },
+    { tag: "path", attrs: { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" } },
+  ],
+  link: [
+    { tag: "path", attrs: { d: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" } },
+    { tag: "path", attrs: { d: "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" } },
+  ],
+  plus: [
+    { tag: "path", attrs: { d: "M5 12h14" } },
+    { tag: "path", attrs: { d: "M12 5v14" } },
+  ],
+  unlink: [
+    {
+      tag: "path",
+      attrs: {
+        d: "m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71",
+      },
+    },
+    {
+      tag: "path",
+      attrs: {
+        d: "m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71",
+      },
+    },
+    { tag: "path", attrs: { d: "M8 2v3" } },
+    { tag: "path", attrs: { d: "M2 8h3" } },
+    { tag: "path", attrs: { d: "M16 19v3" } },
+    { tag: "path", attrs: { d: "M19 16h3" } },
+  ],
+  x: [
+    { tag: "path", attrs: { d: "M18 6 6 18" } },
+    { tag: "path", attrs: { d: "m6 6 12 12" } },
+  ],
   timer: [
     { tag: "line", attrs: { x1: "10", x2: "14", y1: "2", y2: "2" } },
     { tag: "line", attrs: { x1: "12", x2: "15", y1: "14", y2: "11" } },
@@ -159,7 +231,7 @@ const ICON_PATHS: Record<string, ReadonlyArray<{ tag: string; attrs: Record<stri
   ],
 };
 
-function createIconElement(name: string, tone: "neutral" | "destructive"): SVGSVGElement | null {
+function createIconElement(name: string, className: string): SVGSVGElement | null {
   const paths = ICON_PATHS[name];
   if (!paths || typeof document.createElementNS !== "function") {
     return null;
@@ -173,12 +245,7 @@ function createIconElement(name: string, tone: "neutral" | "destructive"): SVGSV
   svg.setAttribute("stroke-width", "2");
   svg.setAttribute("stroke-linecap", "round");
   svg.setAttribute("stroke-linejoin", "round");
-  svg.setAttribute(
-    "class",
-    tone === "destructive"
-      ? "size-4.5 shrink-0 sm:size-4"
-      : "size-4.5 shrink-0 text-muted-foreground sm:size-4",
-  );
+  svg.setAttribute("class", className);
   for (const node of paths) {
     const child = document.createElementNS(SVG_NS, node.tag);
     for (const [key, value] of Object.entries(node.attrs)) {
@@ -189,18 +256,46 @@ function createIconElement(name: string, tone: "neutral" | "destructive"): SVGSV
   return svg;
 }
 
-function clampMenuPosition(menu: HTMLDivElement, preferredLeft: number, preferredTop: number) {
-  const rect = menu.getBoundingClientRect();
-  const left = Math.min(
-    Math.max(4, preferredLeft),
-    Math.max(4, window.innerWidth - rect.width - 4),
-  );
-  const top = Math.min(
-    Math.max(4, preferredTop),
-    Math.max(4, window.innerHeight - rect.height - 4),
-  );
-  menu.style.left = `${left}px`;
-  menu.style.top = `${top}px`;
+const MAC_MODIFIER_SYMBOLS = new Set(["⌃", "⌥", "⇧", "⌘"]);
+
+/** One chip per key, like the rest of the app: "Ctrl+Shift+S" and "⇧⌘S" both become three. */
+function splitShortcutLabel(label: string): string[] {
+  if (label.length > 1 && label.includes("+")) {
+    const keys = label.split("+").filter((key) => key.length > 0);
+    return label.endsWith("++") ? [...keys, "+"] : keys;
+  }
+  const keys: string[] = [];
+  let rest = label;
+  while (rest.length > 1 && MAC_MODIFIER_SYMBOLS.has(rest[0]!)) {
+    keys.push(rest[0]!);
+    rest = rest.slice(1);
+  }
+  return rest.length > 0 ? [...keys, rest] : keys;
+}
+
+const VIEWPORT_MARGIN = 8;
+
+interface MenuAnchor {
+  readonly left: number;
+  readonly right: number;
+  readonly top: number;
+  readonly bottom: number;
+}
+
+/** Opens toward the preferred corner, flips across the anchor when that side lacks room, then shifts inside. */
+function placeMenu(menu: HTMLDivElement, anchor: MenuAnchor) {
+  // Layout sizes: getBoundingClientRect would include the pop-in scale.
+  const width = menu.offsetWidth;
+  const height = menu.offsetHeight;
+  const maxLeft = window.innerWidth - width - VIEWPORT_MARGIN;
+  const maxTop = window.innerHeight - height - VIEWPORT_MARGIN;
+  const flipX = anchor.right > maxLeft && anchor.left - width >= VIEWPORT_MARGIN;
+  const flipY = anchor.top > maxTop && anchor.bottom - height >= VIEWPORT_MARGIN;
+  const left = flipX ? anchor.left - width : anchor.right;
+  const top = flipY ? anchor.bottom - height : anchor.top;
+  menu.style.left = `${Math.max(VIEWPORT_MARGIN, Math.min(left, maxLeft))}px`;
+  menu.style.top = `${Math.max(VIEWPORT_MARGIN, Math.min(top, maxTop))}px`;
+  menu.style.transformOrigin = `${flipY ? "bottom" : "top"} ${flipX ? "right" : "left"}`;
 }
 
 function isNodeWithinMenuStack(target: EventTarget | null, menuStack: readonly HTMLDivElement[]) {
@@ -368,48 +463,39 @@ export function showContextMenuFallback<T extends string>(
 
     const openMenu = (
       entries: readonly ContextMenuItem<T>[],
-      preferredLeft: number,
-      preferredTop: number,
+      anchor: MenuAnchor,
       level: number,
       parentTrigger?: HTMLButtonElement,
+      parentLabel?: string,
     ) => {
       closeMenusFromLevel(level);
 
       const menu = document.createElement("div");
+      // Electron drag regions swallow clicks on anything not opted out, even above them in z-order.
       menu.className =
-        "dropdown-glass fixed z-[10000] min-w-32 max-w-sm overflow-hidden rounded-lg bg-clip-padding text-popover-foreground outline-none";
-      menu.style.cssText =
-        "position:fixed;z-index:10000;min-width:8rem;max-width:24rem;overflow:hidden;border-radius:var(--radius-lg);background-clip:padding-box;color:var(--contrast-popover-foreground);outline:none;pointer-events:auto;";
-      menu.style.left = `${preferredLeft}px`;
-      menu.style.top = `${preferredTop}px`;
+        "fixed z-[10000] max-h-[calc(100vh-1rem)] min-w-[220px] max-w-[360px] overflow-y-auto overflow-x-hidden rounded-lg bg-popover p-1 font-sans text-[13px] text-foreground leading-5 shadow-pop outline-none [-webkit-app-region:no-drag] transition-[opacity,scale,translate] duration-100 ease-out starting:-translate-y-0.5 starting:scale-98 starting:opacity-0 motion-reduce:transition-none";
+      menu.style.left = `${anchor.right}px`;
+      menu.style.top = `${anchor.top}px`;
       menu.dataset.level = String(level);
       menu.dataset.contextMenu = "true";
       menu.setAttribute("role", "menu");
-      menu.setAttribute("aria-label", parentTrigger?.textContent ?? "Context menu");
+      menu.setAttribute("aria-label", parentLabel ?? "Context menu");
       menu.tabIndex = -1;
 
-      const inner = document.createElement("div");
-      inner.className =
-        "max-h-[calc(100vh-0.5rem)] min-w-0 max-w-sm overflow-y-auto overflow-x-hidden p-1";
-      inner.style.cssText =
-        "max-height:calc(100vh - 0.5rem);min-width:0;max-width:24rem;overflow-x:hidden;overflow-y:auto;padding:0.25rem;";
-
       for (const item of entries) {
-        if (item.separatorBefore === true && inner.children.length > 0) {
+        if (item.separatorBefore === true && menu.children.length > 0) {
           const separator = document.createElement("div");
-          separator.className = "mx-2 my-1 h-px bg-border";
-          separator.style.cssText =
-            "height:1px;margin:0.25rem 0.5rem;background:var(--contrast-border);";
+          separator.className = "my-1 h-px shrink-0 bg-border";
           separator.dataset.contextMenuSeparator = "true";
           separator.setAttribute("role", "separator");
-          inner.appendChild(separator);
+          menu.appendChild(separator);
         }
 
         if (item.header === true) {
           const header = document.createElement("div");
-          header.className = "px-2 py-1.5 font-medium text-muted-foreground text-xs";
+          header.className = "truncate px-2 pt-2 pb-1 font-medium text-muted-foreground text-xs";
           header.textContent = item.label;
-          inner.appendChild(header);
+          menu.appendChild(header);
           continue;
         }
 
@@ -424,113 +510,88 @@ export function showContextMenuFallback<T extends string>(
         button.tabIndex = -1;
         button.setAttribute("role", "menuitem");
         button.setAttribute("aria-disabled", String(isDisabled));
-        const rowBase =
-          "flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1 text-left outline-none transition-colors sm:min-h-7 sm:text-sm min-h-8 text-base";
-        button.className = isDisabled
-          ? `${rowBase} pointer-events-none cursor-not-allowed text-muted-foreground opacity-64`
-          : isLeafDestructive
-            ? `${rowBase} text-destructive-foreground hover:bg-destructive/10 hover:text-destructive-foreground`
-            : `${rowBase} text-foreground hover:bg-accent hover:text-accent-foreground`;
-        button.style.cssText =
-          "display:flex;width:100%;min-height:1.75rem;align-items:center;gap:0.5rem;border:0;border-radius:var(--radius-sm);background:transparent;padding:0.25rem 0.5rem;color:var(--contrast-foreground);font-family:var(--font-sans,system-ui,sans-serif);font-size:0.875rem;line-height:1.25rem;text-align:left;cursor:default;";
-        if (isLeafDestructive) {
-          button.style.color = "var(--destructive-foreground)";
-        }
-        if (isDisabled) {
-          button.style.color = "var(--contrast-muted-foreground)";
-          button.style.opacity = "0.64";
-          button.style.pointerEvents = "none";
-        }
+        button.className = [
+          "flex h-8 w-full cursor-default select-none items-center gap-2 whitespace-nowrap rounded-sm px-2.5 text-left outline-none transition-colors duration-100",
+          isLeafDestructive
+            ? "text-destructive"
+            : "text-foreground/85 hover:text-foreground focus:text-foreground aria-expanded:text-foreground",
+          isDisabled
+            ? "pointer-events-none opacity-45"
+            : "hover:bg-accent focus:bg-accent aria-expanded:bg-accent",
+        ].join(" ");
 
-        // Checks trail the label, so checked and unchecked labels line up with plain items.
-        const check =
-          typeof item.checked === "boolean" && item.checked
-            ? createIconElement("check", "neutral")
-            : null;
         if (typeof item.checked === "boolean") {
           button.setAttribute("role", "menuitemradio");
           button.setAttribute("aria-checked", item.checked ? "true" : "false");
-        } else if (typeof item.icon === "string") {
-          const icon = createIconElement(item.icon, isLeafDestructive ? "destructive" : "neutral");
-          if (icon) {
-            button.appendChild(icon);
-          }
+        }
+        if (typeof item.icon === "string") {
+          const icon = createIconElement(
+            item.icon,
+            isLeafDestructive ? "size-4 shrink-0" : "size-4 shrink-0 text-muted-foreground",
+          );
+          if (icon) button.appendChild(icon);
         }
 
         const label = document.createElement("span");
         label.className = "min-w-0 flex-1 truncate";
         label.textContent = item.label;
         button.appendChild(label);
-        if (check) button.appendChild(check);
 
+        // Shortcuts, submenu chevrons and checks share the right edge and never shrink.
+        const meta = document.createElement("span");
+        meta.className = "ms-auto flex flex-none items-center gap-0.5 text-muted-foreground";
+        meta.setAttribute("aria-hidden", "true");
+        if (typeof item.shortcut === "string" && item.shortcut.length > 0) {
+          for (const key of splitShortcutLabel(item.shortcut)) {
+            const chip = document.createElement("kbd");
+            chip.className =
+              "inline-flex h-5 min-w-5 items-center justify-center rounded-[6px] bg-foreground/[0.07] px-[5px] font-medium font-mono text-2xs text-muted-foreground";
+            chip.textContent = key;
+            meta.appendChild(chip);
+          }
+        }
+        if (item.checked === true) {
+          const check = createIconElement("check", "size-4 shrink-0 text-foreground");
+          if (check) meta.appendChild(check);
+        }
         if (hasChildren) {
           button.setAttribute("aria-haspopup", "menu");
           button.setAttribute("aria-expanded", "false");
-          const chevron = createIconElement("chevron-right", "neutral");
+          const chevron = createIconElement("chevron-right", "-me-0.5 size-3.5 shrink-0");
           if (chevron) {
-            chevron.setAttribute(
-              "class",
-              "-me-0.5 ms-auto size-4.5 shrink-0 text-muted-foreground opacity-80 sm:size-4",
-            );
-            chevron.setAttribute("aria-hidden", "true");
             chevron.dataset.contextMenuChevron = "true";
-            button.appendChild(chevron);
+            meta.appendChild(chevron);
           }
         }
+        if (meta.children.length > 0) button.appendChild(meta);
 
         if (!isDisabled) {
-          let isHovered = false;
-          let isFocused = false;
-          const updateHighlight = () => {
-            const isHighlighted = isHovered || isFocused;
-            button.style.background = isHighlighted
-              ? isLeafDestructive
-                ? "color-mix(in srgb, var(--destructive) 10%, transparent)"
-                : "var(--accent)"
-              : "transparent";
-            button.style.color = isHighlighted
-              ? isLeafDestructive
-                ? "var(--destructive-foreground)"
-                : "var(--contrast-accent-foreground)"
-              : isLeafDestructive
-                ? "var(--destructive-foreground)"
-                : "var(--contrast-foreground)";
-          };
           button.addEventListener("mouseenter", () => {
             button.focus({ preventScroll: true });
-            isHovered = true;
-            updateHighlight();
-          });
-          button.addEventListener("mouseleave", () => {
-            isHovered = false;
-            updateHighlight();
-          });
-          button.addEventListener("focus", () => {
-            isFocused = true;
-            updateHighlight();
-          });
-          button.addEventListener("blur", () => {
-            isFocused = false;
-            updateHighlight();
           });
 
           if (hasChildren) {
             const openSubmenu = (focusFirstItem = false) => {
-              const rect = button.getBoundingClientRect();
-              const nextLeft = rect.right + 4;
-              const nextTop = rect.top;
-              openMenu(item.children!, nextLeft, nextTop, level + 1, button);
+              // Measured from layout, not the possibly mid-pop-in rect. The submenu's own
+              // padding is subtracted so its first row lines up with the trigger.
+              const menuLeft = Number.parseFloat(menu.style.left);
+              const rowTop = Number.parseFloat(menu.style.top) + button.offsetTop - menu.scrollTop;
+              openMenu(
+                item.children!,
+                {
+                  left: menuLeft,
+                  right: menuLeft + menu.offsetWidth,
+                  top: rowTop - 4,
+                  bottom: rowTop + button.offsetHeight + 4,
+                },
+                level + 1,
+                button,
+                item.label,
+              );
               button.setAttribute("aria-expanded", "true");
 
               const childMenu = menuStack[level + 1];
-              if (!childMenu) {
-                return;
-              }
-              const childRect = childMenu.getBoundingClientRect();
-              if (childRect.right > window.innerWidth) {
-                clampMenuPosition(childMenu, rect.left - childRect.width - 4, rect.top);
-              }
-              if (focusFirstItem) {
+              if (childMenu && focusFirstItem) {
                 [...childMenu.querySelectorAll<HTMLButtonElement>("button")]
                   .find((childButton) => !childButton.disabled)
                   ?.focus();
@@ -553,10 +614,8 @@ export function showContextMenuFallback<T extends string>(
           }
         }
 
-        inner.appendChild(button);
+        menu.appendChild(button);
       }
-
-      menu.appendChild(inner);
 
       menu.addEventListener("mouseenter", () => {
         closeMenusFromLevel(level + 1);
@@ -565,16 +624,15 @@ export function showContextMenuFallback<T extends string>(
       document.body.appendChild(menu);
       menuStack[level] = menu;
       submenuTriggerStack[level] = parentTrigger;
-
-      requestAnimationFrame(() => {
-        clampMenuPosition(menu, preferredLeft, preferredTop);
-      });
+      placeMenu(menu, anchor);
     };
 
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("contextmenu", onContextMenu, true);
-    openMenu(items, position?.x ?? 0, position?.y ?? 0, 0);
+    const x = position?.x ?? 0;
+    const y = position?.y ?? 0;
+    openMenu(items, { left: x, right: x, top: y, bottom: y }, 0);
     activeContextMenuDismiss = dismiss;
     // A keyboard-opened menu starts on its first action, a pointer-opened one on the menu itself.
     // Text fields always match :focus-visible, so they say nothing about how the menu opened.

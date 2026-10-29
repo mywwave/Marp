@@ -23,6 +23,10 @@ import {
   type ToolGroupSummaryKind,
 } from "@marp/client-runtime/work-log/presentation";
 import {
+  workRunHeader,
+  type WorkRunHeaderRule,
+} from "@marp/client-runtime/work-log/event-presentation";
+import {
   deriveRevertTurnCountByUserMessageId,
   formatDuration,
   isStreamingMessageTextUpdate,
@@ -519,7 +523,6 @@ type MessagesTimelineRowContent =
       groupId: string;
       expanded: boolean;
       active: boolean;
-      thought?: WorkLogEntry;
     }
   | {
       kind: "working";
@@ -545,6 +548,7 @@ type MessagesTimelineRowContent =
       expanded: boolean;
       summary: string;
       summaryKind: ToolGroupSummaryKind;
+      summaryRule: WorkRunHeaderRule;
       toolSurface?: WorkLogEntry["toolSurface"];
       toolIcon?: WorkLogEntry["toolIcon"];
       hasFailure: boolean;
@@ -716,9 +720,7 @@ function foldedWorkSummary(
     if (entry.entry.projectedItem?.item.deferredWork) return null;
     if (workEntryIsVisibleInGroup(entry.entry, true)) work.push(entry.entry);
   }
-  return work.some((entry) => entry.itemType !== "reasoning")
-    ? summarizeToolGroup(work).summary
-    : null;
+  return work.some((entry) => entry.itemType !== "reasoning") ? workRunHeader(work).title : null;
 }
 
 interface TurnFold {
@@ -1496,6 +1498,12 @@ export function deriveMessagesTimelineRows(input: {
       }
     }
   }
+  // An open fold already names its work; a run that says the same thing shows its steps bare.
+  const openFoldTitleByEntryId = new Map<string, string>();
+  for (const fold of foldsByAnchorEntryId.values()) {
+    if (!input.expandedRunIds?.has(fold.runId)) continue;
+    for (const entryId of fold.entryIds) openFoldTitleByEntryId.set(entryId, fold.title);
+  }
   const collapsedSupersededEntryIds = new Set<string>();
   for (const fold of supersededFoldsByAnchorEntryId.values()) {
     if (!input.expandedAttemptIds?.has(fold.attemptId)) {
@@ -1573,9 +1581,6 @@ export function deriveMessagesTimelineRows(input: {
     latestVisibleToolEntry.entry.toolLifecycleStatus !== "declined" &&
     workEntryDisplayIndicatesToolFailure(latestVisibleToolEntry.entry);
 
-  const latestThoughtEntry = visibleActiveToolEntries.findLast(
-    (entry) => entry.entry.itemType === "reasoning" && (entry.entry.detail?.trim() ?? "") !== "",
-  );
   const activeWorkPlacementEntryId = latestVisibleToolEntry?.id;
   const activeWorkRow =
     activeWorkAnchor && latestVisibleToolEntry && !latestToolFailed
@@ -1592,7 +1597,6 @@ export function deriveMessagesTimelineRows(input: {
             groupId,
             expanded: input.expandedWorkGroupIds?.has(groupId) ?? false,
             active: latestToolKeepsActivityLive,
-            ...(latestThoughtEntry ? { thought: latestThoughtEntry.entry } : {}),
           };
         })()
       : null;
@@ -1913,6 +1917,14 @@ export function deriveMessagesTimelineRows(input: {
           const groupId = workGroupId(timelineEntry.id);
           const expanded = input.expandedWorkGroupIds?.has(groupId) ?? false;
           const summaryKind = toolGroupSummaryKind(visibleGroupedEntries);
+          const header = workRunHeader(visibleGroupedEntries);
+          if (openFoldTitleByEntryId.get(timelineEntry.id) === header.title) {
+            nextRows.push(
+              expandedWorkGroupRow(groupId, timelineEntry.createdAt, visibleGroupedEntries),
+            );
+            index = cursor - 1;
+            continue;
+          }
           const primarySourceEntry = visibleGroupedEntries.find(
             (entry) => entry.toolSource !== undefined,
           );
@@ -1943,8 +1955,9 @@ export function deriveMessagesTimelineRows(input: {
             summary:
               singleEntry !== null && !workLogEntryIsToolLike(singleEntry)
                 ? singleEntry.label
-                : summarizeToolGroup(visibleGroupedEntries).summary,
+                : header.title,
             summaryKind,
+            summaryRule: header.rule,
             ...(groupToolSurface ? { toolSurface: groupToolSurface } : {}),
             ...(groupToolIcon ? { toolIcon: groupToolIcon } : {}),
             hasFailure:
@@ -2519,6 +2532,7 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.expanded === bw.expanded &&
         a.summary === bw.summary &&
         a.summaryKind === bw.summaryKind &&
+        a.summaryRule === bw.summaryRule &&
         a.toolSurface === bw.toolSurface &&
         Equal.equals(a.toolIcon, bw.toolIcon) &&
         a.hasFailure === bw.hasFailure

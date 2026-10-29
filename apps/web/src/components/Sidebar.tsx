@@ -165,6 +165,7 @@ import { cn } from "~/lib/utils";
 import { ProjectEnvironmentBadge } from "./ProjectEnvironmentBadge";
 import {
   buildDraftActionMenuItems,
+  withSidebarRowShortcuts,
   buildThreadActionMenuItems,
   threadActionRequiresOperate,
 } from "./threadActionMenu.logic";
@@ -1324,10 +1325,14 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         const clicked = await settlePromise(() =>
           api.contextMenu.show(
             [
-              { id: "new-thread", label: "New thread" },
-              { id: "toggle-collapsed", label: collapsed ? "Expand" : "Collapse" },
-              { id: "copy-path", label: "Copy path" },
+              { id: "new-thread", label: "New thread", icon: "plus" },
+              {
+                id: "toggle-collapsed",
+                label: collapsed ? "Expand" : "Collapse",
+                icon: "chevron-down",
+              },
               { id: "project-settings", label: "Project settings", icon: "settings" },
+              { id: "copy-path", label: "Copy path", icon: "copy" },
             ],
             position,
           ),
@@ -2552,16 +2557,26 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                   {
                     id: "pin",
                     label: `Pin (${unpinnedSelectedThreads.length})`,
+                    icon: "pin",
                     disabled: !canOperateThreads(unpinnedSelectedThreads),
                   },
                 ]
               : []),
             ...(unpinMenuItem
-              ? [{ ...unpinMenuItem, disabled: !canOperateThreads(pinnedSelectedThreads) }]
+              ? [
+                  {
+                    ...unpinMenuItem,
+                    icon: "pin-off",
+                    disabled: !canOperateThreads(pinnedSelectedThreads),
+                  },
+                ]
               : []),
             {
               id: "settle",
               label: `Settle (${count})`,
+              icon: "circle-check",
+              // A focused row inside the selection settles all of it with S.
+              shortcut: "S",
               disabled: settlingThreads.length === 0 || !canOperateThreads(settlingThreads),
             },
             ...(canSnoozeSelection
@@ -2569,6 +2584,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                   {
                     id: "snooze",
                     label: `Snooze (${count})`,
+                    icon: "clock",
                     disabled: !canOperateThreads(selectedThreads),
                     children: [
                       ...snoozePresets.map((preset) => ({
@@ -2590,21 +2606,24 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
               ? [
                   {
                     ...titleRegenerationMenuItem,
+                    icon: "refresh-cw",
                     disabled:
                       titleRegenerationMenuItem.disabled ||
                       !canOperateThreads(regeneratableTitleThreads),
                   },
                 ]
               : []),
-            { id: "mark-unread", label: `Mark unread (${count})` },
+            { id: "mark-unread", label: `Mark unread (${count})`, icon: "mail-open" },
             {
               id: "archive",
               label: `Archive (${count})`,
+              icon: "archive",
               disabled: !canOperateThreads(selectedThreads),
             },
             {
               id: "delete",
               label: `Delete (${count})`,
+              icon: "trash",
               destructive: true,
               disabled: !canOperateThreads(selectedThreads),
             },
@@ -2842,38 +2861,41 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
           ) ?? null;
         const clicked = await settlePromise(() =>
           api.contextMenu.show(
-            buildThreadActionMenuItems({
-              canOperate: readEnvironmentScope(
-                threadRef.environmentId,
-                AuthOrchestrationOperateScope,
-              ),
-              branch: thread.branch ?? null,
-              projectFilter: threadProjectGroup
-                ? {
-                    label: threadProjectGroup.displayName,
-                    isActive: projectScopeKeys.includes(threadProjectGroup.projectKey),
-                  }
-                : null,
-              isPinned,
-              isSettled,
-              autoSettleEnabled: thread.autoSettleDisabledAt == null,
-              isSnoozed,
-              canSnoozeNow: canSnooze(thread, { now: new Date().toISOString() }),
-              isRegeneratingTitle,
-              isRunning: !threadRuntimeCanArchive(thread.runtime),
-              canShareWithGuest: appAtomRegistry.get(
-                canShareWithGuestAtom(threadRef.environmentId),
-              ),
-              canTurnIntoProject: canTurnThreadIntoProject(threadRef),
-              supports: {
-                settlement: configLoaded,
-                autoSettleOptOut: supportsAutoSettleOptOut,
-                snooze: configLoaded,
-                pinning: configLoaded,
-                titleRegeneration: configLoaded,
-              },
-              snoozePresets,
-            }),
+            withSidebarRowShortcuts(
+              buildThreadActionMenuItems({
+                canOperate: readEnvironmentScope(
+                  threadRef.environmentId,
+                  AuthOrchestrationOperateScope,
+                ),
+                branch: thread.branch ?? null,
+                projectFilter: threadProjectGroup
+                  ? {
+                      label: threadProjectGroup.displayName,
+                      isActive: projectScopeKeys.includes(threadProjectGroup.projectKey),
+                    }
+                  : null,
+                isPinned,
+                isSettled,
+                autoSettleEnabled: thread.autoSettleDisabledAt == null,
+                isSnoozed,
+                canSnoozeNow: canSnooze(thread, { now: new Date().toISOString() }),
+                isRegeneratingTitle,
+                isRunning: !threadRuntimeCanArchive(thread.runtime),
+                canShareWithGuest: appAtomRegistry.get(
+                  canShareWithGuestAtom(threadRef.environmentId),
+                ),
+                canTurnIntoProject: canTurnThreadIntoProject(threadRef),
+                supports: {
+                  settlement: configLoaded,
+                  autoSettleOptOut: supportsAutoSettleOptOut,
+                  snooze: configLoaded,
+                  pinning: configLoaded,
+                  titleRegeneration: configLoaded,
+                },
+                snoozePresets,
+              }),
+              { isSnoozed, platform: navigator.platform },
+            ),
             position,
           ),
         );

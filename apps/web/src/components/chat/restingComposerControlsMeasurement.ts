@@ -55,12 +55,6 @@ function controlBlockWidths(block: HTMLElement): { natural: number; iconOnly: nu
     natural += labelWidth - renderedWidth + (inFlow ? 0 : gap);
     iconOnly -= renderedWidth + (inFlow ? gap : 0);
   }
-  for (const icon of block.querySelectorAll<HTMLElement>("[data-composer-control-compact-icon]")) {
-    const width = elementOuterWidth(icon);
-    const gap = Number.parseFloat(getComputedStyle(icon.parentElement!).columnGap) || 0;
-    natural -= compact ? width + gap : 0;
-    iconOnly += compact ? 0 : width + gap;
-  }
   return { natural, iconOnly: Math.min(natural, iconOnly) };
 }
 

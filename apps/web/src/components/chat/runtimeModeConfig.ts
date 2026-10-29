@@ -1,5 +1,5 @@
-import type { RuntimeMode } from "@t3tools/contracts";
-import { type LucideIcon, LockIcon, PenLineIcon, ShieldOffIcon, SparklesIcon } from "lucide-react";
+import type { RuntimeMode } from "@marp/contracts";
+import { type LucideIcon, PenLineIcon, ShieldIcon, SparklesIcon, ZapIcon } from "lucide-react";
 
 export const runtimeModeConfig: Record<
   RuntimeMode,
@@ -8,7 +8,7 @@ export const runtimeModeConfig: Record<
   "approval-required": {
     label: "Supervised",
     description: "Ask before commands and file changes.",
-    icon: LockIcon,
+    icon: ShieldIcon,
   },
   "auto-accept-edits": {
     label: "Auto-accept edits",
@@ -23,8 +23,7 @@ export const runtimeModeConfig: Record<
   "full-access": {
     label: "Full access",
     description: "Allow commands and edits without prompts.",
-    // An open lock reads like a closed one at small sizes; a crossed shield does not.
-    icon: ShieldOffIcon,
+    icon: ZapIcon,
   },
 };
 
