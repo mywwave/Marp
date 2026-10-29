@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Marp — Sidebar reference</title>
+    <link rel="stylesheet" href="../assets/reference.css" />
+    <script src="../assets/reference.js"></script>
+    <style>
+      /* «Сейчас» эталона: 29 Oct 2026, 14:20. Машина — DESKTOP-UC7VC6O. */
+      .app.sb {
+        height: 860px;
+      }
+      .sb-sec {
+        display: flex;
+        align-items: center;
+        gap: var(--space-8);
+        height: var(--row-xs);
+        padding: 0 var(--space-12);
+        margin-top: var(--space-12);
+        color: var(--ink-3);
+        font: var(--text-caption);
+        font-weight: 500;
+        border-radius: var(--radius-sm);
+        width: 100%;
+        text-align: left;
+      }
+      .sb-sec:first-child {
+        margin-top: 0;
+      }
+      button.sb-sec:hover {
+        background: var(--surface-3);
+        color: var(--ink);
+      }
+      .sb-sec .n {
+        margin-left: auto;
+        color: var(--ink-4);
+      }
+      .sb-sec .chev {
+        transition: transform var(--dur) var(--ease-out);
+      }
+      .sb-sec.open .chev {
+        transform: rotate(90deg);
+      }
+      .needs {
+        background: var(--attention-soft);
+        border-radius: var(--radius-md);
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .needs .thr:hover {
+        background: color-mix(in srgb, var(--attention) 10%, transparent);
+      }
+      .needs .proj-tag {
+        font: var(--text-caption);
+        color: var(--ink-3);
+      }
+      .thr .sub {
+        display: block;
+        font: var(--text-caption);
+        color: var(--ink-3);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2px;
+      }
+      .thr.two {
+        height: var(--row-lg);
+      }
+      .thr.two .t {
+        line-height: 20px;
+      }
+      .thr .pr {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font: var(--text-caption);
+        color: var(--ink-3);
+      }
+      .thr .pr .i {
+        width: 12px;
+        height: 12px;
+      }
+      /* Selection is quiet: a neutral fill and a check where the status dot was. */
+      .thr.sel,
+      .thr.sel:hover {
+        background: var(--surface-3);
+        color: var(--ink);
+      }
+      .sel-check {
+        width: 16px;
+        height: 16px;
+        flex: none;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--accent-ink);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sel-check .i {
+        width: 10px;
+        height: 10px;
+        stroke-width: 3;
+      }
+      .thr .trm {
+        color: var(--ink-4);
+        width: 12px;
+        height: 12px;
+      }
+      .thr.dim {
+        opacity: 0.55;
+      }
+      .shelf-rows {
+        display: none;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .open + .shelf-rows {
+        display: flex;
+      }
+      .wake {
+        font: var(--text-caption);
+        color: var(--ink-3);
+        display: inline-flex;
+        gap: 3px;
+        align-items: center;
+      }
+      /* The dragged row floats off the list, so it never reads as the current thread. */
+      .drag-ghost,
+      .drag-ghost:hover {
+        box-shadow: var(--shadow-pop);
+        background: var(--surface);
+        opacity: 0.92;
+        translate: 10px -2px;
+        cursor: grabbing;
+      }
+      /* Insertion point starts where row text starts, so it reads as "between these titles". */
+      .drop-line {
+        position: relative;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--accent);
+        margin: 0 var(--space-12) 0 36px;
+      }
+      .drop-line::before {
+        content: "";
+        position: absolute;
+        left: -6px;
+        top: -3px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 2px var(--accent);
+        background: var(--bg);
+      }
+      /* Bulk actions dock above the footer as one card: count + icon actions, always fits the width. */
+      .multi-bar {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        height: var(--row-md);
+        padding: 0 var(--space-4) 0 var(--space-12);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        box-shadow: var(--shadow-pop);
+        margin-bottom: var(--space-8);
+      }
+      .multi-bar .count {
+        flex: 1;
+        min-width: 0;
+        color: var(--ink);
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .rail {
+        width: 56px;
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding-top: 4px;
+      }
+      .rail .r-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink-3);
+        position: relative;
+      }
+      .rail .r-btn:hover {
+        background: var(--surface-3);
+        color: var(--ink);
+      }
+      .rail .r-mono {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: var(--surface-3);
+        color: var(--ink-2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        position: relative;
+      }
+      .rail .badge-dot {
+        position: absolute;
+        right: -2px;
+        top: -2px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--attention);
+        box-shadow: 0 0 0 2px var(--bg);
+      }
+      .rail .badge-dot.bad {
+        background: var(--danger);
+      }
+      .ph-sheet {
+        flex: 1;
+        min-width: 0;
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        display: flex;
+        flex-direction: column;
+      }
+      .ph-sheet .sheet-head {
+        box-shadow: none;
+      }
+      .ph-lines {
+        padding: var(--space-24);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 760px;
+        margin: 0 auto;
+        width: 100%;
+      }
+      .skel-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: var(--row-sm);
+        padding: 0 8px;
+      }
+      .hovercard {
+        width: 300px;
+      }
+      .hovercard .hc-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--row-xs);
+        color: var(--ink-2);
+      }
+      .hovercard .hc-row .i {
+        width: 14px;
+        height: 14px;
+        color: var(--ink-3);
+      }
+      .phone {
+        width: 390px;
+        height: 760px;
+        background: var(--bg);
+        border-radius: 36px;
+        box-shadow:
+          0 0 0 1px var(--ring),
+          var(--shadow-pop);
+        overflow: hidden;
+        position: relative;
+      }
+      .phone .sheet-side {
+        position: absolute;
+        inset: 0 12px 0 0;
+        background: var(--bg);
+        padding: 48px 10px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        box-shadow: var(--shadow-pop);
+        border-radius: 0 28px 28px 0;
+      }
+      .phone .thr {
+        height: var(--row-lg);
+      }
+      .phone .thr .more {
+        display: inline-flex;
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .phone .thr .when {
+        opacity: 0;
+      }
+      .check-row {
+        display: grid;
+        grid-template-columns: 80px 1fr 300px;
+        gap: var(--space-12);
+        padding: 6px var(--space-12);
+        font: var(--text-caption);
+      }
+      .check-row + .check-row {
+        box-shadow: inset 0 1px 0 var(--line);
+      }
+      .check-row code {
+        font: var(--text-code-sm);
+        color: var(--ink);
+      }
+      .check-row .st {
+        color: var(--success);
+      }
+      .check-row .st.new {
+        color: var(--accent-soft-ink);
+      }
+      .check-row .st.gone {
+        color: var(--danger);
+      }
+      .check-group {
+        font: var(--text-title);
+        color: var(--ink);
+        margin: var(--space-24) 0 var(--space-8);
+      }
+      #sb-default[data-density="two"] .thr:not(.needs .thr) .sub {
+        display: block;
+      }
+      #sb-default[data-density="one"] .thr .sub {
+        display: none;
+      }
+      #sb-default[data-density="one"] .thr.two {
+        height: var(--row-sm);
+      }
+      /* Two-line rows need air between them, or titles and meta lines read as one block. */
+      .thr.two + .thr.two {
+        margin-top: 6px;
+      }
+      .thr.two + .show-more {
+        margin-top: 6px;
+      }
+      .sb-sec + .proj {
+        margin-top: var(--space-4);
+      }
+      /* Shelf headers are rows you click: same height and edges as thread rows. */
+      button.sb-sec {
+        height: var(--row-sm);
+        margin-top: 2px;
+      }
+      .shelf-rows + button.sb-sec,
+      .show-more + button.sb-sec,
+      .thr + button.sb-sec {
+        margin-top: var(--space-16);
+      }
+      .shelf-rows + button.sb-sec {
+        margin-top: 2px;
+      }
+      button.sb-sec .chev {
+        color: var(--ink-4);
+      }
+      button.sb-sec:hover .chev {
+        color: var(--ink-2);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="doc">
+      <div class="doc-top doc-only">
+        <nav class="doc-nav" aria-label="Reference pages"></nav>
+        <div class="row" data-theme-controls></div>
+      </div>
+      <header class="doc-only">
+        <div class="doc-badge">
+          <i data-i="panel-left" class="i-14"></i>Эталон · Сайдбар · 29 окт 2026
+        </div>
+        <h1>Sidebar</h1>
+        <p class="lead">
+          Навигация, на которую смотрят весь день, чтобы понять одно: где я нужен. Раньше: треды,
+          которым нужен пользователь, лежали внутри своих проектов; две лексики статусов; молча
+          пропадающие действия у офлайн-машин; пульсирующая иконка терминала; две кнопки
+          сворачивания. Теперь: секция «Needs you» сверху, одна лексика из пяти семейств, видимое
+          соединение, спокойное движение.
+          <a href="../inventory/sidebar.md">Инвентаризация — 171 пункт</a>, вкладка Checklist.
+        </p>
+      </header>
+      <nav class="screens doc-only" aria-label="Screens">
+        <button data-screen="default">Default</button
+        ><button data-screen="statuses">Statuses</button
+        ><button data-screen="sections">Sections</button>
+        <button data-screen="folders">Folders</button
+        ><button data-screen="actions">Actions &amp; menu</button
+        ><button data-screen="multi">Multi-select &amp; drag</button>
+        <button data-screen="search">Search</button
+        ><button data-screen="collapsed">Collapsed</button
+        ><button data-screen="empty">Empty &amp; loading</button>
+        <button data-screen="offline">Offline</button><button data-screen="narrow">Narrow</button
+        ><button data-screen="checklist">Checklist</button>
+      </nav>
+      <div id="screens"></div>
+
+      <section class="doc-only">
+        <h2 id="decisions">Решения</h2>
+        <p class="sub">Было → стало → почему.</p>
+        <div class="decisions">
+          <div class="decision">
+            <h4>«Needs you» сверху</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Тред, ждущий одобрения, сидел внутри своего проекта, часто ниже экрана.</dd>
+              <dt>Стало</dt>
+              <dd>
+                Секция над проектами на мягком янтарном фоне: approval, question, plan ready, guest
+                request, failed — из всех проектов.
+              </dd>
+              <dt>Почему</dt>
+              <dd>Главный вопрос сайдбара — «где я нужен». Ответ должен быть в первых 100 px.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Одна лексика статусов</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>
+                В строках Approval / Input / Goal / Woke / Done, в палитре — Pending Approval /
+                Awaiting Input; Plan Ready и Connecting не видны.
+              </dd>
+              <dt>Стало</dt>
+              <dd>
+                5 семейств и одни слова везде: Working · Approval needed · Question · Plan ready ·
+                Done · Failed.
+              </dd>
+              <dt>Почему</dt>
+              <dd>Одно состояние — одно слово во всём приложении.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Соединение видно</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>У офлайн-машины пропадали Settle / Snooze / Pin без объяснения.</dd>
+              <dt>Стало</dt>
+              <dd>
+                Точка соединения у проекта и в карточке машины, строки приглушены, в меню —
+                «Reconnecting to vps-hel1…».
+              </dd>
+              <dt>Почему</dt>
+              <dd>Пропавшая кнопка без причины — дефект.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Спокойное движение</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Пульсирующая иконка терминала, таймеры в строках каждую секунду.</dd>
+              <dt>Стало</dt>
+              <dd>
+                Иконка терминала статична; в строке время с шагом в минуту («6m»), секунды — только
+                в шапке треда.
+              </dd>
+              <dt>Почему</dt>
+              <dd>Закон 7: ничего не перерисовывается бесконечно.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Одна кнопка сворачивания</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Плавающая кнопка над рабочей областью + кнопка в шапке.</dd>
+              <dt>Стало</dt>
+              <dd>
+                Кнопка в шапке и ⌘B; свёрнутый вид — рейка 56 с проектами и точками внимания,
+                состояние запоминается.
+              </dd>
+              <dt>Почему</dt>
+              <dd>Дубль одной функции и потерянное состояние после перезагрузки.</dd>
+            </dl>
+          </div>
+        </div>
+        <h3>Нужно от сервера</h3>
+        <div class="doc-note">
+          Ничего: все данные (статусы, PR, окружения) уже есть на клиенте. Порядок проектов вручную
+          (`reorderProjects`) — клиентское состояние, просто нет вызывающего кода.
+        </div>
+        <h3>Открытые вопросы</h3>
+        <div class="doc-note">
+          1. «Needs you» — показывать и failed, или только то, что ждёт решения? (Предлагаю failed
+          тоже: это тоже «нужен я».)<br />2. Полки Working / Snoozed / Settled — оставить внизу
+          свёрнутыми (как сейчас) или Working поднять над проектами?<br />3. Режим «Folders» (boring
+          sidebar из Labs) — сделать вторым штатным видом с переключателем в шапке?
+        </div>
+      </section>
+    </div>
+
+    <div class="pop" id="pop-row-menu" style="width: 260px">
+      <button class="opt">
+        <i data-i="plus"></i
+        ><span class="lbl"
+          >New thread on <span class="mono t-code-sm">feat/session-refresh</span></span
+        >
+      </button>
+      <div class="sep"></div>
+      <button class="opt">
+        <i data-i="pencil"></i>Rename<span class="meta"><span class="kbd">F2</span></span>
+      </button>
+      <button class="opt">
+        <i data-i="pin"></i>Pin<span class="meta"
+          ><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">P</span></span
+        >
+      </button>
+      <button class="opt">
+        <i data-i="check"></i>Settle<span class="meta"
+          ><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">S</span></span
+        >
+      </button>
+      <button class="opt" data-pop="pop-snooze" data-keep-open>
+        <i data-i="snooze"></i>Snooze<span class="meta"
+          ><i data-i="chevron-right" class="i-14"></i
+        ></span>
+      </button>
+      <button class="opt"><i data-i="fork"></i>Fork thread</button>
+      <button class="opt">
+        <i data-i="copy"></i>Copy<span class="meta"
+          ><i data-i="chevron-right" class="i-14"></i
+        ></span>
+      </button>
+      <div class="sep"></div>
+      <button class="opt"><i data-i="archive"></i>Archive</button>
+      <button class="opt danger"><i data-i="trash"></i>Delete…</button>
+    </div>
+    <div class="pop" id="pop-snooze" style="width: 240px">
+      <button class="opt">In 1 hour<span class="meta">15:20</span></button>
+      <button class="opt">This evening<span class="meta">18:00</span></button>
+      <button class="opt">Tomorrow<span class="meta">Fri 9:00</span></button>
+      <button class="opt">Next week<span class="meta">Mon 9:00</span></button>
+      <button class="opt">Until limits reset<span class="meta">16:40</span></button>
+      <div class="sep"></div>
+      <button class="opt"><i data-i="clock"></i>Custom…</button>
+    </div>
+
+    <script>
+      (() => {
+        const I = (n, c = "") => `<i data-i="${n}" class="${c}"></i>`;
+        const kbd = (...k) =>
+          `<span class="kbds">${k.map((x) => `<span class="kbd">${x}</span>`).join("")}</span>`;
+        const dot = (s) =>
+          s === "working"
+            ? `<span class="sdot working">${I("loader", "i-14 spin")}</span>`
+            : `<span class="sdot ${s}"></span>`;
+        const row = (t, o = {}) =>
+          `<button class="thr${o.cur ? " current" : ""}${o.unread ? " unread" : ""}${o.sub ? " two" : ""}${o.sel ? " sel" : ""}${o.dim ? " dim" : ""}${o.cls ? " " + o.cls : ""}">${o.sel ? `<span class="sel-check">${I("check")}</span>` : dot(o.s || "idle")}<span class="t">${t}${o.sub ? `<span class="sub">${o.sub}</span>` : ""}</span>${o.pin ? I("pin", "i-14 pin") : ""}${o.term ? I("terminal", "trm") : ""}${o.pr ? `<span class="pr">${I("git-pull-request")}#${o.pr}</span>` : ""}${o.when ? `<span class="when">${o.when}</span>` : ""}<span class="more" data-pop="pop-row-menu" data-pop-align="end" aria-label="Thread actions">${I("more", "i-14")}</span></button>`;
+        const proj = (m, name, o = {}) =>
+          `<div class="proj"><span class="mono-mark">${m}</span>${name}${o.conn ? `<span class="conn ${o.conn}" style="margin-left:6px"></span>` : ""}<span class="acts"><button aria-label="New thread in ${name}" data-tip="New thread">${I("plus", "i-14")}</button><button aria-label="Project actions">${I("more", "i-14")}</button></span></div>`;
+        const header =
+          () => `<div class="top"><span class="logo">m</span><span class="wordmark">marp</span><span class="grow"></span><button class="btn ghost icon sm" aria-label="Collapse sidebar" data-tip="Collapse sidebar" data-tip-kbd="⌘ B">${I("panel-left")}</button></div>
+    <button class="side-btn side-new">${I("plus")}New thread<span class="meta">${kbd("⌘", "N")}</span></button>
+    <div class="row" style="gap:4px"><button class="side-btn grow" data-tip="Search threads and messages" data-tip-kbd="⌘ K">${I("search")}Search<span class="meta">${kbd("⌘", "K")}</span></button><button class="btn ghost icon sm" aria-label="Filter projects" data-tip="Show projects">${I("layers")}</button></div>`;
+        const foot = (conn = "") => `<div class="side-foot">
+    <button class="side-btn">${I("git-pull-request")}Pull requests<span class="meta t-caption ink-3">3</span></button>
+    <button class="side-btn">${I("zap")}Usage</button>
+    <button class="side-btn">${I("settings")}Settings<span class="meta">${kbd("⌘", ",")}</span></button>
+    <div class="env-card">${I("laptop", "ink-3")}<div class="grow"><b>DESKTOP-UC7VC6O</b><small>${conn === "off" ? "1 machine offline" : "This device · 2 machines"}</small></div><span class="conn${conn === "off" ? " warn" : ""}"></span><button class="btn ghost icon sm" aria-label="Switch machine">${I("chevron-down")}</button></div>
+  </div>`;
+        const needs =
+          () => `<div class="sb-sec">${I("hand", "i-14")}Needs you<span class="n">3</span></div><div class="needs">
+    ${row("Run migrations on staging", { s: "needs-you", sub: "Approval needed · aagenvoro", when: "now", unread: true })}
+    ${row("Pick a pricing page layout", { s: "needs-you", sub: "Question · Modelion", when: "4m", unread: true })}
+    ${row("Terraform plan for eu-west-2", { s: "failed", sub: "Failed · infra", when: "1h", unread: true })}
+  </div>`;
+        const projects = () => `${proj("M", "Modelion")}
+    ${row("Refactor session refresh", { s: "working", cur: true, when: "2m", sub: "feat/session-refresh" })}
+    ${row("Add rate limiting to /api/upload", { s: "working", when: "6m", term: true, sub: "feat/upload-limits" })}
+    ${row("Fix flaky checkout e2e test", { s: "done", unread: true, when: "12m", pr: "482", sub: "fix/checkout-e2e" })}
+    ${row("Migrate billing to Stripe v2", { pin: true, sub: "billing/stripe-v2" })}
+    ${row("Dark mode for marketing site", { when: "3h", sub: "main" })}
+    <button class="show-more">Show 14 more</button>
+    ${proj("a", "aagenvoro")}
+    ${row("SSR и события на фронте", { when: "Oct 26", sub: "feat/manyvids-platform" })}
+    ${row("Review uncommitted changes", { when: "Oct 24", sub: "feat/manyvids-platform" })}
+    ${proj("m", "mywwave/Marp")}
+    ${row("Settings redesign", { s: "done", when: "1d", pr: "12", sub: "design/marp-design-system" })}`;
+        const shelves = (
+          open,
+        ) => `<button class="sb-sec${open ? " open" : ""}">${I("chevron-right", "i-14 chev")}Working<span class="n">2</span></button><div class="shelf-rows">${row("Nightly dependency audit", { s: "working", when: "40m" })}${row("Translate onboarding emails", { s: "working", when: "1h" })}</div>
+    <button class="sb-sec${open ? " open" : ""}">${I("chevron-right", "i-14 chev")}Snoozed<span class="n">2</span></button><div class="shelf-rows">${row("Upgrade to React 20", { s: "idle", when: "" }).replace('<span class="more"', `<span class="wake">${I("clock", "i-14")}Mon 9:00</span><span class="more"`)}${row("Q4 roadmap notes", { s: "idle" }).replace('<span class="more"', `<span class="wake">${I("clock", "i-14")}Tomorrow</span><span class="more"`)}</div>
+    <button class="sb-sec${open ? " open" : ""}">${I("chevron-right", "i-14 chev")}Settled<span class="n">14</span></button><div class="shelf-rows">${row("Ключевые ошибки ИИ сейчас", { when: "Sep 14" })}${row("Разделить цвета трат и агентств", { when: "Sep 14" })}</div>`;
+        const placeholder = (
+          title = "Refactor session refresh",
+          status = `<span class="status working">${I("loader", "spin")}Working · 2m 14s</span>`,
+        ) =>
+          `<main class="ph-sheet"><div class="sheet-head"><span class="title">${title}</span>${status}</div><div class="ph-lines">${[80, 95, 60, 88, 40].map((w) => `<span class="skel" style="height:12px;width:${w}%"></span>`).join("")}</div></main>`;
+        const app = (id, side, sheet = placeholder(), attrs = "") =>
+          `<div class="frame"><div class="app sb" id="sb-${id}" ${attrs}><aside class="sidebar" aria-label="Threads">${side}</aside>${sheet}</div></div>`;
+        const doc = (t) =>
+          `<div class="screen-doc doc-only"><div class="doc-note">${t}</div></div>`;
+
+        const S = [];
+        S.push([
+          "default",
+          `<div class="demo-bar doc-only" data-target="#sb-default"><label>Rows</label><div class="seg sm" data-demo="density"><button data-v="two">Two lines</button><button data-v="one">One line</button></div></div>` +
+            app(
+              "default",
+              `${header()}<div class="side-scroll">${needs()}<div class="sb-sec">Pinned</div>${row("Release checklist 0.2", { pin: true, when: "2d" })}<div class="sb-sec">Projects</div>${projects()}${shelves(false)}</div>${foot()}`,
+              placeholder(),
+              'data-density="two"',
+            ) +
+            doc(
+              "<b>Порядок:</b> New thread, Search (⌘K — палитра с тредами и сообщениями), «Needs you», Pinned, Projects (5 активных + Show N more), свёрнутые полки Working / Snoozed / Settled, низ: Pull requests, Usage, Settings, карточка машины. Вторая строка — ветка или проект; переключается в демо-панели (настройка «Two-line rows»).",
+            ),
+        ]);
+
+        S.push([
+          "statuses",
+          `<div class="grid grid-2"><div class="specimen stack"><div class="specimen-label">Строка сайдбара · компактно</div><div class="sidebar" style="width:280px">
+    ${row("Refactor session refresh", { s: "working", when: "2m" })}
+    ${row("Waiting for terminal", { s: "working", when: "1m" }).replace('<span class="sdot working">' + I("loader", "i-14 spin") + "</span>", `<span class="sdot working">${I("clock", "i-14")}</span>`)}
+    ${row("Run migrations on staging", { s: "needs-you", unread: true, when: "now" })}
+    ${row("Pick a pricing page layout", { s: "needs-you", unread: true, when: "4m" })}
+    ${row("Plan: split billing service", { s: "needs-you", unread: true, when: "8m" })}
+    ${row("Fix flaky checkout e2e test", { s: "done", unread: true, when: "12m" })}
+    ${row("Terraform plan for eu-west-2", { s: "failed", unread: true, when: "1h" })}
+    ${row("Dark mode for marketing site", { when: "3h" })}
+  </div></div>
+  <div class="specimen stack"><div class="specimen-label">Слово · одно и то же в сайдбаре, палитре и шапке треда</div>
+    <div class="wrap"><span class="status working">${I("loader", "spin")}Working · 2m</span><span class="status idle">${I("clock")}Connecting</span><span class="status idle">${I("clock")}Waiting for terminal</span></div>
+    <div class="wrap"><span class="status needs-you">${I("hand")}Approval needed</span><span class="status needs-you">${I("question")}Question</span><span class="status needs-you">${I("list-checks")}Plan ready</span><span class="status needs-you">${I("user")}Guest request</span></div>
+    <div class="wrap"><span class="status done">${I("check")}Done</span><span class="status failed">${I("alert")}Failed</span><span class="status failed">${I("alert")}Usage limit</span><span class="status idle">${I("clock")}Woke up</span></div>
+    <div class="doc-note">Сопоставление старых слов: Approval → Approval needed; Input → Question; Request → Guest request; Goal → Plan ready; Limited → Usage limit; Woke → Woke up; Done → Done. Иконка терминала у строки — статичная, без пульса.</div>
+  </div></div>` +
+            doc(
+              "Точка 8 px (needs-you — с кольцом), спиннер 12 px только у working. Непрочитанный завершённый — заголовок 500. Время в строке шагает по минутам; секунды — только в шапке треда.",
+            ),
+        ]);
+
+        S.push([
+          "sections",
+          app(
+            "sections",
+            `${header()}<div class="side-scroll"><div class="sb-sec">Projects</div>${proj("M", "Modelion")}${row("Refactor session refresh", { s: "working", cur: true, when: "2m" })}${row("Migrate billing to Stripe v2", { pin: true })}${shelves(true)}</div>${foot()}`,
+          ) +
+            doc(
+              "Полки раскрываются кликом по заголовку; состояние запоминается. У Snoozed вместо времени — когда тред проснётся. Перетаскивание строки на заголовок полки — Settle/Pin, как сейчас.",
+            ),
+        ]);
+
+        S.push([
+          "folders",
+          app(
+            "folders",
+            `${header()}<div class="side-scroll"><div class="sb-sec">Projects<span class="n" data-tip="Drag projects to reorder">${I("menu", "i-14")}</span></div>
+    ${proj("M", "Modelion")}${row("Refactor session refresh", { s: "working", cur: true, when: "2m", sub: "feat/session-refresh · #482 · Claude" })}${row("Fix flaky checkout e2e test", { s: "done", unread: true, when: "12m", sub: "fix/checkout-e2e · Codex" })}
+    <div class="proj drag-ghost">${I("menu", "i-14 ink-4")}<span class="mono-mark">a</span>aagenvoro</div><div class="drop-line"></div>
+    ${proj("m", "mywwave/Marp")}${row("Settings redesign", { s: "done", when: "1d", sub: "design/marp-design-system · #12" })}
+  </div>${foot()}`,
+          ) +
+            doc(
+              "Режим «Folders» (Labs → boring sidebar): треды только внутри своих проектов. <b>Новое:</b> проекты перетаскиваются, порядок сохраняется (настройка manual наконец работает).",
+            ),
+        ]);
+
+        S.push([
+          "actions",
+          `<div class="row" style="align-items:flex-start;gap:var(--space-16);flex-wrap:wrap">
+    <div class="specimen"><div class="specimen-label">Строка при наведении</div><div class="sidebar" style="width:280px">${row("Fix flaky checkout e2e test", { s: "done", unread: true, sub: "fix/checkout-e2e" }).replace('<span class="more"', `<span class="row" style="gap:2px;margin-left:auto"><span class="btn ghost icon sm" data-tip="Snooze">${I("snooze", "i-14")}</span><span class="btn ghost icon sm" data-tip="Settle" data-tip-kbd="⌘ ⇧ S">${I("check", "i-14")}</span></span><span class="more" style="display:inline-flex"`)}</div></div>
+    <div class="specimen"><div class="specimen-label">Меню · клик «⋯» или правый клик</div><div class="pop static" style="width:260px">${document.getElementById("pop-row-menu").innerHTML}</div></div>
+    <div class="specimen"><div class="specimen-label">Snooze</div><div class="pop static" style="width:240px">${document.getElementById("pop-snooze").innerHTML}</div></div>
+    <div class="specimen hovercard"><div class="specimen-label">Карточка при наведении (500 мс)</div><div class="t-title">Refactor session refresh</div>
+      <div class="hc-row">${I("folder")}Modelion</div><div class="hc-row">${I("laptop")}DESKTOP-UC7VC6O</div><div class="hc-row">${I("git-branch")}<span class="mono t-code-sm">feat/session-refresh</span></div><div class="hc-row">${I("git-pull-request")}#482 · checks passing</div><div class="hc-row">${I("brain")}Claude Sonnet 4.5</div></div>
+  </div>` +
+            doc(
+              "Действия строки: Snooze и Settle при наведении, всё остальное в «⋯» и правом клике. Delete подтверждается общим окном. Тост «Thread settled · Undo» живёт в подвале сайдбара, как сейчас.",
+            ),
+        ]);
+
+        S.push([
+          "multi",
+          app(
+            "multi",
+            `${header()}<div class="side-scroll"><div class="sb-sec">Projects</div>${proj("M", "Modelion")}${row("Refactor session refresh", { s: "working", cur: true, when: "2m" })}${row("Fix flaky checkout e2e test", { s: "done", sel: true, when: "12m" })}${row("Migrate billing to Stripe v2", { sel: true, pin: true })}${row("Dark mode for marketing site", { sel: true, when: "3h" })}
+    ${row("Translate onboarding emails", { when: "1h" })}<div class="drop-line"></div>${row("Add rate limiting to /api/upload", { s: "working", when: "6m", cls: "drag-ghost" })}${row("Q4 roadmap notes", { when: "Oct 20" })}</div>
+    <div class="multi-bar" role="toolbar" aria-label="3 threads selected"><span class="count">3 selected</span><button class="btn ghost icon sm" aria-label="Settle" data-tip="Settle" data-tip-kbd="⌘ ⇧ S">${I("check")}</button><button class="btn ghost icon sm" aria-label="Snooze" data-tip="Snooze">${I("snooze")}</button><button class="btn ghost icon sm" aria-label="Archive" data-tip="Archive">${I("archive")}</button><button class="btn ghost icon sm" aria-label="More actions" data-tip="More">${I("more")}</button><button class="btn ghost icon sm" aria-label="Clear selection" data-tip="Clear selection" data-tip-kbd="Esc">${I("x")}</button></div>${foot()}`,
+          ) +
+            doc(
+              "⌘/Ctrl-клик и Shift-клик выделяют несколько. Выделенная строка — нейтральная подложка и галочка вместо точки статуса. Над подвалом появляется карточка «3 selected» с иконками Settle, Snooze, Archive, «⋯» и сбросом (Esc); раньше массовые действия были только в контекстном меню. Перетаскивание: тонкая линия вставки от начала текста, строка-«призрак» без поворота. Перетаскивание: в Pinned, в полку, в другой порядок, в композер как контекст.",
+            ),
+        ]);
+
+        S.push([
+          "search",
+          app(
+            "search",
+            `<div class="top"><span class="logo">m</span><span class="wordmark">marp</span></div>
+    <div class="input-wrap" style="margin:4px 0">${I("search")}<input class="input" value="stripe" style="height:32px"><span class="kbd">Esc</span></div>
+    <div class="side-scroll"><div class="sb-sec">Threads<span class="n">2</span></div>${row("Migrate billing to <b>Stripe</b> v2", { pin: true, sub: "Modelion · billing/stripe-v2" })}${row("Webhook retries for <b>Stripe</b>", { when: "Oct 12", sub: "Modelion" })}
+    <div class="sb-sec">Messages<span class="n">5</span></div>${row("Refactor session refresh", { sub: "…keep the <b>Stripe</b> customer id in the session…", when: "2m" })}${row("Q4 roadmap notes", { sub: "…move <b>Stripe</b> v2 to November…" })}
+    </div>${foot()}`,
+          ) +
+            doc(
+              "Ввод в поиске заменяет список результатами в двух группах: совпадения по названию/ветке/PR и по тексту сообщений (с фрагментом). Пусто — строка «No threads match “stripe”.».",
+            ),
+        ]);
+
+        S.push([
+          "collapsed",
+          `<div class="frame"><div class="app sb"><aside class="rail" aria-label="Threads">
+    <button class="r-btn" aria-label="Expand sidebar" data-tip="Expand sidebar" data-tip-kbd="⌘ B">${I("panel-left")}</button>
+    <button class="r-btn" aria-label="New thread" data-tip="New thread" data-tip-kbd="⌘ N">${I("plus")}</button>
+    <button class="r-btn" aria-label="Search" data-tip="Search" data-tip-kbd="⌘ K">${I("search")}</button>
+    <span class="r-mono" data-tip="Needs you: 3">${I("hand", "i-14")}<span class="badge-dot"></span></span>
+    <div class="sep" style="width:24px"></div>
+    <span class="r-mono" data-tip="Modelion · 2 working">M<span class="badge-dot" style="background:var(--working)"></span></span>
+    <span class="r-mono" data-tip="aagenvoro">a</span><span class="r-mono" data-tip="infra · 1 failed">i<span class="badge-dot bad"></span></span>
+    <span class="grow"></span><button class="r-btn" aria-label="Settings">${I("settings")}</button></aside>${placeholder()}</div></div>` +
+            doc(
+              "Рейка 56: проекты монограммами с точкой статуса (needs-you, failed, working). Клик по проекту — поповер с его тредами. <b>Новое:</b> свёрнутость запоминается между перезапусками; плавающей второй кнопки нет.",
+            ),
+        ]);
+
+        S.push([
+          "empty",
+          `<div class="grid grid-3">
+    ${app("empty-a", `${header()}<div class="side-scroll"><div class="empty panel" style="padding:40px 12px"><span class="tile">${I("folder")}</span><h4>Add your first project</h4><p>Point Marp at a folder or clone a repository.</p><button class="btn">Add project</button><button class="btn ghost sm" style="margin-top:4px">Clone repository</button></div></div>${foot()}`, "").replace('class="frame"', 'class="frame" style="width:auto"')}
+    ${app("empty-b", `${header()}<div class="side-scroll"><div class="sb-sec">Projects</div>${proj("M", "Modelion")}<div class="empty-row">No threads in Modelion yet. <a href="#">Start one</a></div></div>${foot()}`, "").replace('class="frame"', 'class="frame" style="width:auto"')}
+    ${app("empty-c", `${header()}<div class="side-scroll">${[1, 2, 3, 4, 5, 6].map((i) => `<div class="skel-row"><span class="skel" style="width:8px;height:8px;border-radius:50%"></span><span class="skel" style="height:10px;width:${50 + ((i * 13) % 40)}%"></span></div>`).join("")}</div>${foot()}`, "").replace('class="frame"', 'class="frame" style="width:auto"')}
+  </div>` +
+            doc(
+              "Нет проектов — «Add project» и «Clone repository» на месте. Нет тредов в проекте — строка с ссылкой. <b>Новое:</b> пока данные грузятся — статичный скелетон, а не мигающее «No projects yet».",
+            ),
+        ]);
+
+        S.push([
+          "offline",
+          app(
+            "offline",
+            `${header()}<div class="side-scroll"><div class="sb-sec">Projects</div>${proj("M", "Modelion")}${row("Refactor session refresh", { s: "working", cur: true, when: "2m" })}
+    ${proj("i", "infra · vps-hel1", { conn: "off" })}<div class="empty-row" style="text-align:left;padding:4px 8px">Reconnecting to vps-hel1… <a href="#">Retry now</a></div>${row("Terraform plan for eu-west-2", { dim: true, when: "1h" })}${row("Rotate staging secrets", { dim: true, when: "Oct 26" })}</div>${foot("off")}`,
+          ) +
+            doc(
+              "Проект с офлайн-машины: красная точка соединения и строка «Reconnecting…» с повтором; строки приглушены; в меню действия выключены с причиной «vps-hel1 is offline». Карточка машины внизу говорит «1 machine offline».",
+            ),
+        ]);
+
+        S.push([
+          "narrow",
+          `<div class="row" style="gap:var(--space-24);flex-wrap:wrap;align-items:flex-start"><div class="phone"><div class="sheet-side">${header()}<div class="side-scroll">${needs()}<div class="sb-sec">Projects</div>${projects()}</div></div></div>
+    <div class="phone" style="padding:16px"><div class="t-title" style="margin:32px 4px 12px">Long-press menu</div><div class="pop static">${document.getElementById("pop-row-menu").innerHTML}</div></div></div>` +
+            doc(
+              "Телефон и окно ≤ 767: сайдбар — шторка во всю ширину минус 12. Строки 44, «⋯» видна всегда (раньше Settle/Snooze на тач-устройствах были доступны только долгим нажатием).",
+            ),
+        ]);
+
+        S.push(["checklist", `<div id="checklist" class="specimen">Loading inventory…</div>`]);
+
+        document.getElementById("screens").innerHTML = S.map(
+          ([id, html]) => `<div data-screen-panel="${id}">${html}</div>`,
+        ).join("");
+        document.addEventListener("click", (e) => {
+          const s = e.target.closest(".sb-sec");
+          if (s && s.tagName === "BUTTON") s.classList.toggle("open");
+        });
+
+        fetch("../inventory/sidebar.md")
+          .then((r) => r.text())
+          .then((md) => {
+            const out = [];
+            let n = 0,
+              nNew = 0,
+              nGone = 0;
+            for (const line of md.split("\n")) {
+              const h = line.match(/^## (.+)/);
+              if (h) {
+                out.push(`<div class="check-group">${h[1].replace(/`/g, "")}</div>`);
+                continue;
+              }
+              const m = line.match(/^- \*\*([A-Z]+-\d+)\*\* (.*?) ⟶ (.*)$/);
+              if (!m) continue;
+              n++;
+              const isNew = m[3].includes("＋"),
+                gone = m[3].startsWith("✗");
+              if (isNew) nNew++;
+              if (gone) nGone++;
+              out.push(
+                `<div class="check-row"><code>${m[1]}</code><span>${m[2]
+                  .replace(/ — `[^`]*`.*$/, "")
+                  .replace(/`/g, "")
+                  .slice(
+                    0,
+                    180,
+                  )}</span><span class="st${isNew ? " new" : gone ? " gone" : ""}">${m[3]}</span></div>`,
+              );
+            }
+            document.getElementById("checklist").innerHTML =
+              `<div class="row" style="margin-bottom:var(--space-12)"><span class="t-title">${n} items</span><span class="badge success">${n} with status</span><span class="badge new">${nNew} new or improved</span><span class="badge danger">${nGone} removed with reason</span></div>` +
+              out.join("");
+          })
+          .catch(() => {
+            document.getElementById("checklist").textContent =
+              "Open over http to render the checklist.";
+          });
+      })();
+    </script>
+  </body>
+</html>

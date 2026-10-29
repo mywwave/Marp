@@ -229,9 +229,7 @@
           <div class="law">
             <div class="n">7</div>
             <h4>Спокойное движение</h4>
-            <p>
-              150 / 220 мс, ease-out. Ничего не перерисовывается бесконечно, кроме спиннера работы.
-            </p>
+            <p>150 / 220 мс, ease-out. Бесконечно движутся только спиннер и шиммер живой работы.</p>
           </div>
           <div class="law">
             <div class="n">∗</div>
@@ -534,8 +532,10 @@
         <div class="doc-note">
           <b>Движение.</b> Цвет и фон — 150 мс. Появление, раскрытие, сдвиг — 220 мс
           <code>cubic-bezier(.22,1,.36,1)</code>. Переключатель — пружина. Нажатие —
-          <code>scale(.97)</code>. Без шиммеров, пульсаций и бегущих градиентов: единственная
-          бесконечная анимация — спиннер 14 px, пока агент реально работает.
+          <code>scale(.97)</code>. Бесконечно движутся только спиннер 14 px и шиммер — и только пока
+          агент реально работает или грузятся данные. Шиммер — маска с
+          <code>transform</code> шагами, текст не перерисовывается. Пульсаций и бегущих градиентов
+          нет.
         </div>
       </section>
 
@@ -1100,7 +1100,8 @@
             <!-- Сайдбар -->
             <aside class="sidebar" aria-label="Threads">
               <div class="top">
-                <span class="logo">m</span><span class="wordmark">marp</span
+                <img class="logo" src="assets/marp-icon.svg" alt="" /><span class="wordmark"
+                  >marp</span
                 ><span class="grow"></span>
                 <button
                   class="btn ghost icon sm"
@@ -1817,7 +1818,7 @@ AssertionError: expected 1 to be 2 // Object.is equality
       <!-- ═════════════ Решения ═════════════ -->
       <section class="doc-only">
         <h2 id="decisions">Решения</h2>
-        <p class="sub">Чем система отличается от текущего T3 Code и почему.</p>
+        <p class="sub">Чем система отличается от текущего Marp и почему.</p>
         <div class="decisions">
           <div class="decision">
             <h4>Тёплая бумага вместо холодного серого</h4>
@@ -1864,12 +1865,12 @@ AssertionError: expected 1 to be 2 // Object.is equality
             </dl>
           </div>
           <div class="decision">
-            <h4>Без бесконечных анимаций</h4>
+            <h4>Шиммер только у живой работы</h4>
             <dl>
               <dt>Было</dt>
               <dd>Шиммеры и пульсации на «думает».</dd>
               <dt>Стало</dt>
-              <dd>Спиннер 14 + таймер.</dd>
+              <dd>Спиннер 14 + таймер; шиммер на одной строке живого процесса и на скелетонах.</dd>
               <dt>Почему</dt>
               <dd>GPU на 120 Гц экранах и честность статуса.</dd>
             </dl>

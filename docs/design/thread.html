@@ -5,321 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Marp — Thread reference</title>
     <link rel="stylesheet" href="assets/reference.css" />
+    <link rel="stylesheet" href="assets/prototype.css" />
     <script src="assets/reference.js"></script>
-    <style>
-      /* «Сейчас» эталона: 29 Oct 2026, 14:20. Проект Modelion на DESKTOP-UC7VC6O. */
-      .app.th {
-        height: 880px;
-      }
-      .mini-side {
-        width: 248px;
-        flex: none;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        padding-top: 4px;
-      }
-      .head-diff {
-        font: var(--text-caption);
-        font-weight: 500;
-        display: inline-flex;
-        gap: 4px;
-        padding: 0 8px;
-        height: 28px;
-        align-items: center;
-        border-radius: var(--radius-pill);
-      }
-      .head-diff:hover {
-        background: var(--surface-2);
-      }
-      .q-opts {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-      .plan {
-        background: var(--surface-2);
-        border-radius: var(--radius-md);
-        padding: 12px 16px;
-        font: var(--text-read);
-        color: var(--ink);
-      }
-      .plan ol {
-        margin: 6px 0 0;
-        padding-left: 20px;
-      }
-      .plan li {
-        margin: 4px 0;
-      }
-      .blocked {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        max-width: calc(var(--read-w) + 32px);
-        margin: 0 auto 8px;
-        padding: 6px 12px;
-        border-radius: var(--radius-md);
-        background: var(--surface-2);
-        font: var(--text-caption);
-        color: var(--ink-2);
-      }
-      .blocked .i {
-        width: 14px;
-        height: 14px;
-        color: var(--attention);
-      }
-      .attach-banner {
-        max-width: calc(var(--read-w) + 32px);
-        margin: 0 auto 8px;
-      }
-      .mention-pop {
-        position: absolute;
-        left: 24px;
-        bottom: 120px;
-        width: 360px;
-      }
-      .composer-wrap {
-        position: relative;
-      }
-      .hero {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: var(--space-16);
-        padding: 0 var(--space-24) 80px;
-      }
-      .hero h3 {
-        font: var(--text-hero);
-        letter-spacing: -0.02em;
-        color: var(--ink);
-        margin: 0;
-      }
-      .hero .composer {
-        width: 100%;
-      }
-      .settled-bar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        justify-content: center;
-        font: var(--text-caption);
-        color: var(--ink-3);
-      }
-      .find-bar {
-        position: absolute;
-        top: 56px;
-        right: 16px;
-        z-index: 4;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 6px 6px 12px;
-        background: var(--surface);
-        border-radius: var(--radius-md);
-        box-shadow: var(--shadow-pop);
-      }
-      .find-bar input {
-        border: 0;
-        outline: none;
-        background: transparent;
-        width: 180px;
-      }
-      .find-bar input:focus-visible {
-        box-shadow: none;
-      }
-      mark {
-        background: var(--attention-soft);
-        color: inherit;
-        border-radius: 3px;
-        box-shadow: 0 0 0 1px color-mix(in srgb, var(--attention) 40%, transparent);
-      }
-      mark.cur {
-        background: color-mix(in srgb, var(--attention) 45%, transparent);
-      }
-      .minimap {
-        position: absolute;
-        right: 6px;
-        top: 70px;
-        bottom: 140px;
-        width: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding-top: 10px;
-      }
-      .minimap i {
-        display: block;
-        height: 3px;
-        border-radius: 2px;
-        background: var(--ink-4);
-        opacity: 0.5;
-      }
-      .minimap i.on {
-        background: var(--ink);
-        opacity: 1;
-      }
-      .details {
-        position: absolute;
-        top: 52px;
-        right: 12px;
-        width: 300px;
-        z-index: 3;
-      }
-      .term-tabs {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 6px 8px 0;
-      }
-      .term-tab {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        height: 28px;
-        padding: 0 10px;
-        border-radius: var(--radius-pill);
-        color: var(--ink-3);
-        font-weight: 500;
-        font: var(--text-caption);
-      }
-      .term-tab.on {
-        background: var(--surface-2);
-        color: var(--ink);
-      }
-      .term-tab .live {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--success);
-      }
-      .url-bar {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        height: 40px;
-        padding: 0 8px;
-      }
-      .url-bar .input {
-        height: 28px;
-        font: var(--text-code-sm);
-      }
-      .preview-canvas {
-        flex: 1;
-        margin: 0 8px 8px;
-        border-radius: var(--radius-md);
-        background: #fff;
-        box-shadow: inset 0 0 0 1px var(--ring);
-        overflow: hidden;
-      }
-      [data-theme="dark"] .preview-canvas {
-        background: #f7f7f7;
-      }
-      .pv-mock {
-        padding: 24px;
-        font-family: system-ui;
-        color: #222;
-      }
-      .pv-mock .nav {
-        display: flex;
-        gap: 16px;
-        font-size: 13px;
-        color: #555;
-        margin-bottom: 40px;
-      }
-      .pv-mock h4 {
-        font-size: 26px;
-        margin: 0 0 10px;
-        color: #111;
-      }
-      .pv-mock .cta {
-        display: inline-block;
-        margin-top: 16px;
-        padding: 8px 14px;
-        border-radius: 8px;
-        background: #111;
-        color: #fff;
-        font-size: 13px;
-      }
-      .checks {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .check-line {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        min-height: var(--row-xs);
-        padding: 0 4px;
-      }
-      .check-line .i {
-        width: 14px;
-        height: 14px;
-      }
-      .phone {
-        width: 390px;
-        height: 820px;
-        background: var(--surface);
-        border-radius: 36px;
-        box-shadow:
-          0 0 0 1px var(--ring),
-          var(--shadow-pop);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-      }
-      .phone .sheet-head {
-        height: 56px;
-        padding-top: 8px;
-      }
-      .phone .thread {
-        padding: 8px 14px;
-      }
-      .phone .composer-dock {
-        padding: 0 10px 18px;
-      }
-      .guest-banner {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin: 0 24px 8px;
-        padding: 8px 12px;
-        border-radius: var(--radius-md);
-        background: color-mix(in srgb, #c026d3 10%, var(--surface));
-        color: var(--ink-2);
-        font: var(--text-caption);
-      }
-      .check-row {
-        display: grid;
-        grid-template-columns: 80px 1fr 300px;
-        gap: var(--space-12);
-        padding: 6px var(--space-12);
-        font: var(--text-caption);
-      }
-      .check-row + .check-row {
-        box-shadow: inset 0 1px 0 var(--line);
-      }
-      .check-row code {
-        font: var(--text-code-sm);
-        color: var(--ink);
-      }
-      .check-row .st {
-        color: var(--success);
-      }
-      .check-row .st.new {
-        color: var(--accent-soft-ink);
-      }
-      .check-row .st.gone {
-        color: var(--danger);
-      }
-      .check-group {
-        font: var(--text-title);
-        color: var(--ink);
-        margin: var(--space-24) 0 var(--space-8);
-      }
-    </style>
+    <script src="assets/prototype.js"></script>
   </head>
   <body>
     <div class="doc">
@@ -328,601 +16,543 @@
         <div class="row" data-theme-controls></div>
       </div>
       <header class="doc-only">
-        <div class="doc-badge"><i data-i="file" class="i-14"></i>Эталон · Тред · 29 окт 2026</div>
+        <div class="doc-badge">
+          <i data-i="file" class="i-14"></i>Эталон · Тред · v2 · 29 окт 2026
+        </div>
         <h1>Thread</h1>
         <p class="lead">
-          Экран, где идёт работа с агентом. Раньше: шапка почти пустая, а Git, ветка и Open in
-          прятались в карточке деталей и пропадали при нехватке высоты; «Implement» плана и ответы
-          на вопросы жили только в композере; шиммеры на Thinking; сырые статусы
-          <code>failed</code> и <code>exit 1</code>; одно ограничение — до трёх уведомлений. Теперь:
-          шапка с ключевыми действиями и статусом, карточки одобрения, вопроса и плана в ленте,
-          чекпоинт после каждого хода, видимая причина «почему нельзя отправить», спокойное
-          движение. <a href="inventory/thread.md">Инвентаризация — 732 пункта</a>, вкладка
-          Checklist.
+          Тред — место, где пользователь
+          <b
+            >ставит задачу, видит работу без шума, решает, когда его спрашивают, проверяет результат
+            и отправляет его</b
+          >. Это живой прототип: отправьте сообщение — «агент» пойдёт по шагам; остановите,
+          направьте, поставьте в очередь, одобрите, ответьте, откатите, откройте дифф и оставьте
+          комментарий к строке. Под прототипом — спецификация каждого взаимодействия. Прошлая версия
+          — <a href="archive/thread-2026-10-29.html">archive/thread-2026-10-29.html</a>,
+          инвентаризация — <a href="inventory/thread.md">732 пункта</a> (Checklist внизу).
         </p>
       </header>
-      <nav class="screens doc-only" aria-label="Screens">
-        <button data-screen="working">Working</button
-        ><button data-screen="needs-you">Approval</button
-        ><button data-screen="question">Question</button><button data-screen="plan">Plan</button>
-        <button data-screen="done">Done &amp; checkpoint</button
-        ><button data-screen="failed">Failed &amp; limits</button
-        ><button data-screen="new">New thread</button>
-        <button data-screen="composer">Composer</button
-        ><button data-screen="details">Details</button><button data-screen="panel">Diff</button
-        ><button data-screen="terminal">Terminal</button>
-        <button data-screen="preview">Preview</button><button data-screen="pr">Pull request</button
-        ><button data-screen="find">Find</button><button data-screen="guest">Guest</button>
-        <button data-screen="narrow">Narrow</button><button data-screen="dialogs">Dialogs</button
-        ><button data-screen="checklist">Checklist</button>
-      </nav>
-      <div id="screens"></div>
+
+      <section>
+        <div class="scenario-bar doc-only">
+          <label>Scenario</label>
+          <div class="seg sm" id="sc">
+            <button data-sc="working">Working</button
+            ><button data-sc="approval" aria-pressed="true">Approval</button
+            ><button data-sc="question">Question</button><button data-sc="plan">Plan</button>
+            <button data-sc="done">Done</button><button data-sc="failed">Failed</button
+            ><button data-sc="new">New thread</button><button data-sc="blocked">Can't send</button>
+            <button data-sc="panel">Diff panel</button><button data-sc="terminal">Terminal</button>
+          </div>
+        </div>
+        <div id="proto"></div>
+        <div class="try doc-only">
+          <span>Напишите и <span class="kbd">↵</span> — агент начнёт</span
+          ><span
+            >Во время работы: <span class="kbd">↵</span> направить · <span class="kbd">Ctrl</span
+            ><span class="kbd">↵</span> в очередь · <span class="kbd">Esc</span> стоп</span
+          ><span>Одобрение: <span class="kbd">↵</span> / <span class="kbd">Esc</span></span
+          ><span>Вопрос: <span class="kbd">1</span>–<span class="kbd">3</span></span
+          ><span><span class="kbd">@</span> в композере — файл</span
+          ><span>Клик по «Edited …» — дифф</span
+          ><span>В диффе «+» у строки — комментарий в промпт</span
+          ><span
+            ><span class="kbd">Ctrl</span><span class="kbd">F</span> поиск ·
+            <span class="kbd">Ctrl</span><span class="kbd">J</span> терминал ·
+            <span class="kbd">Ctrl</span><span class="kbd">⌥</span
+            ><span class="kbd">B</span> панель</span
+          ><span>Перетащите файл на тред</span>
+        </div>
+      </section>
 
       <section class="doc-only">
-        <h2 id="decisions">Решения</h2>
-        <p class="sub">Было → стало → почему.</p>
+        <h2 id="principles">Как устроено</h2>
+        <p class="sub">Шесть решений, из которых следует всё остальное.</p>
         <div class="decisions">
           <div class="decision">
-            <h4>Шапка делает работу</h4>
+            <h4>1. Ход = вопрос → работа → ответ → чекпоинт</h4>
             <dl>
               <dt>Было</dt>
               <dd>
-                Хлебные крошки и переключатели панелей; Git, ветка, Open in, +N −M — в карточке
-                деталей, которая прятала их при нехватке высоты.
+                Лента из отдельных сообщений, шагов, уведомлений; откат только через «Edit from
+                here».
               </dd>
               <dt>Стало</dt>
               <dd>
-                Заголовок + статус слева; справа ветка, +N −M, Open in, сплит-кнопка Git,
-                переключатели панелей — в одном месте.
+                Каждый ход — одна единица: сообщение, свёрнутый журнал работы с длительностью,
+                ответ, разделитель «Checkpoint · N files changed · View diff · Restore».
               </dd>
               <dt>Почему</dt>
-              <dd>Коммит и PR — ежедневные действия; они не должны зависеть от высоты окна.</dd>
+              <dd>
+                Пользователь думает ходами: «что я попросил — что изменилось — можно ли вернуть».
+              </dd>
             </dl>
           </div>
           <div class="decision">
-            <h4>Решения — в ленте</h4>
+            <h4>2. Работу видно, но она не шумит</h4>
             <dl>
               <dt>Было</dt>
-              <dd>Вопрос агента и «Implement plan» — только в композере.</dd>
-              <dt>Стало</dt>
-              <dd>Карточки вопроса, плана и одобрения в ленте над композером, с клавишами.</dd>
-              <dt>Почему</dt>
-              <dd>Решение принимается там, где читается контекст.</dd>
-            </dl>
-          </div>
-          <div class="decision">
-            <h4>Чекпоинт после хода</h4>
-            <dl>
-              <dt>Было</dt>
-              <dd>Откат только через «Edit from here» у сообщения, без маркера хода.</dd>
-              <dt>Стало</dt>
-              <dd>Разделитель «Checkpoint · 4 files changed · View diff · Restore».</dd>
-              <dt>Почему</dt>
-              <dd>Видно, что поменялось и куда можно вернуться.</dd>
-            </dl>
-          </div>
-          <div class="decision">
-            <h4>Честный и спокойный статус</h4>
-            <dl>
-              <dt>Было</dt>
-              <dd>Шиммер на Thinking, worktree setup и compaction весь ход; пульс у Fork.</dd>
-              <dt>Стало</dt>
-              <dd>Спиннер 14 + слово + время.</dd>
-              <dt>Почему</dt>
-              <dd>Закон 7 и GPU на 120 Гц.</dd>
-            </dl>
-          </div>
-          <div class="decision">
-            <h4>Почему нельзя отправить</h4>
-            <dl>
-              <dt>Было</dt>
-              <dd>Причина только в тултипе кнопки отправки.</dd>
-              <dt>Стало</dt>
-              <dd>Строка над композером с действием («Sign in to Claude», «Pick a project»).</dd>
-              <dt>Почему</dt>
-              <dd>Неактивная кнопка без объяснения — тупик.</dd>
-            </dl>
-          </div>
-          <div class="decision">
-            <h4>Одно уведомление на одну проблему</h4>
-            <dl>
-              <dt>Было</dt>
-              <dd>Лимит использования — до трёх уведомлений; 7 вариантов подписи compaction.</dd>
+              <dd>Все шаги сразу, шиммер на Thinking, тикающие таймеры в нескольких местах.</dd>
               <dt>Стало</dt>
               <dd>
-                Строка в ленте + один баннер над композером; одна подпись «Compacted · 182k → 24k
-                tokens».
+                Во время работы журнал раскрыт и показывает последние 3 шага + «N earlier steps»;
+                после хода сворачивается в одну строку-сводку. Тикают только таймер хода и живого
+                шага.
               </dd>
               <dt>Почему</dt>
-              <dd>Повтор — шум.</dd>
+              <dd>Следить за агентом нужно, читать каждую строку — нет.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>3. Решения — карточкой над композером</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>
+                Одобрение в ленте, вопрос и «Implement» — в композере, легко пропустить при
+                прокрутке.
+              </dd>
+              <dt>Стало</dt>
+              <dd>
+                Одобрение, вопрос, план, ошибка — карточка, прилипшая к низу ленты над композером;
+                клавиши на кнопках. После решения — строка-след в журнале («Approved rm -rf dist»).
+              </dd>
+              <dt>Почему</dt>
+              <dd>Решение должно быть там, куда смотрит пользователь, и оставлять след.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>4. Композер знает, что сейчас будет</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Кнопка отправки с девятью состояниями, причина «нельзя» — только в тултипе.</dd>
+              <dt>Стало</dt>
+              <dd>
+                Плейсхолдер и кнопка говорят, что произойдёт: Send / Steer / Stop; подсказка «Enter
+                steers · Ctrl+Enter queues»; очередь — видимые строки с удалением; причина
+                блокировки — строка с действием.
+              </dd>
+              <dt>Почему</dt>
+              <dd>Никаких сюрпризов от Enter.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>5. Шапка — для ежедневных действий</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>
+                Git, ветка и Open in — в карточке деталей, которая прятала их на невысоком окне.
+              </dd>
+              <dt>Стало</dt>
+              <dd>
+                Название (клик — переименовать), статус с временем, ветка, +N −M → дифф, Open in,
+                Git (умная подпись; если нельзя — почему), детали, терминал, панель.
+              </dd>
+              <dt>Почему</dt>
+              <dd>Коммит и PR — каждый день; они не зависят от высоты окна.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>6. Дифф говорит с агентом</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Комментарий к строке уходил в черновик незаметно.</dd>
+              <dt>Стало</dt>
+              <dd>
+                «+» у строки → поле → «Add to prompt» → чип в композере «session.ts:43 · …». Клик по
+                шагу «Edited …» открывает дифф на этом файле.
+              </dd>
+              <dt>Почему</dt>
+              <dd>Ревью и следующая инструкция — один жест.</dd>
             </dl>
           </div>
         </div>
+      </section>
+
+      <section class="doc-only">
+        <h2 id="spec">Спецификация взаимодействий</h2>
+        <p class="sub">
+          Элемент → действие → результат → что видно → как отменить. Всё проверяется в прототипе
+          выше.
+        </p>
+        <div id="spec-host"></div>
+      </section>
+
+      <section class="doc-only">
+        <h2 id="decisions">Решения и вопросы</h2>
         <h3>Нужно от сервера</h3>
         <div class="doc-note">
-          1. Чекпоинт «Restore» на конкретный ход — использует существующий revert («Edit from
-          here»), отдельного RPC не нужно; счётчик «N files changed» — из уже приходящего диффа
-          хода.<br />2. Stop процесса в терминале (SIGINT) — проверить, есть ли RPC сигнала для
-          терминала; в Diagnostics сигналы есть. <span class="be-tag">needs server</span>
+          1. Stop процесса в терминале (SIGINT) — проверить RPC сигнала для терминальных сессий.
+          <span class="be-tag">needs server</span><br />2. «N files changed» у чекпоинта и Restore —
+          из существующего диффа хода и revert; новый RPC не нужен.<br />3. Steer во время хода —
+          уже поддерживается (followUpBehavior); очередь — существующая queue.
         </div>
         <h3>Открытые вопросы</h3>
         <div class="doc-note">
-          1. Карточка деталей: оставить плавающей справа (как сейчас) или открывать по кнопке из
-          шапки? (Предлагаю по кнопке: ключевое уже в шапке.)<br />2. Ответ на вопрос агента —
-          только карточкой, или карточка + поле в композере для «Other»?<br />3. Миникарта: всегда
-          видимая тонкая полоса или по наведению?
+          1. Журнал во время работы — последние 3 шага (сейчас) или всё?<br />2. Карточка решения
+          прилипает к низу ленты (сейчас) или живёт в потоке?<br />3. Детали треда — меню по кнопке
+          (сейчас) или боковая карточка как раньше?
         </div>
+      </section>
+
+      <section class="doc-only">
+        <h2 id="checklist">Checklist</h2>
+        <div id="checklist" class="specimen">Loading inventory…</div>
       </section>
     </div>
 
-    <div class="pop" id="pop-git" style="width: 280px">
-      <button class="opt">
-        <i data-i="git-commit"></i>Commit<span class="meta"
-          ><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">C</span></span
-        >
-      </button>
-      <button class="opt"><i data-i="upload"></i>Commit &amp; push</button>
-      <button class="opt"><i data-i="git-pull-request"></i>Commit, push &amp; create PR</button>
-      <div class="sep"></div>
-      <button class="opt"><i data-i="git-branch"></i>New branch…</button
-      ><button class="opt"><i data-i="upload"></i>Publish repository…</button>
-    </div>
-    <div class="pop" id="pop-model" style="width: 340px">
-      <div class="input-wrap">
-        <i data-i="search"></i><input class="input" placeholder="Search models" />
-      </div>
-      <div class="opt-group">Claude</div>
-      <button class="opt">
-        <span class="pmark s16">Cl</span>Claude Sonnet 4.5<span class="meta">fast</span
-        ><i data-i="check" style="color: var(--ink)"></i>
-      </button>
-      <button class="opt">
-        <span class="pmark s16">Cl</span>Claude Opus 4.8<span class="meta">1M context</span>
-      </button>
-      <div class="opt-group">Codex</div>
-      <button class="opt">
-        <span class="pmark s16">Cx</span>GPT-5.6 Terra<span class="meta">medium</span></button
-      ><button class="opt">
-        <span class="pmark s16">Cx</span>GPT-5.6 Luna<span class="meta">cheap</span>
-      </button>
-      <div class="sep"></div>
-      <button class="opt"><i data-i="settings"></i>Manage models…</button>
-    </div>
-
     <script>
-      (() => {
-        const I = (n, c = "") => `<i data-i="${n}" class="${c}"></i>`;
-        const kbd = (...k) =>
-          `<span class="kbds">${k.map((x) => `<span class="kbd">${x}</span>`).join("")}</span>`;
-        const st = {
-          working: `<span class="status working">${I("loader", "spin")}Working · 2m 14s</span>`,
-          approval: `<span class="status needs-you">${I("hand")}Approval needed</span>`,
-          question: `<span class="status needs-you">${I("question")}Question</span>`,
-          plan: `<span class="status needs-you">${I("list-checks")}Plan ready</span>`,
-          done: `<span class="status done">${I("check")}Done</span>`,
-          failed: `<span class="status failed">${I("alert")}Failed</span>`,
-          idle: "",
-        };
-        const side = (
-          cur = "working",
-        ) => `<aside class="sidebar mini-side" aria-label="Threads"><div class="top"><span class="logo">m</span><span class="wordmark">marp</span></div>
-    <button class="side-btn side-new">${I("plus")}New thread<span class="meta">${kbd("⌘", "N")}</span></button>
-    <div class="side-scroll"><div class="proj"><span class="mono-mark">M</span>Modelion</div>
-    <button class="thr current"><span class="sdot ${cur === "working" ? "working" : cur}">${cur === "working" ? I("loader", "i-14 spin") : ""}</span><span class="t">Refactor session refresh</span><span class="when">now</span></button>
-    <button class="thr"><span class="sdot working">${I("loader", "i-14 spin")}</span><span class="t">Add rate limiting to /api/upload</span><span class="when">6m</span></button>
-    <button class="thr unread"><span class="sdot done"></span><span class="t">Fix flaky checkout e2e test</span><span class="when">12m</span></button>
-    <button class="thr"><span class="sdot idle"></span><span class="t">Migrate billing to Stripe v2</span>${I("pin", "i-14 pin")}</button></div></aside>`;
-        const head = (
-          status,
-          o = {},
-        ) => `<div class="sheet-head"><span class="title">${o.title || "Refactor session refresh"}</span>${status}<div class="right">
-    <button class="chip" data-tip="Branch · worktree"><i data-i="git-branch"></i><span class="mono">feat/session-refresh</span></button>
-    <button class="head-diff" data-tip="Open diff"><span class="add">+44</span><span class="del">−3</span></button>
-    <button class="btn ghost icon sm" aria-label="Open in VS Code" data-tip="Open in VS Code" data-tip-kbd="⌘ O">${I("external-link")}</button>
-    <div class="split"><button class="btn sm" data-tip="Commit" data-tip-kbd="⌘ ⇧ C">${I("git-commit")}${o.git || "Commit"}</button><button class="btn sm" aria-label="More git actions" data-pop="pop-git" data-pop-align="end">${I("chevron-down")}</button></div>
-    <button class="btn ghost icon sm" aria-label="Thread details" data-tip="Thread details">${I("info")}</button>
-    <button class="btn ghost icon sm" aria-label="Terminal" data-tip="Terminal" data-tip-kbd="⌘ J">${I("terminal")}</button>
-    <button class="btn ghost icon sm" aria-label="Right panel" data-tip="Right panel" data-tip-kbd="⌘ ⌥ B">${I("panel-right")}</button></div></div>`;
-        const user = (t, chips = "") =>
-          `<div class="msg-user">${t}${chips ? `<div class="chips">${chips}</div>` : ""}</div>`;
-        const author = (m = "Claude Sonnet 4.5", time = "14:12", mk = "Cl") =>
-          `<div class="author"><span class="pmark s16">${mk}</span><b>${m}</b>· ${time}</div>`;
-        const step = (ic, verb, obj, meta = "", cls = "") =>
-          `<button class="step ${cls}">${I(ic)}${verb}<span class="obj">${obj}</span>${meta ? `<span class="meta">${meta}</span>` : ""}</button>`;
-        const worklog = (
-          id,
-          open,
-          steps,
-          sum = "Read 3 files, edited 2, ran 2 commands",
-          time = "1m 12s",
-        ) =>
-          `<div class="work${open ? " open" : ""}" id="${id}"><button class="work-sum" data-toggle="${id}">${I("chevron-right", "i-14 chev")}${I("wrench", "i-14")}<span class="grow">${sum}</span><span class="num">${time}</span></button><div class="work-steps">${steps}</div></div>`;
-        const stepsDone =
-          step("brain", '<span class="thinking">Thought for 8s</span>', "") +
-          step("file", "Read", '<span class="dir">src/auth/</span>session.ts') +
-          step("search", "Searched", '"expiresAt" in src/', "6 results") +
-          step(
-            "file-pen",
-            "Edited",
-            '<span class="dir">src/auth/</span>session.ts',
-            '<span class="add">+4</span><span class="del">−2</span>',
-          ) +
-          step(
-            "file-pen",
-            "Created",
-            '<span class="dir">src/auth/</span>session.test.ts',
-            '<span class="add">+38</span>',
-          ) +
-          step("terminal", "Ran", "pnpm vitest run src/auth", '<span class="num">7s</span>');
-        const composer = (
-          o = {},
-        ) => `<div class="composer-dock">${o.above || ""}<div class="composer">${o.chips ? `<div class="chips">${o.chips}</div>` : ""}<textarea rows="2" placeholder="${o.ph || "Ask Claude to…"}" aria-label="Message">${o.text || ""}</textarea><div class="bar">
-    <button class="btn ghost sm" aria-label="Attach" data-tip="Attach files">${I("paperclip")}</button>
-    <button class="btn ghost sm" data-pop="pop-model"><span class="pmark s16">Cl</span>Sonnet 4.5${I("chevron-down", "i-14")}</button>
-    <button class="btn ghost sm" data-tip="Reasoning effort" data-tip-kbd="⌘ ⇧ E">${I("brain")}High</button>
-    <button class="btn ghost sm" data-tip="Chat or plan" data-tip-kbd="⇧ Tab">${I("list-checks")}Chat</button>
-    <button class="btn ghost sm">${I("shield")}Supervised</button>
-    <div class="right"><span class="row t-caption ink-3" data-tip-title="Context window" data-tip="How much of the model's memory this thread uses."><span class="ctx-ring" style="--p:${o.ctx || 38}"></span><span class="num">${o.ctx || 38}%</span></span>${o.send || `<button class="send" aria-label="Send" data-tip="Send" data-tip-kbd="↵">${I("arrow-up")}</button>`}</div></div></div></div>`;
-        const stopBtn = `<button class="send stop" aria-label="Stop" data-tip="Stop" data-tip-kbd="Esc"><span class="sq"></span></button>`;
-        const sheet = (status, body, o = {}) =>
-          `<main class="sheet">${head(status, o)}${o.over || ""}<div class="thread"><div class="col">${body}</div></div>${o.composer ?? composer()}</main>`;
-        const app = (id, cur, sheetHtml, panel = "") =>
-          `<div class="frame"><div class="app th" id="th-${id}">${side(cur)}${sheetHtml}${panel}</div></div>`;
-        const doc = (t) =>
-          `<div class="screen-doc doc-only"><div class="doc-note">${t}</div></div>`;
-        const prompt = user(
-          "The session refresh races the expiry and we see random 401s in prod. Move the refresh earlier and add a test for the edge case.",
-          `<span class="chip"><i data-i="file"></i><span class="mono">src/auth/session.ts</span></span><span class="chip"><i data-i="image"></i>sentry-401.png</span>`,
-        );
-        const answer = `<div class="msg-wrap"><div class="msg-ai"><p>The refresh fired exactly at <code>expiresAt</code>, so any request in flight during that tick went out with a dead token. I moved the refresh 60 seconds earlier and covered the boundary with a test.</p><div class="codeblock"><div class="cb-head">src/auth/session.ts<button class="btn ghost icon sm" aria-label="Copy code" data-tip="Copy">${I("copy")}</button></div><pre><span class="kw">const</span> SKEW_MS = <span class="nm">60_000</span>;
-<span class="kw">const</span> expires = session.expiresAt - SKEW_MS;</pre></div><ul><li>Both auth tests pass, including the new boundary case.</li><li>The <a href="#">Sentry issue</a> should stop within one deploy.</li></ul></div><div class="msg-acts show"><button aria-label="Copy" data-tip="Copy">${I("copy", "i-14")}</button><button aria-label="Fork from here" data-tip="Fork from here">${I("fork", "i-14")}</button><button aria-label="Copy prompt link" data-tip="Copy prompt link">${I("link", "i-14")}</button></div></div>`;
-        const checkpoint = `<div class="checkpoint">Checkpoint · 2 files changed · <a href="#panel">View diff</a> · <a href="#dialogs">Restore</a></div>`;
+      document.addEventListener("DOMContentLoaded", () => {
+        const app = MarpProto.mount(document.getElementById("proto"), { scenario: "approval" });
+        document.getElementById("sc").addEventListener("click", (e) => {
+          const b = e.target.closest("[data-sc]");
+          if (!b) return;
+          document
+            .querySelectorAll("#sc button")
+            .forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+          app.scenario(b.dataset.sc);
+        });
 
-        const panelDiff = `<section class="panel" aria-label="Right panel"><div class="panel-head"><div class="ptabs"><button aria-selected="true">${I("file-diff", "i-14")}Diff <span class="count">2</span></button><button aria-selected="false">${I("terminal", "i-14")}Terminal</button><button aria-selected="false">${I("globe", "i-14")}Preview</button><button aria-selected="false">${I("git-pull-request", "i-14")}#482</button></div><span class="grow"></span><button class="btn ghost icon sm" aria-label="Maximize panel" data-tip="Maximize" data-tip-kbd="⌘ ⌥ M">${I("panel-right")}</button><button class="btn ghost icon sm" aria-label="Close panel">${I("x")}</button></div>
-    <div class="dtool"><div class="seg sm"><button aria-pressed="true">This turn</button><button aria-pressed="false">Branch</button></div><div class="seg sm"><button aria-pressed="true">Stacked</button><button aria-pressed="false">Split</button></div><span class="grow"></span><button class="btn ghost icon sm" aria-label="Diff options" data-tip="Whitespace, wrap, file tree">${I("settings")}</button></div>
-    <div class="dbody"><div class="dfiles"><button class="dfile on">${I("file-pen", "i-14 ink-3")}<span class="nm2">session.ts</span><span class="s add">+4</span><span class="s del">−2</span></button><button class="dfile">${I("plus", "i-14 add")}<span class="nm2">session.test.ts</span><span class="s add">+40</span></button></div>
-    <div class="dcode"><div class="dhead"><span class="grow trunc"><span>src/auth/</span><b>session.ts</b></span><span class="t-caption"><span class="add">+4</span> <span class="del">−2</span></span><button class="btn ghost icon sm" aria-label="Copy path">${I("copy")}</button></div>
-    <div class="dl hunk"><span class="ln">@@</span><span>-38,9 +38,11 @@</span></div><div class="dl"><span class="ln">38</span><span class="ln">38</span><span>import { useInterval } from "./timers";</span></div><div class="dl a"><span class="ln"></span><span class="ln">39</span><span><span class="wa">const SKEW_MS = 60_000;</span></span></div><div class="dl"><span class="ln">40</span><span class="ln">41</span><span>export function useSession(initial: Session) {</span></div><div class="dl d"><span class="ln">42</span><span class="ln"></span><span>  const expires = session.<span class="wd">expiresAt</span>;</span></div><div class="dl a"><span class="ln"></span><span class="ln">43</span><span>  const expires = session.<span class="wa">expiresAt - SKEW_MS</span>;</span></div>
-    <div class="inset" style="margin:6px 10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><input class="input" style="height:28px;background:var(--surface);flex:1 1 220px" placeholder="Comment for the agent…" value="Use the shared SKEW constant from config instead"><button class="btn sm">Add to prompt</button></div>
-    <div class="dl"><span class="ln">44</span><span class="ln">46</span><span>  return session;</span></div><div class="dl fold"><span class="ln">⋯</span><span>Show 61 hidden lines</span></div></div></div></section>`;
-
-        const S = [];
-        S.push([
-          "working",
-          app(
-            "working",
-            "working",
-            sheet(
-              st.working,
-              prompt +
-                `<div class="msg-wrap">${author()}${worklog("w1", true, stepsDone.replace(/<button class="step "><i data-i="terminal"><\/i>Ran<span class="obj">pnpm vitest run src\/auth<\/span><span class="meta"><span class="num">7s<\/span><\/span><\/button>$/, "") + `<div class="step live">${I("loader", "spin")}Running<span class="obj">pnpm vitest run src/auth</span><span class="meta"><span class="num">0:09</span></span></div>`, "Read 3 files, edited 2, running tests", "1m 03s")}</div>`,
-              {
-                composer: composer({
-                  send: stopBtn,
-                  chips: `<span class="queued">${I("clock", "i-14")}Queued · 1</span>`,
-                  ph: "Steer Claude, or queue a follow-up…",
-                }),
-              },
-            ),
-          ) +
-            doc(
-              "<b>Ход идёт:</b> пилюля «Working · 2m 14s» в шапке, работа свёрнута в «Work log» с живым шагом (спиннер 14, тикает только он). Отправка → Stop; новое сообщение — steer или в очередь (чип «Queued · 1»). Без шиммера на Thinking и Setting up worktree.",
-            ),
-        ]);
-
-        S.push([
-          "needs-you",
-          app(
-            "needs-you",
-            "needs-you",
-            sheet(
-              st.approval,
-              prompt +
-                `<div class="msg-wrap">${author()}${worklog("w2", false, stepsDone)}</div><div class="msg-ai"><p>Tests pass. Before I push I want to clear stale build output so the bundle check runs clean.</p></div>
-    <div class="ask"><div class="row">${st.approval}<span class="grow"></span><span class="t-caption ink-3">Supervised · asks before commands</span></div><div class="q">Run a command that deletes files</div><div class="cmd">rm -rf dist .turbo</div><div class="foot"><span class="grow">Removes build output in <span class="mono">acme-web</span>. Source files are not touched.</span><button class="btn ghost sm">Deny <span class="kbd">Esc</span></button><button class="btn sm">Always allow</button><button class="btn primary sm">Approve <span class="kbd">↵</span></button></div></div>`,
-              {
-                composer: composer({
-                  send: `<button class="send" disabled aria-label="Send">${I("arrow-up")}</button>`,
-                  ph: "Tell Claude what to do instead…",
-                }),
-              },
-            ),
-          ) +
-            doc(
-              "Карточка одобрения над композером. Primary на экране одна — «Approve» (отправка выключена). Варианты кнопок приходят от провайдера (Always allow / Allow for session). Изменения файлов в режиме Supervised — та же карточка с мини-диффом.",
-            ),
-        ]);
-
-        S.push([
-          "question",
-          app(
-            "question",
-            "needs-you",
-            sheet(
-              st.question,
-              user("Build a pricing page for the agency plan.") +
-                `<div class="msg-wrap">${author()}${worklog("w3", false, step("file", "Read", "app/(marketing)/page.tsx") + step("search", "Searched", '"PricingCard" in components/', "2 results"), "Read 2 files", "18s")}</div>
-    <div class="ask"><div class="row">${st.question}</div><div class="q">Which layout should the pricing page use?</div><div class="q-opts" role="radiogroup">
-      <button class="choice" role="radio" aria-checked="true">${I("layers")}<div><b>Three cards side by side</b><span>Starter, Agency, Enterprise. Agency highlighted.</span></div></button>
-      <button class="choice" role="radio" aria-checked="false">${I("list-checks")}<div><b>Comparison table</b><span>One table with every feature per plan.</span></div></button>
-      <button class="choice" role="radio" aria-checked="false">${I("pencil")}<div><b>Other…</b><span>Describe it below.</span></div></button>
-    </div><div class="foot"><span class="grow">Question 1 of 2</span><button class="btn ghost sm">Skip</button><button class="btn primary sm">Next <span class="kbd">↵</span></button></div></div>`,
-              {
-                composer: composer({
-                  send: `<button class="send" disabled aria-label="Send">${I("arrow-up")}</button>`,
-                }),
-              },
-            ),
-          ) +
-            doc(
-              "<b>Новое:</b> вопрос агента — карточка в ленте с вариантами (радио-карточки), «Other…» раскрывает поле. Несколько вопросов — шаги «Question 1 of 2». История ответов остаётся в ленте.",
-            ),
-        ]);
-
-        S.push([
-          "plan",
-          app(
-            "plan",
-            "needs-you",
-            sheet(
-              st.plan,
-              user("Plan how to split the billing service out of the monolith.") +
-                `<div class="msg-wrap">${author("Claude Opus 4.8")}${worklog("w4", false, step("file", "Read", "services/billing/index.ts") + step("search", "Searched", '"billing" in packages/', "41 results"), "Read 12 files", "2m 40s")}</div>
-    <div class="ask"><div class="row">${st.plan}<span class="grow"></span><button class="btn ghost icon sm" aria-label="Copy plan">${I("copy")}</button><button class="btn ghost icon sm" aria-label="Download plan">${I("upload")}</button></div><div class="q">Split billing into its own service</div>
-      <div class="plan"><ol><li>Move <code>services/billing</code> into <code>packages/billing</code> with its own entry point.</li><li>Replace direct imports with a typed client over the internal RPC.</li><li>Run both paths behind a flag for one release.</li><li>Delete the in-process path once traffic is at 100%.</li></ol></div>
-      <div class="foot"><span class="grow">4 steps · about 25 files</span><button class="btn sm">${I("pencil")}Refine</button><button class="btn primary sm">Implement plan <span class="kbd">⌘</span><span class="kbd">↵</span></button></div></div>`,
-              {
-                composer: composer({
-                  ph: "Add feedback to refine the plan…",
-                  send: `<button class="send" disabled aria-label="Send">${I("arrow-up")}</button>`,
-                }),
-              },
-            ),
-          ) +
-            doc(
-              "<b>Новое:</b> «Implement plan» и «Refine» на самой карточке плана (раньше — только в композере). Refine переводит фокус в композер с подсказкой «Add feedback to refine the plan…».",
-            ),
-        ]);
-
-        S.push([
-          "done",
-          app(
-            "done",
-            "done",
-            sheet(
-              st.done,
-              prompt +
-                `<div class="msg-wrap">${author()}${worklog("w5", false, stepsDone)}</div>${answer}${checkpoint}`,
-              { git: "Commit & push" },
-            ),
-            panelDiff,
-          ) +
-            doc(
-              "<b>Ход завершён:</b> «Done» в шапке, Git предлагает следующее действие («Commit & push»), +N −M открывает дифф. <b>Новое:</b> разделитель «Checkpoint» после хода; Restore использует существующий откат. Действия под ответом видны при наведении и всегда на тач-устройствах; Fork во время работы — спиннер, не пульс.",
-            ),
-        ]);
-
-        S.push([
-          "failed",
-          app(
-            "failed",
-            "failed",
-            sheet(
-              st.failed,
-              prompt +
-                `<div class="msg-wrap">${author()}${worklog(
-                  "w6",
-                  true,
-                  step(
-                    "file-pen",
-                    "Edited",
-                    '<span class="dir">src/auth/</span>session.ts',
-                    '<span class="add">+4</span><span class="del">−2</span>',
-                  ) +
-                    `<div class="work open" id="w6r"><button class="step err" data-toggle="w6r">${I("terminal")}Ran<span class="obj">pnpm vitest run src/auth</span><span class="meta"><span class="exit">Failed · exit 1</span><span class="num">9s</span></span></button><div class="work-steps"><div class="step-body"><pre><span class="term"><span class="e">FAIL</span></span> src/auth/session.test.ts &gt; refreshes before expiry
-AssertionError: expected 1 to be 2</pre><div class="sb-foot"><span class="grow">Exit code 1 · 9s</span><button class="btn ghost sm">Show full output</button></div></div></div></div>`,
-                  "Edited 1 file, 1 command failed",
-                  "34s",
-                )}</div>
-    <div class="ask" style="background:var(--danger-soft);box-shadow:none"><div class="row">${st.failed}</div><div class="q">Claude stopped responding</div><div class="t-body">The provider closed the connection after 30 seconds without output. Your changes up to the last checkpoint are safe.</div><details><summary class="t-caption ink-3">Details</summary><pre class="t-code-sm" style="margin:6px 0 0">error: stream closed (code 1006) · trace 3f9a…c21</pre></details><div class="foot"><span class="grow"></span><button class="btn ghost sm">Copy details</button><button class="btn sm">${I("undo")}Retry turn</button></div></div>`,
-              {
-                composer: composer({
-                  above: `<div class="alert warning attach-banner">${I("alert")}<div class="grow"><b>Usage limit reached</b>Claude resets at 16:40. Marp can resume this thread then.</div><button class="btn sm">Resume at reset</button></div>`,
-                }),
-              },
-            ),
-          ) +
-            doc(
-              "Упавший шаг раскрыт и подписан «Failed · exit 1». Ошибка хода — карточка: человеческий заголовок, последствия, исходный текст свёрнут, «Retry turn». Сырые статусы <code>failed</code>/<code>cancelled</code> → «Failed» / «Stopped». Лимит — один баннер над композером (раньше до трёх уведомлений).",
-            ),
-        ]);
-
-        S.push([
-          "new",
-          app(
-            "new",
-            "idle",
-            `<main class="sheet"><div class="sheet-head"><span class="title ink-3" style="font-weight:500">New thread</span><div class="right"><button class="chip">${I("folder")}Modelion${I("chevron-down", "i-14")}</button><button class="chip">${I("laptop")}DESKTOP-UC7VC6O</button><button class="chip">${I("git-branch")}<span class="mono">New worktree from main</span></button></div></div>
-    <div class="hero"><h3>What should we build?</h3><span class="t-caption ink-3">Modelion · D:\\VSProjects\\platform</span>${composer({ ph: "Describe a task, paste an error, or @ a file…" }).replace('class="composer-dock"', 'class="composer-dock" style="width:100%;max-width:792px;padding:0"')}
-    <div class="wrap" style="justify-content:center"><button class="chip">${I("terminal")}Fix the failing CI on main</button><button class="chip">${I("git-pull-request")}Review PR #482</button><button class="chip">${I("search")}Explain the auth flow</button></div>
-    <span class="t-caption ink-4">or <a href="#">start without a project</a> ${kbd("⌘", "⌥", "N")}</span></div></main>`,
-          ) +
-            doc(
-              "Пустой тред — не пустое состояние, а приглашение: композер по центру, проект/машина/рабочая копия — чипами в шапке, три подсказки по недавней активности. Нет проектов — «Add a project to start» с кнопкой.",
-            ),
-        ]);
-
-        S.push([
-          "composer",
-          `<div class="grid grid-2">
-    <div class="specimen composer-wrap"><div class="specimen-label">Причина, почему нельзя отправить · новое</div>${composer({ above: `<div class="blocked">${I("alert")}<span class="grow">Claude isn't signed in on DESKTOP-UC7VC6O.</span><button class="btn sm">Sign in</button></div>`, text: "Add a test for the refresh boundary", send: `<button class="send" disabled aria-label="Send">${I("arrow-up")}</button>` }).replace('class="composer-dock"', 'class="composer-dock" style="padding:0"')}</div>
-    <div class="specimen composer-wrap"><div class="specimen-label">Упоминания · @ файл, $ навык, / команда</div><div class="pop static" style="margin-bottom:8px"><div class="opt-group">Files</div><button class="opt active">${I("file")}<span class="mono t-code-sm">src/auth/session.ts</span></button><button class="opt">${I("file")}<span class="mono t-code-sm">src/auth/session.test.ts</span></button><div class="opt-group">Skills</div><button class="opt">${I("sparkle")}design-reference</button></div>${composer({ text: "Check @sess", chips: `<span class="chip"><i data-i="image"></i>sentry-401.png<span class="x">${I("x", "i-14")}</span></span><span class="chip"><i data-i="git-pull-request"></i>#482<span class="x">${I("x", "i-14")}</span></span>` }).replace('class="composer-dock"', 'class="composer-dock" style="padding:0"')}</div>
-    <div class="specimen"><div class="specimen-label">Выбор модели</div><div class="pop static" style="width:340px">${document.getElementById("pop-model").innerHTML}</div></div>
-    <div class="specimen stack"><div class="specimen-label">Кнопка отправки · все состояния</div><div class="wrap">
-      <span class="row t-caption"><button class="send" aria-label="Send">${I("arrow-up")}</button>Send</span><span class="row t-caption">${stopBtn}Stop</span>
-      <span class="row t-caption"><button class="send" aria-label="Steer">${I("arrow-up")}</button>Steer · ⌘↵ queue</span><span class="row t-caption"><button class="send" aria-label="Resume">${I("play")}</button>Resume</span>
-      <span class="row t-caption"><button class="send" aria-label="Update queued message">${I("check")}</button>Update queued</span><span class="row t-caption"><button class="send" disabled aria-label="Send">${I("arrow-up")}</button>Blocked</span></div>
-      <div class="doc-note">Compact and send — подпись в тултипе и строка над композером «Summarizes 182k tokens of history first». Implement/refine и ответы на вопросы — теперь на карточках в ленте.</div></div>
-  </div>` +
-            doc(
-              "Композер из reference.html: чипы контекста, поле 15/24, низ — вложение, модель, effort, режим, доступ; справа кольцо контекста и отправка. Перетаскивание файла — зона на весь лист. Все 355 пунктов инвентаризации композера сохранены (вкладка Checklist).",
-            ),
-        ]);
-
-        S.push([
-          "details",
-          app(
-            "details",
-            "done",
-            sheet(st.done, prompt + answer + checkpoint, {
-              over: `<div class="details"><div class="pop static" style="max-width:none;width:300px;padding:8px">
-    <div class="opt-group">Run on</div><button class="opt">${I("laptop")}DESKTOP-UC7VC6O<span class="meta">${kbd("⌘", "⇧", "H")}</span></button><button class="opt">${I("git-branch")}New worktree<span class="meta">${kbd("⌘", "⇧", "X")}</span></button>
-    <div class="sep"></div><div class="opt-group">Project scripts</div><button class="opt">${I("play")}dev<span class="meta">pnpm dev</span></button><button class="opt">${I("play")}test<span class="meta">pnpm test</span></button><button class="opt">${I("plus")}Add script…</button>
-    <div class="sep"></div><div class="opt-group">Servers</div><button class="opt">${I("globe")}localhost:3000<span class="meta">Stop</span></button>
-    <div class="sep"></div><div class="opt-group">Pull request</div><button class="opt">${I("git-pull-request")}#482 · checks passing<span class="meta">Open</span></button>
-    <div class="sep"></div><button class="opt">${I("settings")}Choose what this card shows…</button></div></div>`,
-            }),
-          ) +
-            doc(
-              "Карточка деталей открывается кнопкой (i) в шапке: рабочее окружение и рабочая копия, скрипты проекта, локальные серверы, PR, автоматизации — всё, что было в карточке, с той же настройкой «что показывать». Ключевые действия (ветка, Git, Open in, +N −M) — в шапке и не зависят от высоты.",
-            ),
-        ]);
-
-        S.push([
-          "panel",
-          app(
-            "panel",
-            "done",
-            sheet(st.done, answer + checkpoint, { git: "Commit & push" }),
-            panelDiff,
-          ) +
-            doc(
-              "Правая панель: вкладки Diff / Terminal / Preview / Files / PR / Devices, «Maximize» с сочетанием (новое), закрытие. Дифф: этот ход или вся ветка, stacked/split, опции (whitespace, wrap, дерево файлов) в одном меню — одинаково с вкладкой Code у PR. Комментарий к строке уходит в черновик как review-комментарий. Пока панель грузится — скелетон.",
-            ),
-        ]);
-
-        S.push([
-          "terminal",
-          app(
-            "terminal",
-            "working",
-            sheet(
-              st.working,
-              prompt + `<div class="msg-wrap">${author()}${worklog("w7", false, stepsDone)}</div>`,
-              {
-                composer:
-                  `<div style="padding:0 8px 8px"><div class="term-tabs"><span class="term-tab on"><span class="live"></span>pnpm dev</span><span class="term-tab">zsh</span><button class="btn ghost icon sm" aria-label="New terminal" data-tip="New terminal">${I("plus")}</button><span class="grow"></span><button class="btn sm" data-tip="Send Ctrl+C">${I("x")}Stop</button><button class="btn ghost icon sm" aria-label="Split terminal" data-tip="Split" data-tip-kbd="⌘ D">${I("panel-right")}</button><button class="btn ghost icon sm" aria-label="Close drawer">${I("chevron-down")}</button></div><div class="term" style="height:200px;margin-top:6px"><span class="dim">$</span> pnpm dev
-<span class="c">▲ Next.js 16.1</span>  - Local: <span class="c">http://localhost:3000</span>
-<span class="p">✓</span> Ready in 1.8s
-<span class="w">⚠</span> Fast Refresh had to perform a full reload
-<span class="dim">GET /pricing 200 in 84ms</span></div></div>` + composer({ send: stopBtn }),
-              },
-            ),
-          ) +
-            doc(
-              "Ящик терминала внутри листа (⌘J). <b>Новое:</b> живой процесс — зелёная точка на вкладке (статичная), кнопка Stop (Ctrl+C) — раньше остановить можно было только набрав Ctrl+C. Терминалы попадают в «Reopen closed» (⌘⇧T).",
-            ),
-        ]);
-
-        S.push([
-          "preview",
-          app(
-            "preview",
-            "done",
-            sheet(st.done, answer, {}),
-            `<section class="panel" aria-label="Preview"><div class="panel-head"><div class="ptabs"><button aria-selected="false">${I("file-diff", "i-14")}Diff</button><button aria-selected="true">${I("globe", "i-14")}Preview</button><button aria-selected="false">${I("laptop", "i-14")}iPhone 16</button></div><span class="grow"></span><button class="btn ghost icon sm" aria-label="Close panel">${I("x")}</button></div>
-    <div class="url-bar"><button class="btn ghost icon sm" aria-label="Back">${I("arrow-left")}</button><button class="btn ghost icon sm" aria-label="Reload">${I("undo")}</button><input class="input" value="localhost:3000/pricing"><button class="btn ghost sm">100%</button><button class="btn ghost icon sm" aria-label="Record" data-tip="Record">${I("play")}</button></div>
-    <div class="preview-canvas"><div class="pv-mock"><div class="nav"><b style="color:#111">Modelion</b><span>Features</span><span>Pricing</span><span>Docs</span></div><h4>Simple pricing for agencies</h4><div style="color:#666;font-size:14px">One plan per agency. Unlimited models and chatters.</div><span class="cta">Start free trial</span></div></div></section>`,
-          ) +
-            doc(
-              "Встроенный браузер: адрес, назад, перезагрузка, масштаб, запись. В вебе — тот же браузер с машины («Take control» / «Release control»), а не надпись «only in the desktop app»: текст исправлен по факту возможностей.",
-            ),
-        ]);
-
-        S.push([
-          "pr",
-          app(
-            "pr",
-            "done",
-            sheet(st.done, answer + checkpoint, { git: "Push" }),
-            `<section class="panel" aria-label="Pull request"><div class="panel-head"><div class="ptabs"><button aria-selected="false">${I("file-diff", "i-14")}Diff</button><button aria-selected="true">${I("git-pull-request", "i-14")}#482</button></div><span class="grow"></span><button class="btn ghost icon sm" aria-label="Open on GitHub">${I("external-link")}</button></div>
-    <div style="padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px;overflow:auto"><div><div class="t-title">fix(auth): refresh sessions before they expire</div><div class="t-caption ink-3"><span class="mono">feat/session-refresh</span> → <span class="mono">main</span> · opened 1h ago</div></div>
-    <div class="row"><span class="badge working dot">Open</span><span class="badge success dot">Checks passing</span><span class="badge">1 approval</span></div>
-    <div class="ptabs"><button aria-selected="true">Overview</button><button aria-selected="false">Checks <span class="count">4</span></button><button aria-selected="false">Code</button><button aria-selected="false">Comments <span class="count">2</span></button></div>
-    <div class="checks"><div class="check-line">${I("check", "add")}build<span class="grow"></span><span class="t-caption ink-3">1m 12s</span></div><div class="check-line">${I("check", "add")}test<span class="grow"></span><span class="t-caption ink-3">2m 40s</span></div><div class="check-line">${I("check", "add")}lint<span class="grow"></span><span class="t-caption ink-3">31s</span></div><div class="check-line">${I("check", "add")}e2e<span class="grow"></span><span class="t-caption ink-3">4m 02s</span></div></div>
-    <div class="row"><span class="grow"></span><button class="btn sm">Squash ▾</button><button class="btn primary sm">Merge pull request</button></div></div></section>`,
-          ) +
-            doc(
-              "Панель PR: статус, проверки, код (тот же тулбар, что у диффа), комментарии, слияние. Кнопки «Fix» и «Resolve» открывают новый тред, как сейчас.",
-            ),
-        ]);
-
-        S.push([
-          "find",
-          app(
-            "find",
-            "done",
-            sheet(
-              st.done,
-              prompt.replace("refresh", "<mark>refresh</mark>") +
-                `<div class="msg-wrap"><div class="msg-ai"><p>The <mark class="cur">refresh</mark> fired exactly at <code>expiresAt</code>… I moved the <mark>refresh</mark> 60 seconds earlier.</p></div></div>` +
-                checkpoint,
-              {
-                over: `<div class="find-bar"><input value="refresh" aria-label="Find in thread"><span class="t-caption ink-3 num">2 of 3</span><button class="btn ghost icon sm" aria-label="Previous match">${I("chevron-down", "")}</button><button class="btn ghost icon sm" aria-label="Close find">${I("x")}</button></div><div class="minimap" aria-label="Messages"><i></i><i class="on"></i><i></i><i></i><i></i></div>`,
-              },
-            ),
-          ) +
-            doc(
-              "Поиск по треду (⌘F): плашка справа сверху, «2 of 3», ↑/↓. Миникарта — тонкие полосы по сообщениям у правого края, всегда видна (раньше — только при наведении), ярче на hover; Previous/Next turn — клавишами ⌘⇧[ / ⌘⇧].",
-            ),
-        ]);
-
-        S.push([
-          "guest",
-          app(
-            "guest",
-            "working",
-            sheet(
-              st.working,
-              prompt +
-                `<div class="msg-user" style="background:color-mix(in srgb,#c026d3 10%,var(--surface-2))"><span class="t-caption ink-3" style="display:block;margin-bottom:4px">Anna · guest</span>Can you also handle the logout race?</div><div class="ask"><div class="row"><span class="status needs-you">${I("user")}Guest request</span></div><div class="q">Anna wants to send this message</div><div class="foot"><span class="grow">Guests watch live and send messages you approve.</span><button class="btn ghost sm">Decline</button><button class="btn primary sm">Send to Claude</button></div></div>`,
-              {
-                over: `<div class="guest-banner">${I("user")}Shared with 1 guest · <a href="#">Manage link</a></div>`,
-              },
-            ),
-          ) +
-            doc(
-              "Гостевая ссылка: баннер «Shared with N guests», сообщения гостя выделены, запрос гостя — карточка одобрения. Гостевая страница — тот же композер в упрощённом виде.",
-            ),
-        ]);
-
-        S.push([
-          "narrow",
-          `<div class="row" style="gap:var(--space-24);flex-wrap:wrap;align-items:flex-start">
-    <div class="phone"><div class="sheet-head"><button class="btn ghost icon sm" aria-label="Threads">${I("menu")}</button><span class="title">Refactor session refresh</span>${st.working}</div><div class="thread"><div class="col">${prompt}<div class="msg-wrap">${worklog("wn", false, stepsDone, "Read 3 files, edited 2", "1m 12s")}</div></div></div>${composer({ send: stopBtn })}</div>
-    <div class="phone"><div class="sheet-head"><button class="btn ghost icon sm" aria-label="Back">${I("arrow-left")}</button><span class="title">Diff · 2 files</span></div><div style="padding:8px">${panelDiff.replace('class="panel"', 'class="panel" style="width:auto;box-shadow:none"')}</div></div></div>` +
-            doc(
-              "Телефон и узкое окно: шапка с кнопкой сайдбара и статусом, Git и прочее — в «⋯». Правая панель — экран поверх треда с «←». Композер на телефоне сворачивается в одну строку, пока не в фокусе.",
-            ),
-        ]);
-
-        S.push([
-          "dialogs",
-          `<div class="grid grid-2">
-    <div style="background:var(--bg);border-radius:var(--radius-lg);padding:var(--space-24)"><div class="modal static"><div class="modal-head"><span class="danger-mark">${I("undo", "i-18")}</span><div class="grow"><div class="t-heading">Restore this checkpoint?</div><p>Rewinds the chat to after turn 3 and puts 2 files back as they were then. Later messages move to an archived fork.</p></div></div><div class="modal-body"><div class="row"><span class="check" role="checkbox" aria-checked="true">${I("check")}</span>Revert files too</div></div><div class="modal-foot"><button class="btn ghost">Cancel</button><button class="btn danger-solid">Restore checkpoint</button></div></div></div>
-    <div style="background:var(--bg);border-radius:var(--radius-lg);padding:var(--space-24)"><div class="modal static wide"><div class="modal-head"><div class="grow"><div class="t-heading">Commit changes</div><p><span class="mono t-code-sm">feat/session-refresh</span> · 2 files · leave the message blank to write one for you.</p></div></div><div class="modal-body"><div class="field"><label>Message</label><textarea class="input" placeholder="fix(auth): refresh sessions 60s before they expire"></textarea></div><div class="row"><span class="check" role="checkbox" aria-checked="true">${I("check")}</span>Push after committing</div></div><div class="modal-foot"><button class="btn ghost">Cancel</button><button class="btn primary">${I("git-commit")}Commit &amp; push</button></div></div></div>
-    <div style="background:var(--bg);border-radius:var(--radius-lg);padding:var(--space-24)"><div class="modal static"><div class="modal-head"><span class="danger-mark" style="background:var(--attention-soft);color:var(--attention)">${I("shield", "i-18")}</span><div class="grow"><div class="t-heading">Let Figma read this file?</div><p>The Figma app wants to open <span class="mono t-code-sm">design/pricing.fig</span>. It can't change anything.</p></div></div><div class="modal-body"><details><summary class="t-caption ink-3">Request details</summary><pre class="t-code-sm">{ "tool": "figma.read", "path": "design/pricing.fig" }</pre></details></div><div class="modal-foot"><button class="btn ghost">Deny</button><button class="btn primary">Allow</button></div></div></div>
-    <div style="background:var(--bg);border-radius:var(--radius-lg);padding:var(--space-24)"><div class="modal static"><div class="modal-head"><span class="danger-mark" style="background:var(--attention-soft);color:var(--attention)">${I("git-branch", "i-18")}</span><div class="grow"><div class="t-heading">Commit to main?</div><p>You're on the default branch. Most teams keep it for merged work.</p></div></div><div class="modal-foot"><button class="btn ghost">Cancel</button><button class="btn">Create feature branch</button><button class="btn primary">Commit to main</button></div></div></div>
-  </div>` +
-            doc(
-              "Окна треда: Restore checkpoint (бывшее «Edit from here»), Commit, подтверждение MCP-приложения (раньше browser confirm() с сырым JSON — теперь окно Marp, JSON свёрнут), коммит в основную ветку.",
-            ),
-        ]);
-
-        S.push(["checklist", `<div id="checklist" class="specimen">Loading inventory…</div>`]);
-
-        document.getElementById("screens").innerHTML = S.map(
-          ([id, html]) => `<div data-screen-panel="${id}">${html}</div>`,
+        const K = (...k) => k.map((x) => `<span class="kbd">${x}</span>`).join(" ");
+        const SPEC = [
+          [
+            "Шапка",
+            [
+              [
+                "Название",
+                "Клик",
+                "Становится полем.",
+                "Кольцо фокуса, текст выделен.",
+                `${K("↵")} сохранить · ${K("Esc")} отменить · клик мимо — сохранить`,
+              ],
+              [
+                "Статус",
+                "—",
+                "Working · 1m 12s / Approval needed / Question / Plan ready / Done / Failed.",
+                "Пилюля по семейству; время тикает раз в секунду.",
+                "—",
+              ],
+              [
+                "Ветка",
+                "Клик по чипу",
+                "Меню: текущая ✓, недавние, New branch….",
+                "Моно-шрифт, обрезка посередине в узком листе.",
+                "Esc",
+              ],
+              [
+                "+N −M",
+                "Клик",
+                "Открывает панель Diff на этом ходе.",
+                "Только когда есть изменения.",
+                "—",
+              ],
+              [
+                "Git",
+                "Клик / Ctrl+Shift+C",
+                "Подпись по состоянию: Commit → Push → Create PR. Клик — окно подтверждения с сообщением.",
+                "Если нельзя — кнопка приглушена, тултип называет причину («Wait for Claude to finish this turn», «Nothing to commit»).",
+                "Тост «Committed · Undo»",
+              ],
+              [
+                "Git ▾",
+                "Клик",
+                "Commit… · Commit & push · Commit, push & create PR · New branch… · Discard all changes…",
+                "Недоступное — серым с причиной.",
+                "Esc",
+              ],
+              [
+                "Детали (i)",
+                "Клик",
+                "Run on, рабочая копия, скрипты, серверы, «Choose what this shows…».",
+                "Меню у кнопки.",
+                "Esc",
+              ],
+              [
+                "Терминал / Панель",
+                `${K("Ctrl/⌘", "J")} · ${K("Ctrl/⌘", "⌥", "B")}`,
+                "Открывают ящик терминала внизу листа и правую панель.",
+                "Кнопка нажата, пока открыто.",
+                "Повтор шортката",
+              ],
+            ],
+          ],
+          [
+            "Ход агента",
+            [
+              [
+                "Отправка",
+                `${K("↵")} (Shift+Enter — перенос)`,
+                "Сообщение сразу в ленте (полупрозрачно 250 мс), затем журнал «Thinking».",
+                "Лента прокручивается вниз.",
+                "Stop · Edit from here",
+              ],
+              [
+                "Журнал работы",
+                "—",
+                "Во время хода раскрыт: последние 3 шага + «N earlier steps»; живой шаг со спиннером, шиммером подписи и своим таймером. Свёрнутый журнал — шиммер на сводке.",
+                "Новый шаг появляется 220 мс; таймеры — tabular-nums.",
+                "—",
+              ],
+              [
+                "Сводка",
+                "Клик",
+                "Сворачивает/раскрывает журнал. После хода — «Read 2 files, edited 2, ran 1 command · 1m 12s».",
+                "Шеврон 220 мс.",
+                "Клик ещё раз",
+              ],
+              ["Шаг Edited", "Клик", "Открывает Diff на этом файле.", "Тултип «Open diff».", "—"],
+              [
+                "Шаг Ran",
+                "Клик",
+                "Раскрывает вывод (до 240 px, прокрутка внутри) + Copy output.",
+                "Упавший шаг раскрыт сам, «Failed · exit 1» красным.",
+                "Клик ещё раз",
+              ],
+              [
+                "Ответ",
+                "—",
+                "Текст 15/24, код в блоке с Copy; при стриминге — курсор-полоса в конце (статичная).",
+                "—",
+                "—",
+              ],
+              [
+                "Действия сообщения",
+                "Наведение",
+                "Пользователь: Copy · Edit from here. Агент: Copy · Fork from here.",
+                "Только прозрачность; на тач — всегда видны.",
+                "—",
+              ],
+              [
+                "Новая активность",
+                "Прокрутили вверх во время хода",
+                "Автопрокрутка останавливается, внизу пилюля «New activity».",
+                "Клик — вниз.",
+                "Прокрутка к низу убирает пилюлю",
+              ],
+            ],
+          ],
+          [
+            "Во время хода",
+            [
+              [
+                "Steer",
+                `Текст + ${K("↵")}`,
+                "Сообщение уходит агенту сейчас; в журнале «You steered: “…”».",
+                "Над композером подсказка «Enter steers · Ctrl+Enter queues».",
+                "—",
+              ],
+              [
+                "Queue",
+                `Текст + ${K("Ctrl/⌘", "↵")}`,
+                "Строка «Queued: …» над композером; отправится после хода.",
+                "Строка с ✕.",
+                "✕ — убрать из очереди",
+              ],
+              [
+                "Stop",
+                `Кнопка ■ или ${K("Esc")} (композер пуст)`,
+                "Ход останавливается; в журнале «Stopped by you after 0:14. Changes so far are kept.»",
+                "Статус исчезает.",
+                "Новое сообщение продолжает",
+              ],
+            ],
+          ],
+          [
+            "Решения",
+            [
+              [
+                "Одобрение",
+                `Approve ${K("↵")} · Deny ${K("Esc")} · Always allow`,
+                "Ход продолжается (или нет); в журнале след «Approved / Denied / Always allowed rm -rf dist .turbo».",
+                "Карточка прилипает над композером; отправка выключена.",
+                "Текст в композере + ↵ = Deny с объяснением",
+              ],
+              [
+                "Вопрос",
+                `${K("1")}–${K("3")}, клик, Other…`,
+                "Выбор подсвечивается; Other раскрывает поле; «Send answer» продолжает ход.",
+                "Строка-след «You answered: …».",
+                "Skip",
+              ],
+              [
+                "План",
+                `Implement plan ${K("Ctrl/⌘", "↵")} · Refine`,
+                "Implement переключает режим на Build и запускает ход; Refine ставит «Refine: » в композер.",
+                "4 steps · about 25 files.",
+                "—",
+              ],
+              [
+                "Ошибка хода",
+                "Retry turn · Copy details",
+                "Повтор запускает ход заново с того же места.",
+                "Заголовок человеческим языком, исходный текст в Details.",
+                "—",
+              ],
+            ],
+          ],
+          [
+            "Чекпоинты и история",
+            [
+              ["View diff", "Клик в разделителе", "Панель Diff на этом ходе.", "—", "—"],
+              [
+                "Restore",
+                "Клик",
+                "Окно «Restore this checkpoint?»: что вернётся, что уйдёт в форк.",
+                "Тост «Restored checkpoint · 2 files reverted».",
+                "Cancel",
+              ],
+              [
+                "Edit from here",
+                "У сообщения пользователя",
+                "Окно подтверждения → лента обрезается до сообщения, текст возвращается в композер.",
+                "Фокус в композере.",
+                "Cancel",
+              ],
+            ],
+          ],
+          [
+            "Композер",
+            [
+              [
+                "Поле",
+                "Ввод",
+                "Растёт до 200 px; Shift+Enter — перенос; Shift+Tab — Chat/Plan.",
+                "Кольцо фокуса на всём композере.",
+                "—",
+              ],
+              [
+                "@ файл",
+                "Ввод @",
+                "Поповер файлов и навыков; ↑ ↓ ↵ вставляет чип.",
+                "Поповер над полем.",
+                "Esc / продолжить печатать",
+              ],
+              [
+                "Вложение",
+                "Скрепка, перетаскивание на тред",
+                "Чип файла; при перетаскивании — зона «Drop to attach» на весь лист.",
+                "Пунктир акцента (единственная рамка).",
+                "✕ на чипе",
+              ],
+              [
+                "Модель",
+                "Клик",
+                "Поповер по провайдерам, мета (fast, 1M context), Manage models….",
+                "Галочка у текущей.",
+                "Esc",
+              ],
+              [
+                "Effort / Mode / Access",
+                "Клик",
+                "Effort циклом Low → Medium → High; Chat ↔ Plan; доступ — меню Supervised / Auto / Full access.",
+                "Full access — с янтарной точкой.",
+                "—",
+              ],
+              [
+                "Кнопка",
+                "—",
+                "Send (есть текст) · Steer (идёт ход, есть текст) · Stop (идёт ход, пусто) · выключена (решение ждёт или нельзя отправить).",
+                "Тултип называет действие и клавишу.",
+                "—",
+              ],
+              [
+                "Нельзя отправить",
+                "Нет входа у провайдера",
+                "Строка над композером «Claude isn't signed in on …» + Sign in.",
+                "Кнопка выключена с причиной.",
+                "Sign in",
+              ],
+            ],
+          ],
+          [
+            "Правая панель",
+            [
+              [
+                "Вкладки",
+                "Клик",
+                "Diff · Terminal (точка живого процесса) · Preview · #PR.",
+                "Плашка у активной.",
+                "—",
+              ],
+              ["Размер", "Тянуть левый край", "360–820 px.", "Линия края.", "Двойной клик — 520"],
+              [
+                "Maximize",
+                `Кнопка, ${K("Ctrl/⌘", "⌥", "M")}`,
+                "Панель занимает место листа.",
+                "Иконка меняется.",
+                "Повтор",
+              ],
+              [
+                "Дифф",
+                "Клик по файлу слева",
+                "Показывает файл; шапка файла прилипает.",
+                "+N −M у каждого файла.",
+                "—",
+              ],
+              [
+                "Комментарий",
+                "«+» у строки",
+                "Поле → «Add to prompt» → чип в композере «session.ts:43 · …».",
+                "Поле с кольцом фокуса.",
+                `${K("Esc")} / Cancel`,
+              ],
+              [
+                "Терминал",
+                "Stop / Run again",
+                "Ctrl+C процессу; точка на вкладке гаснет.",
+                "Тост «Sent Ctrl+C to pnpm dev».",
+                "Run again",
+              ],
+              [
+                "PR",
+                "Merge pull request",
+                "Окно подтверждения со способом слияния.",
+                "Тост «Merged #482».",
+                "Cancel",
+              ],
+            ],
+          ],
+          [
+            "Поиск и навигация",
+            [
+              [
+                "Find",
+                `${K("Ctrl/⌘", "F")}`,
+                "Плашка справа сверху; подсветка совпадений в сообщениях и ответах; «2 of 5».",
+                "Текущее совпадение ярче, прокрутка к нему.",
+                `${K("↵")} след. · ${K("⇧", "↵")} пред. · ${K("Esc")}`,
+              ],
+              [
+                "Новый тред",
+                `${K("Ctrl/⌘", "N")}`,
+                "Пустой лист: «What should we build?», композер по центру, проект/машина/рабочая копия — чипами в шапке, три подсказки.",
+                "После отправки тред появляется в сайдбаре.",
+                "—",
+              ],
+            ],
+          ],
+          [
+            "Движение и производительность",
+            [
+              [
+                "Длительности",
+                "—",
+                "Цвет 150 мс, появление и раскрытие 220 мс ease-out.",
+                "prefers-reduced-motion — без анимаций.",
+                "—",
+              ],
+              [
+                "Бесконечное",
+                "—",
+                "Спиннер 14 и шиммер — только у живой работы, шиммер на одной строке за раз. Стрим ответа не мерцает, курсор стрима статичен, пульсов нет.",
+                "Шиммер — маска с transform шагами, текст не перерисовывается; вне экрана на паузе. Таймеры обновляют текст, не ленту.",
+                "—",
+              ],
+            ],
+          ],
+        ];
+        document.getElementById("spec-host").innerHTML = SPEC.map(
+          ([g, rows]) =>
+            `<div class="spec-group"><h3>${g}</h3><table class="spec"><thead><tr><th>Элемент</th><th>Действие</th><th>Результат</th><th>Что видно</th><th>Отмена / выход</th></tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`,
         ).join("");
 
         fetch("inventory/thread.md")
@@ -930,8 +560,7 @@ AssertionError: expected 1 to be 2</pre><div class="sb-foot"><span class="grow">
           .then((md) => {
             const out = [];
             let n = 0,
-              nNew = 0,
-              nGone = 0;
+              nNew = 0;
             for (const line of md.split("\n")) {
               const h = line.match(/^## (.+)/);
               if (h) {
@@ -941,10 +570,8 @@ AssertionError: expected 1 to be 2</pre><div class="sb-foot"><span class="grow">
               const m = line.match(/^- \*\*([A-Z]+-\d+)\*\* (.*?) ⟶ (.*)$/);
               if (!m) continue;
               n++;
-              const isNew = m[3].includes("＋"),
-                gone = m[3].startsWith("✗");
+              const isNew = m[3].includes("＋");
               if (isNew) nNew++;
-              if (gone) nGone++;
               out.push(
                 `<div class="check-row"><code>${m[1]}</code><span>${m[2]
                   .replace(/ — `[^`]*`.*$/, "")
@@ -952,7 +579,7 @@ AssertionError: expected 1 to be 2</pre><div class="sb-foot"><span class="grow">
                   .slice(
                     0,
                     180,
-                  )}</span><span class="st${isNew ? " new" : gone ? " gone" : ""}">${m[3]}</span></div>`,
+                  )}</span><span class="st${isNew ? " new" : ""}">${m[3]}</span></div>`,
               );
             }
             document.getElementById("checklist").innerHTML =
@@ -963,7 +590,7 @@ AssertionError: expected 1 to be 2</pre><div class="sb-foot"><span class="grow">
             document.getElementById("checklist").textContent =
               "Open over http to render the checklist.";
           });
-      })();
+      });
     </script>
   </body>
 </html>

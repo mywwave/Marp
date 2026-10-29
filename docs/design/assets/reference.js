@@ -396,6 +396,13 @@
     });
 
     window.addEventListener("scroll", closePop, true);
+    // A tooltip whose trigger is clicked away (re-rendered, removed) must not linger.
+    const hideTip = () => {
+      clearTimeout(tipTimer);
+      tipEl?.classList.remove("on");
+    };
+    document.addEventListener("mousedown", hideTip, true);
+    document.addEventListener("keydown", hideTip, true);
   }
 
   // Демо-панель: <div class="demo-bar" data-target="#id"> с .seg[data-demo="key"] > button[data-v]
