@@ -5,8 +5,8 @@ import { RotateCcwIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useSettingsRestore } from "../components/settings/SettingsPanels";
 
-import { AppRouteModal, AppRouteModalClose } from "../components/AppRouteModal";
-import { SettingsBreadcrumb } from "../components/settings/SettingsBreadcrumb";
+import { AppRouteModal } from "../components/AppRouteModal";
+import { SettingsPageHeader } from "../components/settings/SettingsPageHeader";
 import { SettingsSidebarNav } from "../components/settings/SettingsSidebarNav";
 import {
   SettingsScopeProvider,
@@ -31,13 +31,13 @@ function RestoreDeviceDefaultsButton({ onRestored }: { onRestored: () => void })
   const { changedSettingLabels, restoreDefaults } = useSettingsRestore(onRestored);
   return (
     <Button
-      size="xs"
+      size="sm"
       variant="ghost"
       disabled={changedSettingLabels.length === 0}
       onClick={() => void restoreDefaults()}
     >
-      <RotateCcwIcon className="mx-1 size-3.5" />
-      <span className="max-sm:sr-only">Restore device defaults</span>
+      <RotateCcwIcon />
+      <span className="max-sm:sr-only">Restore defaults</span>
     </Button>
   );
 }
@@ -117,21 +117,23 @@ function SettingsContentLayout() {
   const [restoreSignal, setRestoreSignal] = useState(0);
 
   return (
-    <AppRouteModal label="Settings">
-      <div className="relative flex min-h-0 flex-1">
+    <AppRouteModal label="Settings" variant="workspace">
+      <div className="relative flex min-h-0 flex-1 gap-2 p-2 max-md:p-0">
         <SettingsSidebarNav pathname={location.pathname} />
-        <div {...contentArea} className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="flex h-12 shrink-0 items-center gap-3 border-b ps-5 pe-2">
-            <SettingsBreadcrumb pathname={location.pathname} />
-            <div className="ms-auto flex shrink-0 items-center gap-1">
-              {location.pathname === "/settings/general" ? (
+        <div
+          {...contentArea}
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-card md:rounded-2xl md:shadow-card"
+        >
+          <SettingsPageHeader
+            pathname={location.pathname}
+            actions={
+              location.pathname === "/settings/general" ? (
                 <RestoreDeviceDefaultsButton
                   onRestored={() => setRestoreSignal((value) => value + 1)}
                 />
-              ) : null}
-              <AppRouteModalClose />
-            </div>
-          </header>
+              ) : null
+            }
+          />
           <div key={`${contentScopeKey}:${restoreSignal}`} className="min-h-0 flex flex-1 flex-col">
             <SettingsScopeBoundary pathname={location.pathname}>
               <Outlet />

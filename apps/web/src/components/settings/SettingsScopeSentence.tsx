@@ -1,6 +1,6 @@
 import { resolveEnvironmentMachineKind } from "@t3tools/contracts";
 import { useLocation } from "@tanstack/react-router";
-import { CheckIcon, ChevronDownIcon, LayersIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, LaptopIcon, LayersIcon } from "lucide-react";
 import { Fragment, useState, type ReactNode } from "react";
 
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
@@ -62,11 +62,20 @@ interface SettingsScopeMenuProps {
   readonly onChange: (next: SettingsScopeSearch) => void;
 }
 
-export function SettingsScopeSentence() {
+/** Where this page's changes land: this device, or the picked projects and machines. */
+export function SettingsStorageBadge() {
   const scope = useOptionalSettingsScope();
   const pathname = useLocation({ select: (location) => location.pathname });
   const { environments } = useEnvironments();
-  if (scope === null || SETTINGS_DEVICE_ONLY_PATHS.has(pathname)) return null;
+  if (SETTINGS_DEVICE_ONLY_PATHS.has(pathname)) {
+    return (
+      <span className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-muted ps-2 pe-3 font-medium text-muted-foreground text-xs">
+        <LaptopIcon aria-hidden className="size-3.5" strokeWidth={1.75} />
+        This device
+      </span>
+    );
+  }
+  if (scope === null) return null;
   const props: SettingsScopeMenuProps = {
     value: scope.search,
     singleEnvironment: scope.singleEnvironment,
@@ -75,18 +84,11 @@ export function SettingsScopeSentence() {
     onChange: scope.selectScope,
   };
   return (
-    <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 px-3 text-sm text-muted-foreground sm:px-4">
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="shrink-0">Applying settings for</span>
-        <ProjectScopeMenu {...props} />
-      </span>
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="shrink-0">
-          {scope.search.machine || scope.scope.kind === "checkout" ? "on" : "across"}
-        </span>
-        <EnvironmentScopeMenu {...props} />
-      </span>
-    </p>
+    <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground text-xs">
+      <span className="shrink-0 font-medium">Saved to</span>
+      <ProjectScopeMenu {...props} />
+      <EnvironmentScopeMenu {...props} />
+    </div>
   );
 }
 

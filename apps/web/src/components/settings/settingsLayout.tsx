@@ -17,7 +17,6 @@ import { WorkspacePageContainer, type WorkspacePageWidth } from "../WorkspacePag
 import { Button } from "../ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { useOptionalSettingsScope } from "./SettingsScopeContext";
-import { SettingsScopeSentence } from "./SettingsScopeSentence";
 import {
   isProjectScopedSettingKey,
   listProjectOverrides,
@@ -580,8 +579,15 @@ export function SettingsPageContainer({
         className="topbar-scroll-fade scrollbar-gutter-both flex-1 overflow-y-auto"
         data-settings-page-scroll
       >
-        <WorkspacePageContainer width={width} className={cn("gap-8", className)}>
-          <SettingsScopeSentence />
+        <WorkspacePageContainer
+          width={width}
+          // Settings align with the page header instead of centering in the sheet.
+          className={cn(
+            "mx-0 gap-8 pt-2 sm:px-8 max-md:px-4",
+            width === "readable" && "max-w-[calc(48rem+4rem)]",
+            className,
+          )}
+        >
           {children}
         </WorkspacePageContainer>
       </div>

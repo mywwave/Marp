@@ -104,21 +104,46 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/maintenance": "Maintenance",
   "/settings/labs": "Labs",
   "/settings/about": "About",
-  "/settings/archived": "Archive",
+  "/settings/archived": "Archived threads",
 };
 
-/** Sidebar order. A group without a heading is set apart by space alone. */
+/** One line under each page title: what the page is for. */
+export const SETTINGS_SECTION_DESCRIPTIONS: Readonly<Record<SettingsPath, string>> = {
+  "/settings/diagnostics": "What Marp is using on this machine right now.",
+  "/settings/projects": "Name, icon, scripts and defaults for each project.",
+  "/settings/general": "Notifications, the sidebar and confirmations on this device.",
+  "/settings/appearance": "Theme, colors and type on this device.",
+  "/settings/chat": "How the composer and follow-ups behave on this device.",
+  "/settings/diffs": "How diffs and pull requests open on this device.",
+  "/settings/keybindings":
+    "Shortcuts for every command. Saved on your machines, so they follow you.",
+  "/settings/snap-shot": "Capture a window and attach it to your current draft.",
+  "/settings/providers": "Agent accounts and runtimes on each machine.",
+  "/settings/threads": "How new threads start and what happens to old ones.",
+  "/settings/browser": "The built-in browser agents use, and how links open.",
+  "/settings/devices": "Simulators and phones agents can drive.",
+  "/settings/scheduled-tasks": "Agent runs on a schedule or a webhook.",
+  "/settings/source-control": "Repositories, git tools and AI-written commit messages.",
+  "/settings/worktrees": "Where thread worktrees live and when they are cleaned up.",
+  "/settings/connections": "Every machine Marp connects to.",
+  "/settings/access": "Who can reach this machine, and how.",
+  "/settings/maintenance": "Updates, background work and cleanup on your machines.",
+  "/settings/labs": "Early features. They may change or go away.",
+  "/settings/about": "Version, updates and legal.",
+  "/settings/archived": "Threads you archived. Bring them back from here.",
+};
+
+/** Sidebar order, grouped by what the settings are about. */
 export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   readonly heading: string | null;
   readonly paths: ReadonlyArray<SettingsPath>;
 }> = [
   {
-    heading: null,
+    heading: "You",
     paths: [
       "/settings/general",
       "/settings/appearance",
       "/settings/chat",
-      "/settings/diffs",
       "/settings/keybindings",
       "/settings/snap-shot",
     ],
@@ -128,19 +153,24 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
     paths: [
       "/settings/providers",
       "/settings/threads",
+      "/settings/scheduled-tasks",
       "/settings/browser",
       "/settings/devices",
-      "/settings/scheduled-tasks",
     ],
   },
   {
     heading: "Code",
-    paths: ["/settings/projects", "/settings/source-control", "/settings/worktrees"],
+    paths: [
+      "/settings/projects",
+      "/settings/source-control",
+      "/settings/diffs",
+      "/settings/worktrees",
+    ],
   },
   { heading: "Connections", paths: ["/settings/connections", "/settings/access"] },
   {
-    heading: null,
-    paths: ["/settings/maintenance", "/settings/labs", "/settings/about", "/settings/archived"],
+    heading: "System",
+    paths: ["/settings/maintenance", "/settings/archived", "/settings/labs", "/settings/about"],
   },
 ];
 

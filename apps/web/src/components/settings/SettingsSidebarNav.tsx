@@ -54,6 +54,7 @@ import {
   type SettingsPath,
   type SettingsSearchItem,
 } from "./settingsSearch";
+import { AppRouteModalBackButton } from "../AppRouteModal";
 import { useAvailableSettingsSearchItems } from "./useAvailableSettingsSearchItems";
 import { validateSettingsScopeSearch } from "./settingsScope";
 import { useSettingsSectionNavigation } from "./useSettingsSectionNavigation";
@@ -254,7 +255,7 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
       {...navArea}
       role="navigation"
       className={cn(
-        "flex w-60 shrink-0 flex-col border-e bg-sidebar text-sidebar-foreground max-md:w-14",
+        "flex w-62 shrink-0 flex-col bg-chrome text-sidebar-foreground max-md:w-14",
         compactSearchOpen &&
           "max-md:absolute max-md:inset-y-0 max-md:start-0 max-md:z-10 max-md:w-full",
       )}
@@ -262,9 +263,14 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
       <SidebarContent className="overflow-x-hidden">
         <SidebarGroup>
           <div className="flex flex-col gap-2">
+            <SidebarMenu className={cn(!compactSearchOpen && "max-md:hidden")}>
+              <SidebarMenuItem>
+                <AppRouteModalBackButton label="Back to app" />
+              </SidebarMenuItem>
+            </SidebarMenu>
             <div
               className={cn(
-                "flex h-8 items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-muted-foreground hover:bg-sidebar-row-hover hover:text-sidebar-foreground",
+                "flex h-8 items-center gap-2 rounded-lg bg-sidebar-control-surface px-2.5 py-1.5 text-sm font-medium text-sidebar-muted-foreground",
                 !compactSearchOpen && "max-md:hidden",
               )}
             >
