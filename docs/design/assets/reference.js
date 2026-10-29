@@ -2,7 +2,10 @@
 (function () {
   "use strict";
 
-  const DOC_PAGES = [["reference.html", "Design system"]];
+  const DOC_PAGES = [
+    ["reference.html", "Design system"],
+    ["settings.html", "Settings"],
+  ];
 
   const ACCENTS = [
     ["clay", "Clay", "#b4532f"],

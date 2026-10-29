@@ -1,0 +1,2231 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Marp — Settings reference</title>
+    <link rel="stylesheet" href="assets/reference.css" />
+    <script src="assets/reference.js"></script>
+    <style>
+      /* «Сейчас» эталона: 29 Oct 2026, 14:20. Этот компьютер — DESKTOP-UC7VC6O (Windows, desktop app). */
+      .app.st {
+        padding: var(--space-8);
+        gap: var(--space-8);
+      }
+      .s-nav {
+        width: 248px;
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-height: 0;
+        padding-top: var(--space-4);
+      }
+      .s-nav .back {
+        color: var(--ink-3);
+      }
+      .s-nav .groups {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: var(--space-8);
+        scrollbar-width: none;
+      }
+      .s-nav .opt-group {
+        padding: var(--space-16) var(--space-8) var(--space-4);
+      }
+      .s-nav .side-btn.on {
+        background: var(--surface);
+        box-shadow: var(--shadow-raised);
+        color: var(--ink);
+      }
+      .s-nav .side-btn.on > .i {
+        color: var(--ink);
+      }
+      .attn {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--attention);
+        margin-left: auto;
+      }
+      .attn.bad {
+        background: var(--danger);
+      }
+      .acct {
+        display: flex;
+        align-items: center;
+        gap: var(--space-8);
+        padding: var(--space-8);
+        border-radius: var(--radius-md);
+        background: var(--surface-2);
+        margin-top: var(--space-8);
+      }
+      .acct b {
+        display: block;
+        color: var(--ink);
+        font-weight: 500;
+      }
+      .acct small {
+        font: var(--text-caption);
+        color: var(--ink-3);
+      }
+
+      .s-sheet {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        overflow: hidden;
+        container: ssheet / inline-size;
+      }
+      .s-head {
+        flex: none;
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-16);
+        padding: var(--space-24) var(--space-32) var(--space-16);
+      }
+      .s-head .crumb {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--ink-3);
+        font: var(--text-caption);
+        font-weight: 500;
+        margin-bottom: var(--space-4);
+      }
+      .s-head h2 {
+        margin: 0;
+        font: var(--text-page);
+        color: var(--ink);
+        letter-spacing: -0.01em;
+      }
+      .s-head p {
+        margin: var(--space-4) 0 0;
+        color: var(--ink-3);
+        font-size: 14px;
+        line-height: 20px;
+        max-width: 560px;
+      }
+      .s-head .acts {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: var(--space-8);
+        flex: none;
+        padding-top: 2px;
+      }
+      .s-body {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 0 var(--space-32) var(--space-48);
+      }
+      .s-col {
+        max-width: 760px;
+      }
+      .s-col.wide {
+        max-width: 1040px;
+      }
+      .store {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 28px;
+        padding: 0 var(--space-12) 0 var(--space-8);
+        border-radius: var(--radius-pill);
+        background: var(--surface-2);
+        color: var(--ink-2);
+        font: var(--text-caption);
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .store .i {
+        width: 14px;
+        height: 14px;
+        color: var(--ink-3);
+      }
+      button.store:hover {
+        background: var(--surface-3);
+      }
+      .store b {
+        color: var(--ink);
+        font-weight: 500;
+      }
+
+      .sec {
+        margin-top: var(--space-32);
+      }
+      .sec:first-child {
+        margin-top: var(--space-8);
+      }
+      .sec-h {
+        display: flex;
+        align-items: center;
+        gap: var(--space-8);
+        margin-bottom: var(--space-12);
+        min-height: 28px;
+      }
+      .sec-h .t-title {
+        flex: none;
+      }
+      .sec-h .d {
+        color: var(--ink-3);
+        font: var(--text-body);
+      }
+      .sec-h .r {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: var(--space-8);
+      }
+      .sec-sub {
+        color: var(--ink-3);
+        margin: calc(-1 * var(--space-8)) 0 var(--space-12);
+      }
+      .rows {
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+      }
+      .r {
+        display: flex;
+        align-items: center;
+        gap: var(--space-16);
+        min-height: 56px;
+        padding: var(--space-12) var(--space-20);
+      }
+      .rows > .r + .r,
+      .rows > .r + .fold,
+      .rows > .fold + .r {
+        box-shadow: inset 0 1px 0 var(--line);
+      }
+      .r .l {
+        flex: 1;
+        min-width: 0;
+      }
+      .r .l b {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink);
+        font-weight: 500;
+      }
+      .r .l span.h {
+        display: block;
+        font: var(--text-caption);
+        color: var(--ink-3);
+        margin-top: 2px;
+        max-width: 520px;
+      }
+      .r .c {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: var(--space-8);
+      }
+      .r .c .input,
+      .r .c .select-wrap {
+        width: 240px;
+      }
+      .r.dis {
+        opacity: 0.5;
+      }
+      .r.top {
+        align-items: flex-start;
+      }
+      .inh {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        color: var(--accent-soft-ink);
+        background: var(--accent-soft);
+      }
+      .inh .i {
+        width: 11px;
+        height: 11px;
+      }
+      .inh.mixed {
+        color: var(--attention);
+        background: var(--attention-soft);
+      }
+      .reset {
+        color: var(--ink-4);
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .reset:hover {
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+      .fold > summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: var(--space-8);
+        min-height: 44px;
+        padding: 0 var(--space-20);
+        color: var(--ink-3);
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .fold > summary::-webkit-details-marker {
+        display: none;
+      }
+      .fold > summary .i {
+        transition: transform var(--dur) var(--ease-out);
+      }
+      .fold[open] > summary .i {
+        transform: rotate(90deg);
+      }
+      .fold[open] > summary {
+        box-shadow: inset 0 -1px 0 var(--line);
+      }
+      .fold .r + .r {
+        box-shadow: inset 0 1px 0 var(--line);
+      }
+      .devtag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 20px;
+        padding: 0 8px;
+        border-radius: var(--radius-pill);
+        background: var(--surface-2);
+        color: var(--ink-3);
+        font: var(--text-caption);
+        font-weight: 500;
+      }
+      .devtag .i {
+        width: 12px;
+        height: 12px;
+      }
+
+      /* overview */
+      .ov-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-12);
+      }
+      .ov-card {
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: var(--space-20);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-12);
+      }
+      .ov-card .hd {
+        display: flex;
+        align-items: center;
+        gap: var(--space-8);
+      }
+      .ov-card .hd a {
+        margin-left: auto;
+        color: var(--ink-3);
+        font: var(--text-caption);
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .ov-card .hd a:hover {
+        color: var(--ink);
+      }
+      .ov-line {
+        display: flex;
+        align-items: center;
+        gap: var(--space-8);
+        min-height: 28px;
+      }
+      .ov-line .grow {
+        color: var(--ink-2);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .ov-line .m {
+        white-space: nowrap;
+      }
+      a.chip {
+        text-decoration: none;
+      }
+      .ov-line .m {
+        font: var(--text-caption);
+        color: var(--ink-3);
+      }
+      .attn-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-8);
+      }
+      .attn-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-12);
+        padding: var(--space-12) var(--space-16);
+        border-radius: var(--radius-md);
+        background: var(--attention-soft);
+      }
+      .attn-item.bad {
+        background: var(--danger-soft);
+      }
+      .attn-item.notice {
+        background: var(--surface-2);
+      }
+      .attn-item > .i {
+        color: var(--attention);
+      }
+      .attn-item.bad > .i {
+        color: var(--danger);
+      }
+      .attn-item.notice > .i {
+        color: var(--working);
+      }
+      .attn-item b {
+        display: block;
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .attn-item span {
+        color: var(--ink-2);
+      }
+
+      /* master-detail */
+      .md {
+        display: flex;
+        gap: var(--space-16);
+        min-height: 0;
+      }
+      .md-list {
+        width: 280px;
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .md-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-12);
+        padding: var(--space-8) var(--space-12);
+        min-height: 52px;
+        border-radius: var(--radius-md);
+        text-align: left;
+        width: 100%;
+        transition: background var(--dur-fast);
+      }
+      .md-item:hover {
+        background: var(--surface-2);
+      }
+      .md-item.on {
+        background: var(--surface-2);
+        box-shadow: inset 0 0 0 1px var(--line);
+      }
+      .md-item .tx {
+        flex: 1;
+        min-width: 0;
+      }
+      .md-item .tx b {
+        display: block;
+        color: var(--ink);
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .md-item .tx span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font: var(--text-caption);
+        color: var(--ink-3);
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .sd {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex: none;
+        background: var(--success);
+      }
+      .sd.warn {
+        background: var(--attention);
+      }
+      .sd.bad {
+        background: var(--danger);
+      }
+      .sd.off {
+        background: var(--ink-4);
+      }
+      .md-add {
+        display: flex;
+        align-items: center;
+        gap: var(--space-8);
+        height: 40px;
+        padding: 0 var(--space-12);
+        color: var(--ink-3);
+        border-radius: var(--radius-md);
+        font-weight: 500;
+      }
+      .md-add:hover {
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+      .md-detail {
+        flex: 1;
+        min-width: 0;
+      }
+      .md-head {
+        display: flex;
+        align-items: center;
+        gap: var(--space-12);
+        margin-bottom: var(--space-16);
+      }
+      .md-head .t {
+        font: var(--text-heading);
+        color: var(--ink);
+      }
+      .md-head .r2 {
+        margin-left: auto;
+        display: flex;
+        gap: var(--space-8);
+        align-items: center;
+      }
+      .tabs-u {
+        display: flex;
+        gap: var(--space-4);
+        margin-bottom: var(--space-20);
+        box-shadow: inset 0 -1px 0 var(--line);
+      }
+      .tabs-u button {
+        height: 36px;
+        padding: 0 var(--space-12);
+        color: var(--ink-3);
+        font-weight: 500;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tabs-u button:hover {
+        color: var(--ink);
+      }
+      .tabs-u button[aria-selected="true"] {
+        color: var(--ink);
+      }
+      .tabs-u button[aria-selected="true"]::after {
+        content: "";
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: 0;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--ink);
+      }
+      .tab-panel {
+        display: none;
+      }
+      .tab-panel.on {
+        display: block;
+      }
+      .pmark.lg {
+        width: 36px;
+        height: 36px;
+        font-size: 13px;
+      }
+
+      /* list rows */
+      .lrow {
+        display: flex;
+        align-items: center;
+        gap: var(--space-12);
+        min-height: 56px;
+        padding: var(--space-8) var(--space-20);
+      }
+      .rows > .lrow + .lrow {
+        box-shadow: inset 0 1px 0 var(--line);
+      }
+      .lrow .tx {
+        flex: 1;
+        min-width: 0;
+      }
+      .lrow .tx b {
+        display: block;
+        color: var(--ink);
+        font-weight: 500;
+      }
+      .lrow .tx span {
+        display: block;
+        font: var(--text-caption);
+        color: var(--ink-3);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .lrow .acts2 {
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity var(--dur-fast);
+      }
+      .lrow:hover .acts2,
+      .lrow:focus-within .acts2 {
+        opacity: 1;
+      }
+      .kb-keys {
+        display: inline-flex;
+        gap: 2px;
+      }
+      .when {
+        font: var(--text-code-sm);
+        color: var(--ink-3);
+      }
+      .theme-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: var(--space-12);
+      }
+      .theme-card {
+        border-radius: var(--radius-md);
+        background: var(--surface-2);
+        padding: var(--space-8);
+        text-align: left;
+        transition: box-shadow var(--dur-fast);
+      }
+      .theme-card[aria-pressed="true"] {
+        box-shadow: inset 0 0 0 2px var(--accent);
+        background: var(--surface);
+      }
+      .theme-card .pv {
+        height: 64px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        overflow: hidden;
+        margin-bottom: var(--space-8);
+        box-shadow: inset 0 0 0 1px var(--ring);
+      }
+      .theme-card .pv i {
+        display: block;
+      }
+      .theme-card b {
+        font-weight: 500;
+        color: var(--ink);
+      }
+      .scheme {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-12);
+      }
+      .scheme button {
+        border-radius: var(--radius-md);
+        background: var(--surface-2);
+        padding: var(--space-8) var(--space-8) var(--space-12);
+        text-align: center;
+        color: var(--ink-2);
+        font-weight: 500;
+      }
+      .scheme button[aria-pressed="true"] {
+        background: var(--surface);
+        box-shadow: inset 0 0 0 2px var(--accent);
+        color: var(--ink);
+      }
+      .scheme .pv {
+        height: 72px;
+        border-radius: var(--radius-sm);
+        margin-bottom: var(--space-8);
+        box-shadow: inset 0 0 0 1px var(--ring);
+      }
+      .check-row {
+        display: grid;
+        grid-template-columns: 90px 1fr 280px;
+        gap: var(--space-12);
+        padding: 6px var(--space-12);
+        font: var(--text-caption);
+      }
+      .check-row + .check-row {
+        box-shadow: inset 0 1px 0 var(--line);
+      }
+      .check-row code {
+        font: var(--text-code-sm);
+        color: var(--ink);
+      }
+      .check-row .st {
+        color: var(--success);
+      }
+      .check-row .st.new {
+        color: var(--accent-soft-ink);
+      }
+      .check-group {
+        font: var(--text-title);
+        color: var(--ink);
+        margin: var(--space-24) 0 var(--space-8);
+      }
+
+      /* demo states */
+      #s-providers[data-pstate="signed-out"] .ps-in,
+      #s-providers:not([data-pstate="signed-out"]) .ps-out {
+        display: none;
+      }
+      #s-providers[data-pstate="update"] .ps-up {
+        display: flex;
+      }
+      .ps-up {
+        display: none;
+      }
+      #s-machines[data-conn="offline"] .mc-on {
+        display: none;
+      }
+      #s-machines:not([data-conn="offline"]) .mc-off {
+        display: none;
+      }
+      #s-git[data-perm="read"] .rows .c {
+        opacity: 0.45;
+        pointer-events: none;
+      }
+      #s-git:not([data-perm="read"]) .perm-note {
+        display: none;
+      }
+      #s-archive[data-sel="none"] .bulk {
+        display: none;
+      }
+      #s-archive[data-sel="some"] .nobulk {
+        display: none;
+      }
+
+      @container ssheet (max-width: 820px) {
+        .ov-grid {
+          grid-template-columns: 1fr;
+        }
+        .md {
+          flex-direction: column;
+        }
+        .md-list {
+          width: auto;
+        }
+        .theme-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .r .c .input,
+        .r .c .select-wrap {
+          width: 180px;
+        }
+      }
+      /* narrow: phone or narrow window */
+      .app.narrow.st {
+        padding: 0;
+      }
+      .narrow .s-sheet {
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .narrow .s-head {
+        padding: var(--space-16);
+      }
+      .narrow .s-body {
+        padding: 0 var(--space-16) var(--space-32);
+      }
+      .narrow .r {
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="doc">
+      <div class="doc-top doc-only">
+        <nav class="doc-nav" aria-label="Reference pages"></nav>
+        <div class="row" data-theme-controls></div>
+      </div>
+
+      <header class="doc-only">
+        <div class="doc-badge">
+          <i data-i="settings" class="i-14"></i>Эталон · Настройки · 29 окт 2026
+        </div>
+        <h1>Settings</h1>
+        <p class="lead">
+          Новые настройки Marp. Раньше: модалка с узкой колонкой, 25 разделов, фраза «Applying
+          settings for … across …» на каждой странице и функции, разбросанные по 2–4 местам. Теперь:
+          полноэкранное рабочее пространство в композиции приложения, страница Overview с тем, что
+          требует внимания, честный бейдж «где хранится», раскладки «список + детали» для
+          провайдеров, машин и проектов. Ничего не потеряно:
+          <a href="inventory/settings.md">инвентаризация — 761 пункт</a>, у каждого статус (вкладка
+          Checklist).
+        </p>
+      </header>
+
+      <nav class="screens doc-only" aria-label="Screens">
+        <button data-screen="overview">Overview</button>
+        <button data-screen="general">General</button>
+        <button data-screen="appearance">Appearance</button>
+        <button data-screen="chat">Chat</button>
+        <button data-screen="keybindings">Keybindings</button>
+        <button data-screen="snapshots">SnapShots</button>
+        <button data-screen="providers">Providers</button>
+        <button data-screen="threads">Threads &amp; models</button>
+        <button data-screen="scheduled">Scheduled tasks</button>
+        <button data-screen="browser">Browser</button>
+        <button data-screen="devices">Devices</button>
+        <button data-screen="projects">Projects</button>
+        <button data-screen="git">Git &amp; PRs</button>
+        <button data-screen="worktrees">Worktrees</button>
+        <button data-screen="machines">Machines</button>
+        <button data-screen="maintenance">Maintenance</button>
+        <button data-screen="diagnostics">Diagnostics</button>
+        <button data-screen="archive">Archive</button>
+        <button data-screen="labs">Labs</button>
+        <button data-screen="about">About</button>
+        <button data-screen="licenses">Licenses</button>
+        <button data-screen="scope">Saved to</button>
+        <button data-screen="search">Search</button>
+        <button data-screen="narrow">Narrow</button>
+        <button data-screen="dialogs">Dialogs</button>
+        <button data-screen="checklist">Checklist</button>
+      </nav>
+
+      <div id="screens"></div>
+
+      <section class="doc-only">
+        <h2 id="decisions">Решения</h2>
+        <p class="sub">Было → стало → почему.</p>
+        <div class="decisions">
+          <div class="decision">
+            <h4>Рабочее пространство вместо модалки</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Модалка 80rem, колонка ~470 px, фон затемнён.</dd>
+              <dt>Стало</dt>
+              <dd>
+                Настройки занимают окно: навигация на бумаге, лист справа, «Back to app» и Esc.
+              </dd>
+              <dt>Почему</dt>
+              <dd>
+                Настройки — место, где работают минутами; узкая колонка в огромном окне тратила
+                место. Механика маршрута та же: тред на фоне не перемонтируется.
+              </dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Overview</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>/settings открывал General.</dd>
+              <dt>Стало</dt>
+              <dd>Что требует внимания + сводки агентов, машин, устройства.</dd>
+              <dt>Почему</dt>
+              <dd>Отвечает на «всё ли работает» без обхода 20 разделов.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Где хранится — в шапке</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>
+                Фраза «Applying settings for All projects across All environments», скрытая на
+                device-страницах.
+              </dd>
+              <dt>Стало</dt>
+              <dd>Бейдж «This device» или пилюля «Saved to: …» с проектом, машиной и checkout.</dd>
+              <dt>Почему</dt>
+              <dd>
+                Пользователь видел одинаковые строки, сохраняемые в разные места (наблюдение «Device
+                vs environment scope is invisible»).
+              </dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Группы по смыслу</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>5 групп, две без заголовка, Diffs среди device-настроек, Archive последним.</dd>
+              <dt>Стало</dt>
+              <dd>You · Agents · Code · Connections · System.</dd>
+              <dt>Почему</dt>
+              <dd>Заголовок группы отвечает «про что это».</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Threads &amp; models</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Модели на 4 страницах, сжатие тредов в Providers › Advanced.</dd>
+              <dt>Стало</dt>
+              <dd>
+                Модели и поведение тредов — одна страница; провайдеры — про аккаунты и рантайм.
+              </dd>
+              <dt>Почему</dt>
+              <dd>«Какой моделью начнётся тред» ищут в одном месте.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Providers во вкладках</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Длинная лента Status → Setup → Runtime → Environment → Sessions → Models.</dd>
+              <dt>Стало</dt>
+              <dd>
+                Список слева, справа вкладки Account / Runtime / Models / Variables / Sessions.
+              </dd>
+              <dt>Почему</dt>
+              <dd>У ACP-агентов редактор был длиннее экрана в 3 раза.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Machines</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>
+                Environments и Sharing &amp; access — один компонент на двух страницах; своей машины
+                в списке нет.
+              </dd>
+              <dt>Стало</dt>
+              <dd>
+                Одна страница: все машины, включая эту; детали во вкладках Overview / Access /
+                Clients / Permissions.
+              </dd>
+              <dt>Почему</dt>
+              <dd>
+                Сеть, WSL и локальный бэкенд перезапускают одно и то же, а лежали на разных
+                страницах.
+              </dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Git &amp; pull requests</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>Source control и Diffs &amp; pull requests отдельно.</dd>
+              <dt>Стало</dt>
+              <dd>
+                Одна страница: Repositories, Pull requests, Diffs, Writing, Tools &amp; hosts.
+              </dd>
+              <dt>Почему</dt>
+              <dd>Это один рабочий процесс; старые адреса редиректят.</dd>
+            </dl>
+          </div>
+          <div class="decision">
+            <h4>Единые подтверждения</h4>
+            <dl>
+              <dt>Было</dt>
+              <dd>4 стиля подтверждений, у 7 удалений и отзывов — никакого.</dd>
+              <dt>Стало</dt>
+              <dd>Одно окно подтверждения: что пропадёт, кнопка-действие.</dd>
+              <dt>Почему</dt>
+              <dd>Отзыв доступа и удаление инстанса нельзя отменить.</dd>
+            </dl>
+          </div>
+        </div>
+        <h3>Нужно от сервера</h3>
+        <div class="doc-note">
+          1. Удаление архивного треда из веба (сейчас только через local API desktop) — RPC удаления
+          треда. <span class="be-tag">needs server</span><br />2. Сводка Overview «обновления
+          провайдеров на всех машинах» уже есть по машинам; агрегат по всем — собрать на клиенте,
+          сервер не нужен.<br />3. Остальное — клиент: маршруты, раскладки, подтверждения, команда
+          <code>settings.open</code>.
+        </div>
+        <h3>Открытые вопросы</h3>
+        <div class="doc-note">
+          1. «Restore defaults» сбрасывает и значения окружения (provider update checks, background
+          activity…). Оставить так, но честно показать в окне, или ограничить только устройством?<br />2.
+          Labs: оставить отдельной страницей или раздать флаги по разделам с меткой «Beta»?<br />3.
+          Diagnostics: два похожих блока истории процессов — объединить в один (предлагаю) или
+          оставить оба?
+        </div>
+      </section>
+    </div>
+
+    <!-- ═════════ Поповеры ═════════ -->
+    <div class="pop" id="pop-scope" style="width: 340px">
+      <div class="opt-group">Project</div>
+      <button class="opt">
+        <i data-i="layers"></i>All projects<i
+          data-i="check"
+          style="margin-left: auto; color: var(--ink)"
+        ></i>
+      </button>
+      <button class="opt">
+        <span class="mono-mark">M</span>Modelion<span class="meta">D:\VSProjects\platform</span>
+      </button>
+      <button class="opt">
+        <span class="mono-mark">a</span>aagenvoro<span class="meta">D:\VSProjects\aagenvoro</span>
+      </button>
+      <button class="opt">
+        <span class="mono-mark">m</span>mywwave/Marp<span class="meta">D:\VSProjects\Marp</span>
+      </button>
+      <div class="sep"></div>
+      <div class="opt-group">Machine</div>
+      <button class="opt">
+        <i data-i="layers"></i>All machines<i
+          data-i="check"
+          style="margin-left: auto; color: var(--ink)"
+        ></i>
+      </button>
+      <button class="opt">
+        <i data-i="laptop"></i>DESKTOP-UC7VC6O<span class="meta">this device</span>
+      </button>
+      <button class="opt"><i data-i="server"></i>vps-hel1<span class="meta">Offline</span></button>
+      <div class="sep"></div>
+      <div class="opt-group">
+        Checkout <span class="ink-4" style="font-weight: 400">· pick a project first</span>
+      </div>
+      <button class="opt is-disabled" style="opacity: 0.45">
+        <i data-i="git-branch"></i>All checkouts
+      </button>
+    </div>
+    <div class="pop" id="pop-row">
+      <button class="opt"><i data-i="undo"></i>Reset to inherited value</button>
+      <button class="opt"><i data-i="layers"></i>Show where this value comes from</button>
+    </div>
+    <div class="pop" id="pop-inst">
+      <button class="opt"><i data-i="pencil"></i>Rename</button>
+      <button class="opt"><i data-i="terminal"></i>Switch to existing CLI</button>
+      <button class="opt"><i data-i="undo"></i>Reset to defaults</button>
+      <div class="sep"></div>
+      <button class="opt danger" data-modal="m-del-inst">
+        <i data-i="trash"></i>Delete instance…
+      </button>
+    </div>
+
+    <!-- ═════════ Окна ═════════ -->
+    <div class="overlay" id="m-restore">
+      <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="m-restore-t">
+        <div class="modal-head">
+          <span class="danger-mark"><i data-i="undo" class="i-18"></i></span>
+          <div class="grow">
+            <div class="t-heading" id="m-restore-t">Restore defaults?</div>
+            <p>Resets 12 changed settings. You can't undo this.</p>
+          </div>
+          <button class="btn ghost icon sm" data-close aria-label="Close">
+            <i data-i="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div>
+            <div class="t-caption ink-3" style="font-weight: 500; margin-bottom: 6px">
+              On this device
+            </div>
+            <div class="wrap">
+              <span class="badge">Theme</span><span class="badge">Contrast</span
+              ><span class="badge">Chat width</span><span class="badge">Send shortcut</span
+              ><span class="badge">Diff layout</span><span class="badge">Time format</span
+              ><span class="badge">Delete confirmation</span>
+            </div>
+          </div>
+          <div>
+            <div class="t-caption ink-3" style="font-weight: 500; margin-bottom: 6px">
+              On all machines
+            </div>
+            <div class="wrap">
+              <span class="badge">Provider update checks</span
+              ><span class="badge">Background activity</span
+              ><span class="badge">Text generation model</span
+              ><span class="badge">Continue threads after restarts</span
+              ><span class="badge">Add project base directory</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn ghost" data-close>Cancel</button
+          ><button
+            class="btn danger-solid"
+            data-close
+            data-toast='{"title":"Defaults restored","text":"12 settings reset"}'
+          >
+            Restore 12 settings
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="overlay" id="m-del-inst">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-del-inst-t">
+        <div class="modal-head">
+          <span class="danger-mark"><i data-i="trash" class="i-18"></i></span>
+          <div class="grow">
+            <div class="t-heading" id="m-del-inst-t">Delete “codex-work”?</div>
+            <p>
+              Removes this Codex instance, its sign-in and 3 environment variables from
+              DESKTOP-UC7VC6O. Threads that use it stop. You can't undo this.
+            </p>
+          </div>
+        </div>
+        <div class="modal-foot" style="padding-top: var(--space-24)">
+          <button class="btn ghost" data-close>Cancel</button
+          ><button
+            class="btn danger-solid"
+            data-close
+            data-toast='{"title":"Instance deleted","text":"codex-work"}'
+          >
+            Delete instance
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="overlay" id="m-revoke">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-revoke-t">
+        <div class="modal-head">
+          <span class="danger-mark"><i data-i="shield" class="i-18"></i></span>
+          <div class="grow">
+            <div class="t-heading" id="m-revoke-t">Revoke 3 other clients?</div>
+            <p>
+              iPhone 16, Chrome on vps-hel1 and Safari on MacBook Air lose access right away.
+              They'll need a new pairing link to come back.
+            </p>
+          </div>
+        </div>
+        <div class="modal-foot" style="padding-top: var(--space-24)">
+          <button class="btn ghost" data-close>Cancel</button
+          ><button class="btn danger-solid" data-close data-toast='{"title":"Revoked 3 clients"}'>
+            Revoke 3 clients
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="overlay" id="m-add-provider">
+      <div class="modal xwide" role="dialog" aria-modal="true" aria-labelledby="m-add-t">
+        <div class="modal-head">
+          <div class="grow">
+            <div class="t-heading" id="m-add-t">Add provider</div>
+            <p>Add an account or configure an agent on DESKTOP-UC7VC6O.</p>
+          </div>
+          <div class="steps">
+            <span class="st cur">1</span><span class="ln"></span><span class="st">2</span
+            ><span class="ln"></span><span class="st">3</span>
+          </div>
+          <button class="btn ghost icon sm" data-close aria-label="Close">
+            <i data-i="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="grid grid-4" role="radiogroup" aria-label="Provider">
+            <button class="choice" role="radio" aria-checked="true">
+              <span class="pmark s28">Cx</span>
+              <div><b>Codex</b><span>ChatGPT plan or API key</span></div>
+            </button>
+            <button class="choice" role="radio" aria-checked="false">
+              <span class="pmark s28">Cl</span>
+              <div><b>Claude</b><span>Claude plan or API key</span></div>
+            </button>
+            <button class="choice" role="radio" aria-checked="false">
+              <span class="pmark s28">Cu</span>
+              <div><b>Cursor</b><span>Cursor account</span></div>
+            </button>
+            <button class="choice" role="radio" aria-checked="false">
+              <span class="pmark s28">Gk</span>
+              <div><b>Grok</b><span>xAI CLI</span></div>
+            </button>
+            <button class="choice" role="radio" aria-checked="false">
+              <span class="pmark s28">Oc</span>
+              <div><b>OpenCode</b><span>Local server</span></div>
+            </button>
+            <button class="choice" role="radio" aria-checked="false">
+              <span class="pmark s28">Ag</span>
+              <div><b>Antigravity</b><span>Managed runtime</span></div>
+            </button>
+            <button class="choice" role="radio" aria-checked="false">
+              <span class="pmark s28">Mu</span>
+              <div><b>Muse Code</b><span>CLI</span></div>
+            </button>
+            <button class="choice" role="radio" aria-checked="false">
+              <span class="pmark s28">Pi</span>
+              <div><b>Pi</b><span>RPC mode</span></div>
+            </button>
+          </div>
+          <div class="field">
+            <label>Or find an agent in the ACP Registry</label>
+            <div class="input-wrap">
+              <i data-i="search"></i><input class="input" placeholder="Search agents" />
+            </div>
+          </div>
+          <div class="alert">
+            <i data-i="info"></i>
+            <div class="grow">
+              You're already signed in to Codex. Add another account only if you keep work and
+              personal usage apart.
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn ghost" data-close>Cancel</button
+          ><button class="btn primary">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const I = (n, c = "") => `<i data-i="${n}" class="${c}"></i>`;
+        const sw = (on) =>
+          `<button class="switch" role="switch" aria-checked="${on}" aria-label="Toggle"></button>`;
+        const sel = (v, mono) =>
+          `<div class="select-wrap"><button class="input select${mono ? " mono" : ""}">${v}</button>${I("chevron-down")}</div>`;
+        const seg = (opts, i) =>
+          `<div class="seg sm">${opts.map((o, k) => `<button aria-pressed="${k === i}">${o}</button>`).join("")}</div>`;
+        const inp = (v, ph, mono) =>
+          `<input class="input${mono ? " mono" : ""}" value="${v || ""}" placeholder="${ph || ""}">`;
+        const btn = (t, cls = "", ic = "") =>
+          `<button class="btn sm ${cls}">${ic ? I(ic) : ""}${t}</button>`;
+        const kbd = (...k) =>
+          `<span class="kb-keys">${k.map((x) => `<span class="kbd">${x}</span>`).join("")}</span>`;
+        const info = (t, d) =>
+          `<span class="info" data-tip-title="${t}" data-tip="${d}">${I("info")}</span>`;
+        const inh = (mixed) =>
+          `<span class="inh${mixed ? " mixed" : ""}" data-tip="${mixed ? "Mixed across selected machines" : "Overridden for this project"}">${I("layers")}</span>`;
+        const row = (t, h, c, o = {}) =>
+          `<div class="r${o.top ? " top" : ""}${o.dis ? " dis" : ""}"${o.id ? ` id="${o.id}"` : ""}><div class="l"><b>${t}${o.inh || ""}</b>${h ? `<span class="h">${h}</span>` : ""}</div><div class="c">${o.reset ? `<button class="reset" aria-label="Reset ${t} to default" data-tip="Reset to default">${I("undo", "i-14")}</button>` : ""}${c}</div></div>`;
+        const fold = (t, rows) =>
+          `<details class="fold"><summary>${I("chevron-right", "i-14")}${t}</summary>${rows.join("")}</details>`;
+        const sec = (t, rows, o = {}) =>
+          `<section class="sec"><div class="sec-h"><span class="t-title">${t}</span>${o.dev ? `<span class="devtag">${I("laptop")}This device</span>` : ""}${o.d ? `<span class="d">${o.d}</span>` : ""}<div class="r">${o.r || ""}</div></div>${o.sub ? `<p class="sec-sub">${o.sub}</p>` : ""}${o.raw ? o.raw : `<div class="rows">${rows.join("")}</div>`}</section>`;
+
+        const NAV = [
+          [null, [["overview", "layers", "Overview"]]],
+          [
+            "You",
+            [
+              ["general", "settings", "General"],
+              ["appearance", "sun", "Appearance"],
+              ["chat", "question", "Chat"],
+              ["keybindings", "keyboard", "Keybindings"],
+              ["snapshots", "image", "SnapShots"],
+            ],
+          ],
+          [
+            "Agents",
+            [
+              ["providers", "plug", "Providers", "warn"],
+              ["threads", "brain", "Threads & models"],
+              ["scheduled", "clock", "Scheduled tasks"],
+              ["browser", "globe", "Browser"],
+              ["devices", "laptop", "Devices"],
+            ],
+          ],
+          [
+            "Code",
+            [
+              ["projects", "folder", "Projects"],
+              ["git", "git-branch", "Git & pull requests"],
+              ["worktrees", "layers", "Worktrees"],
+            ],
+          ],
+          ["Connections", [["machines", "server", "Machines", "bad"]]],
+          [
+            "System",
+            [
+              ["maintenance", "wrench", "Maintenance", "warn"],
+              ["archive", "archive", "Archive"],
+              ["labs", "zap", "Labs"],
+              ["about", "info", "About"],
+            ],
+          ],
+        ];
+        const nav = (cur) => `<aside class="s-nav" aria-label="Settings sections">
+    <button class="side-btn back">${I("arrow-left")}Back to app<span class="meta">${kbd("Esc")}</span></button>
+    <div class="input-wrap" style="margin-top:var(--space-4)">${I("search")}<input class="input" placeholder="Search settings" aria-label="Search settings" style="height:32px;background:var(--surface-3)"><span class="kbd">/</span></div>
+    <div class="groups">${NAV.map(([h, items]) => `${h ? `<div class="opt-group">${h}</div>` : ""}${items.map(([id, ic, label, a]) => `<button class="side-btn${id === cur ? " on" : ""}" data-go="${id}">${I(ic)}${label}${a ? `<span class="attn${a === "bad" ? " bad" : ""}"></span>` : ""}</button>`).join("")}`).join("")}</div>
+    <div class="acct"><span class="avatar">SM</span><div class="grow"><b>Stas</b><small>T3 Connect · signed in</small></div><button class="btn ghost icon sm" aria-label="Account menu">${I("more")}</button></div>
+  </aside>`;
+        const store = (kind) =>
+          kind === "device"
+            ? `<span class="store" data-tip="Saved in this browser profile on this device">${I("laptop")}This device</span>`
+            : kind === "machine"
+              ? `<button class="store" data-pop="pop-scope" data-pop-align="end">${I("laptop")}Machine <b>DESKTOP-UC7VC6O</b>${I("chevron-down", "i-14")}</button>`
+              : kind === "none"
+                ? ""
+                : `<button class="store" data-pop="pop-scope" data-pop-align="end">Saved to <b>All projects · All machines</b>${I("chevron-down", "i-14")}</button>`;
+        const frame = (
+          id,
+          p,
+          body,
+        ) => `<div class="frame"><div class="app st${p.narrow ? " narrow" : ""}" id="s-${id}" ${p.attrs || ""}>${p.narrow ? "" : nav(p.nav || id)}<main class="s-sheet">
+    <header class="s-head"><div class="grow" style="min-width:0">${p.crumb ? `<a class="crumb" href="#${p.crumb[0]}">${I("arrow-left", "i-14")}${p.crumb[1]}</a>` : ""}<h2>${p.title}</h2><p>${p.desc}</p></div><div class="acts">${store(p.store)}${p.actions || ""}<button class="btn ghost icon sm" aria-label="Close settings" data-tip="Close" data-tip-kbd="Esc">${I("x")}</button></div></header>
+    <div class="s-body"><div class="s-col${p.wide ? " wide" : ""}">${body}</div></div></main></div></div>`;
+
+        const P = {};
+        // ───── Overview
+        P.overview = {
+          title: "Settings",
+          desc: "What needs attention, and where everything is set up.",
+          store: "none",
+          wide: true,
+          body: `
+    <section class="sec"><div class="sec-h"><span class="t-title">Needs attention</span><span class="d">3 items</span></div>
+      <div class="attn-list">
+        <div class="attn-item bad">${I("alert")}<div class="grow"><b>vps-hel1 is offline</b><span>Threads on it can't run. Last seen 2 h ago.</span></div>${btn("Diagnose", "", "wrench")}</div>
+        <div class="attn-item">${I("plug")}<div class="grow"><b>Cursor isn't signed in</b><span>Sign in to use Cursor models in new threads.</span></div>${btn("Sign in")}</div>
+        <div class="attn-item notice">${I("upload")}<div class="grow"><b>Claude 2.1.320 is available</b><span>You're on 2.1.312 on DESKTOP-UC7VC6O.</span></div>${btn("Update")}</div>
+      </div></section>
+    <section class="sec"><div class="ov-grid">
+      <div class="ov-card"><div class="hd"><span class="t-title">Agents</span><a href="#providers">Providers${I("chevron-right", "i-14")}</a></div>
+        <div class="ov-line"><span class="pmark s16">Cx</span><span class="grow">Codex</span><span class="sd"></span><span class="m">ChatGPT Free</span></div>
+        <div class="ov-line"><span class="pmark s16">Cl</span><span class="grow">Claude</span><span class="sd warn"></span><span class="m">Update available</span></div>
+        <div class="ov-line"><span class="pmark s16">Cu</span><span class="grow">Cursor</span><span class="sd off"></span><span class="m">Not signed in</span></div>
+        <div class="ov-line"><span class="grow ink-3">New threads start with</span><span class="m">GPT-5.6 Terra · Medium</span></div></div>
+      <div class="ov-card"><div class="hd"><span class="t-title">Machines</span><a href="#machines">Machines${I("chevron-right", "i-14")}</a></div>
+        <div class="ov-line">${I("laptop", "ink-3")}<span class="grow">DESKTOP-UC7VC6O</span><span class="sd"></span><span class="m">This device</span></div>
+        <div class="ov-line">${I("server", "ink-3")}<span class="grow">vps-hel1</span><span class="sd bad"></span><span class="m">Offline · 2 h</span></div>
+        <div class="ov-line"><span class="grow ink-3">Paired clients</span><span class="m">4</span></div>
+        <div class="ov-line"><span class="grow ink-3">Remote access</span><span class="m">Tailscale · on</span></div></div>
+      <div class="ov-card"><div class="hd"><span class="t-title">This device</span><a href="#appearance">Appearance${I("chevron-right", "i-14")}</a></div>
+        <div class="ov-line"><span class="grow ink-3">Theme</span><span class="m">Marp · System</span></div>
+        <div class="ov-line"><span class="grow ink-3">Fonts</span><span class="m">Onest · JetBrains Mono</span></div>
+        <div class="ov-line"><span class="grow ink-3">Send with</span><span class="m">${kbd("Enter")}</span></div>
+        <div class="ov-line"><span class="grow ink-3">Version</span><span class="m">Marp 0.1.4 · stable</span></div></div>
+    </div></section>
+    ${sec("Jump to", [], {
+      raw: `<div class="wrap">${[
+        ["providers", "Add a provider"],
+        ["projects", "Project scripts"],
+        ["keybindings", "Keybindings"],
+        ["machines", "Pair a device"],
+        ["threads", "Default model"],
+        ["archive", "Archived threads"],
+      ]
+        .map(([k, t]) => `<a class="chip" href="#${k}">${t}</a>`)
+        .join("")}</div>`,
+    })}`,
+        };
+
+        // ───── General
+        P.general = {
+          title: "General",
+          desc: "Notifications, the sidebar and confirmations on this device.",
+          store: "device",
+          body:
+            sec("Notifications", [
+              row(
+                "Thread notifications",
+                "System alerts when a thread finishes, fails, or needs you. Only while Marp is open.",
+                sel("When in background"),
+              ),
+              row(
+                "In-app notifications",
+                "Show a toast when another thread finishes, fails, or needs you.",
+                sw(true),
+              ),
+            ]) +
+            sec("Sidebar", [
+              row("Project grouping", "Combine matching repositories across machines.", sw(true)),
+              row(
+                "Project order",
+                "Order of projects in the sidebar and command palette.",
+                sel("Last user message"),
+              ),
+              row(
+                "Working section",
+                "Fold working threads into a Working section. They jump back up when they need you.",
+                sw(true),
+              ),
+            ]) +
+            sec("Time", [
+              row(
+                "Time format",
+                "How times show in threads and lists.",
+                seg(["System", "12-hour", "24-hour"], 0),
+              ),
+            ]) +
+            sec("Confirmations", [
+              row("Unpin", "Ask before unpinning a thread.", sw(false)),
+              row("Archive", "Ask before archiving a thread from the sidebar.", sw(false)),
+              row("Delete", "Ask before deleting a thread and its history.", sw(true)),
+              row("Quit shortcut", "Hold Ctrl+Q to quit, so a slip doesn't close Marp.", sw(true), {
+                reset: true,
+              }),
+            ]) +
+            sec("Reset", [
+              row(
+                "Restore defaults",
+                "Resets settings you changed. Some of them live on your machines, not just this device — the next step lists both.",
+                `<button class="btn sm danger" data-modal="m-restore">${I("undo")}Restore defaults…</button>`,
+              ),
+            ]),
+        };
+
+        // ───── Appearance
+        const tc = (name, a, b, c, on) =>
+          `<button class="theme-card" aria-pressed="${!!on}"><div class="pv"><i style="width:28%;background:${a}"></i><i style="flex:1;background:${b}"></i><i style="width:18%;background:${c}"></i></div><b>${name}</b></button>`;
+        P.appearance = {
+          title: "Appearance",
+          desc: "Theme, colors and type on this device.",
+          store: "device",
+          body:
+            sec("Color scheme", [], {
+              raw: `<div class="scheme"><button aria-pressed="true"><div class="pv" style="background:linear-gradient(90deg,#f6f4f0 50%,#141210 50%)"></div>System</button><button aria-pressed="false"><div class="pv" style="background:#f6f4f0"></div>Light</button><button aria-pressed="false"><div class="pv" style="background:#141210"></div>Dark</button></div>`,
+            }) +
+            sec("Theme", [], {
+              r: btn("Import", "ghost", "upload") + btn("Create theme", "", "pencil"),
+              raw: `<div class="theme-grid">${tc("Marp", "#f6f4f0", "#ffffff", "#b4532f", true)}${tc("Ocean", "#e8f1f7", "#ffffff", "#2a6cc4")}${tc("Grove", "#eef3ec", "#ffffff", "#27804a")}${tc("Ember", "#f7ece6", "#ffffff", "#c4532d")}${tc("Iris", "#efedf9", "#ffffff", "#6250d8")}${tc("T3 Chat", "#f7e9f1", "#ffffff", "#bd3d7a")}${tc("Graphite", "#ebe9e6", "#ffffff", "#34312d")}<button class="theme-card" style="display:flex;align-items:center;justify-content:center;color:var(--ink-3);min-height:104px">${I("plus")}&nbsp;Add theme</button></div>`,
+            }) +
+            sec("Interface", [
+              row(
+                "Contrast",
+                "Strengthen text and borders across the interface.",
+                `<span class="num ink-3 t-caption">100%</span><div style="width:160px" class="progress"><i style="width:40%"></i></div>`,
+                { reset: true },
+              ),
+              row(
+                "Chat width",
+                "How wide the thread column gets.",
+                seg(["Comfortable", "Wide", "Full"], 0),
+              ),
+              row(
+                "Panel animations",
+                "Speed of panel open and close.",
+                seg(["Off", "Fast", "Normal"], 2),
+              ),
+              row(
+                `Environment identification ${info("Environment identification", "Marks dev and nightly builds with artwork, so you never confuse them with your daily app.")}`,
+                "",
+                sel("Artwork"),
+              ),
+            ]) +
+            sec("Text", [
+              row("Interface font", "", sel("Onest")),
+              row("Code font", "", sel("JetBrains Mono", true)),
+              row("Sizes", "Interface 14 · prompt 15 · code 13", btn("Adjust", "ghost")),
+              row("Word wrap in code", "Wrap long lines in code blocks and diffs.", sw(false)),
+              fold("Advanced", [
+                row(
+                  "Separate fonts for prompt and terminal",
+                  "Pick a different font for the composer and the terminal.",
+                  sw(false),
+                ),
+                row("Font smoothing", "macOS only.", sw(true)),
+                row("Render math", "Show LaTeX between $ signs as formulas.", sw(true)),
+              ]),
+            ]),
+        };
+
+        // ───── Chat
+        P.chat = {
+          title: "Chat",
+          desc: "How the composer and follow-ups behave on this device.",
+          store: "device",
+          body:
+            sec("Composer", [
+              row("Rich text composer", "Show formatted Markdown as you type.", sw(true)),
+              row(
+                "Send shortcut",
+                "What Enter does. The other key inserts a new line.",
+                seg(["Enter", "Ctrl+Enter"], 0),
+              ),
+              row(
+                "Composer context",
+                "Keep branch and worktree controls under the composer after a thread starts.",
+                sw(false),
+              ),
+              row(
+                "Skills in the slash menu",
+                "Also list skills in the / menu. They always appear when you type $.",
+                sw(true),
+              ),
+            ]) +
+            sec("Follow-ups", [
+              row(
+                "While the agent works",
+                "What a new message does mid-run. Ctrl+Enter does the other one.",
+                seg(["Steer", "Queue"], 0),
+              ),
+              row("Effort display", "Show the reasoning effort next to the model.", sel("Icon")),
+            ]) +
+            sec("Responses", [
+              row("Response streaming", "Show text as it arrives.", sw(true)),
+              row(
+                "Thread details card",
+                "What the card next to the thread shows.",
+                btn("Choose", "ghost"),
+              ),
+            ]) +
+            sec("Legacy", [
+              fold("2 legacy options", [
+                row(
+                  "Plan mode",
+                  "Bring back Build/Plan, /plan, /default and Shift+Tab.",
+                  sw(false),
+                ),
+                row(
+                  "Context window ring",
+                  "Show context use as a ring in the composer.",
+                  sw(false),
+                ),
+              ]),
+            ]),
+        };
+
+        // ───── Keybindings
+        const kb = (cmd, keys, when) =>
+          `<div class="lrow"><div class="tx"><b>${cmd}</b><span class="when">${when}</span></div>${keys}<div class="acts2"><button class="btn ghost icon sm" aria-label="Edit ${cmd}" data-tip="Edit">${I("pencil")}</button><button class="btn ghost icon sm" aria-label="Remove ${cmd}" data-tip="Remove">${I("trash")}</button></div></div>`;
+        P.keybindings = {
+          title: "Keybindings",
+          desc: "Shortcuts for every command. Saved on your machines, so they follow you to any device.",
+          store: "scoped",
+          wide: false,
+          actions: btn("Add shortcut", "", "plus"),
+          body:
+            `<div class="row" style="margin-top:var(--space-8)"><div class="input-wrap grow">${I("search")}<input class="input" placeholder="Search by command or keys"></div>${seg(["All", "Changed", "Conflicts"], 0)}<button class="btn ghost sm">${I("file")}Open keybindings.json</button></div>` +
+            sec("Navigation", [
+              kb("Command palette", kbd("Ctrl", "K"), "not in terminal"),
+              kb("Open settings", kbd("Ctrl", ","), "always · new"),
+              kb("Toggle sidebar", kbd("Ctrl", "B"), "always"),
+              kb("New thread", kbd("Ctrl", "N"), "always"),
+              kb("Project search", kbd("Ctrl", "Shift", "F"), "not in terminal"),
+            ]) +
+            sec("Right panel", [
+              kb("Toggle panel", kbd("Ctrl", "Alt", "B"), "always"),
+              kb("Close panel", kbd("Ctrl", "W"), "panel open and not in terminal"),
+            ]) +
+            `<div class="doc-note doc-only"><b>Почему так.</b> Keybindings хранятся в окружении — шапка честно показывает «Saved to». «Remove» теперь подтверждает строкой «Removed · Undo» (тост с отменой), без окна: действие обратимо.</div>`,
+        };
+
+        // ───── SnapShots
+        P.snapshots = {
+          title: "SnapShots",
+          desc: "Capture a window and attach it to your current draft. Desktop app only.",
+          store: "device",
+          body:
+            sec("Capture", [
+              row("SnapShots", "Turn on the capture shortcut.", sw(true)),
+              row(
+                "Shortcut",
+                "Press to capture the window under the cursor.",
+                `${kbd("Ctrl", "Shift", "2")}${btn("Change", "ghost")}`,
+              ),
+              row("Capture sound", "", sel("Whoosh")),
+            ]) +
+            sec("Setup", [
+              row(
+                `Screen capture permission ${info("Platform setup", "Steps differ on macOS, Windows, GNOME, KDE, Hyprland and Niri. Marp shows only the ones for your system.")}`,
+                "Windows Graphics Capture · ready",
+                `<span class="badge success dot">Ready</span>`,
+              ),
+            ]) +
+            `<div class="alert doc-only" style="margin-top:var(--space-16)"><i data-i="info"></i><div class="grow">В вебе страница показывает состояние «Desktop app only» с кнопкой «Get the desktop app» вместо выключенных строк.</div></div>`,
+        };
+
+        // ───── Providers
+        const inst = (mk, name, sub, dot, on) =>
+          `<div class="md-item${on ? " on" : ""}" role="button" tabindex="0"><span class="pmark s28">${mk}</span><div class="tx"><b>${name}</b><span><span class="sd ${dot}"></span>${sub}</span></div>${sw(dot !== "off")}</div>`;
+        P.providers = {
+          title: "Providers",
+          desc: "Agent accounts and runtimes on each machine.",
+          store: "machine",
+          wide: true,
+          attrs: 'data-pstate="signed-in"',
+          actions: `<button class="btn ghost sm" data-tip="Refresh provider status">${I("undo")}Checked 1 m ago</button>${btn("Update all on 1 machine")}`,
+          body: `
+    <div class="md" style="margin-top:var(--space-8)">
+      <div class="md-list">
+        ${inst("Cx", "Codex", "ChatGPT Free · v0.165.0", "", false)}
+        ${inst("Cl", "Claude", "Claude Max · v2.1.312", "warn", true)}
+        ${inst("Cu", "Cursor", "Not signed in", "off", false)}
+        ${inst("Oc", "OpenCode", "Local server · v1.4.2", "", false)}
+        ${inst("Rp", "Replay (dev)", "Available", "", false)}
+        <button class="md-add" data-modal="m-add-provider">${I("plus")}Add provider</button>
+        <div class="sep" style="margin:var(--space-12) 0"></div>
+        <button class="md-item"><span class="pmark s28">${I("layers", "i-14")}</span><div class="tx"><b>Usage hubs</b><span>1 hub · CLIProxyAPI</span></div></button>
+        <button class="md-item"><span class="pmark s28">${I("clock", "i-14")}</span><div class="tx"><b>Health checks</b><span>Every 5 minutes</span></div></button>
+      </div>
+      <div class="md-detail">
+        <div class="md-head"><span class="pmark lg">Cl</span><div><div class="t">Claude</div><div class="t-caption ink-3">claude · v2.1.312 · default instance</div></div>
+          <div class="r2"><span class="badge attention dot ps-in">Update available</span><button class="btn ghost icon sm" aria-label="Instance actions" data-pop="pop-inst" data-pop-align="end">${I("more")}</button></div></div>
+        <div class="alert ps-up" style="margin-bottom:var(--space-16)"><i data-i="upload"></i><div class="grow"><b>Claude 2.1.320 is available</b>Update now, or run <code class="t-code-sm">npm i -g @anthropic-ai/claude-code</code>.</div>${btn("Update now", "", "upload")}</div>
+        <div class="tabs-u" role="tablist"><button aria-selected="true">Account</button><button aria-selected="false">Runtime</button><button aria-selected="false">Models <span class="count t-caption ink-3">14</span></button><button aria-selected="false">Variables <span class="count t-caption ink-3">2</span></button></div>
+        <div class="rows">
+          <div class="ps-in">${row("Signed in", "stas•••@gmail.com · Claude Max", `${btn("Change account", "ghost")}${btn("Sign out", "ghost")}`)}</div>
+          <div class="ps-out">${row("Not signed in", "Sign in with your Claude plan, or set ANTHROPIC_API_KEY in Variables.", btn("Sign in", "primary"))}</div>
+          ${row("Sign-in method", "", sel("Provider default"))}
+          ${row("Display name", "Shown in the model picker and thread headers.", `<span class="pmark s16" style="background:#b4532f;color:#fff">C</span>${inp("Claude")}`)}
+        </div>
+        <div class="doc-note doc-only"><b>Вкладки.</b> Runtime: binary path, CLAUDE_CONFIG_DIR, launch arguments, auto-compact (по провайдеру — поля из PROV-47…54). Models: фильтр от 8 моделей, избранное, порядок, видимость, кастомные модели с подтверждением удаления. Variables: KEY = value, секреты хранятся отдельно. Sessions — только у ACP. Codex managed: в меню «Switch to existing CLI» (раньше пути назад не было).</div>
+      </div>
+    </div>`,
+        };
+
+        // ───── Threads & models
+        P.threads = {
+          title: "Threads & models",
+          desc: "How new threads start and what happens to old ones.",
+          store: "scoped",
+          body:
+            sec("New threads", [
+              row(
+                "Model",
+                "Projects can override this.",
+                `<button class="btn sm"><span class="pmark s16">Cx</span>GPT-5.6 Terra</button>${sel("Medium")}`,
+                { inh: inh() },
+              ),
+              row(
+                "Fallback model",
+                "Used when the default model's provider is out of usage.",
+                sel("None"),
+              ),
+              row(
+                "Permissions",
+                "What the agent may do without asking. Projects can override this.",
+                sel("Full access"),
+              ),
+              row("Workspace", "Where new threads start.", sel("Current checkout")),
+            ]) +
+            sec("Background models", [
+              row(
+                "Text generation model",
+                "Writes thread titles and commit messages. Git & pull requests can override it for writing.",
+                `<button class="btn sm"><span class="pmark s16">Cl</span>Claude Haiku 4.5</button>`,
+              ),
+              row("Thread title instructions", "", btn("Edit", "ghost")),
+            ]) +
+            sec("Idle threads", [
+              row(
+                "Compact idle threads",
+                "Summarize long idle threads so they resume faster. Claude can set its own value.",
+                sel("When you return"),
+              ),
+              row(
+                "Auto-settle inactive threads",
+                "Move threads with no activity to Settled.",
+                sel("After 3 days"),
+              ),
+              row(
+                "Keep threads with a PR",
+                "Don't auto-settle while a pull request is open.",
+                sw(true),
+              ),
+              row("Auto-settle merged threads", "", sw(true)),
+            ]) +
+            sec("Usage limits", [
+              row(
+                "Resume after usage limits",
+                "Continue runs when your plan's limit resets.",
+                sw(true),
+              ),
+              row("Snooze until limits reset", "", sw(false)),
+            ]) +
+            sec("Snooze", [
+              row(
+                "Snooze options",
+                "Choices in every snooze menu, soonest first.",
+                btn("Edit 4 options", "ghost"),
+                { top: true },
+              ),
+            ]) +
+            sec("New projects", [
+              row(
+                "Add project starts in",
+                "Folder the Add project browser opens.",
+                inp("", "~/", true),
+              ),
+            ]),
+        };
+
+        // ───── Scheduled
+        P.scheduled = {
+          title: "Scheduled tasks",
+          desc: "Agent runs on a schedule or a webhook.",
+          store: "scoped",
+          actions: btn("New task", "primary", "plus"),
+          body: sec("Tasks", [], {
+            d: "3 tasks",
+            raw: `<div class="rows">
+      <div class="lrow"><span class="pmark s28">Cx</span><div class="tx"><b>Nightly dependency audit</b><span>Every day at 03:00 · Modelion · next in 12 h</span></div><span class="badge success dot">Active</span><button class="btn ghost icon sm" aria-label="Actions for Nightly dependency audit">${I("more")}</button></div>
+      <div class="lrow"><span class="pmark s28">Cl</span><div class="tx"><b>Triage new GitHub issues</b><span>On webhook · aagenvoro · last run 40 m ago</span></div><span class="badge success dot">Active</span><button class="btn ghost icon sm" aria-label="Actions">${I("more")}</button></div>
+      <div class="lrow"><span class="pmark s28">Cx</span><div class="tx"><b>Weekly changelog draft</b><span>Mondays at 09:00 · mywwave/Marp</span></div><span class="badge">Paused</span><button class="btn ghost icon sm" aria-label="Actions">${I("more")}</button></div></div>
+      <div class="pop static" style="margin-top:var(--space-12);width:220px"><button class="opt">${I("pencil")}Edit</button><button class="opt">${I("play")}Run now</button><button class="opt">${I("copy")}Duplicate</button><div class="sep"></div><button class="opt danger">${I("trash")}Delete…</button></div>`,
+          }),
+        };
+
+        // ───── Browser
+        P.browser = {
+          title: "Browser",
+          desc: "The built-in browser agents use, and how links open.",
+          store: "scoped",
+          body:
+            sec("Agent access", [
+              row(
+                "Agent browser access",
+                "Let agents use the shared browser. Projects can override this.",
+                sw(true),
+                { inh: inh() },
+              ),
+            ]) +
+            sec(
+              "Browsing",
+              [
+                row(
+                  "Profiles",
+                  "Profiles keep cookies and sign-ins apart.",
+                  btn("Add profile", "ghost", "plus"),
+                ),
+                row("Open links in", "Hold Ctrl to open in the other place.", sel("Marp browser")),
+                row("Floating preview", "Show a preview when an agent opens a page.", sw(true)),
+                row("Search engine", "", sel("DuckDuckGo")),
+                fold("Viewport and zoom", [
+                  row("Default viewport", "", sel("Desktop 1440")),
+                  row("Zoom", "", sel("100%")),
+                  row("Appearance", "", seg(["System", "Light", "Dark"], 0)),
+                ]),
+              ],
+              { dev: true },
+            ) +
+            sec(
+              "Recordings",
+              [
+                row(
+                  "Keep recordings",
+                  "Delete browser captures after this many days.",
+                  sel("30 days"),
+                ),
+              ],
+              { dev: true },
+            ),
+        };
+
+        // ───── Devices
+        P.devices = {
+          title: "Devices",
+          desc: "Simulators and phones agents can drive.",
+          store: "scoped",
+          body:
+            sec("Devices", [
+              row("Use devices", "Open simulators and emulators in the Device panel.", sw(true)),
+              row(
+                "Agents can use devices",
+                "New agent sessions can open and drive devices.",
+                sw(false),
+              ),
+            ]) +
+            sec("Sources", [], {
+              r: btn("Add source", "ghost", "plus"),
+              raw: `<div class="rows"><div class="lrow">${I("laptop", "ink-3")}<div class="tx"><b>Local simulators</b><span>Simulators and emulators on this machine</span></div><span class="badge success dot">Ready</span></div><div class="lrow">${I("server", "ink-3")}<div class="tx"><b>mac-mini (SSH)</b><span>2 iOS simulators · last checked 5 m ago</span></div><span class="badge success dot">Ready</span><button class="btn ghost icon sm" aria-label="Actions for mac-mini">${I("more")}</button></div></div>`,
+            }),
+        };
+
+        // ───── Projects
+        P.projects = {
+          title: "Projects",
+          desc: "Name, icon, scripts and defaults for each project.",
+          store: "none",
+          wide: true,
+          body: `
+    <div class="md" style="margin-top:var(--space-8)">
+      <div class="md-list">
+        <div class="input-wrap" style="margin-bottom:var(--space-8)">${I("search")}<input class="input" placeholder="Search projects" style="height:32px"></div>
+        ${[
+          ["M", "Modelion", "D:\\VSProjects\\platform", 1],
+          ["a", "aagenvoro", "D:\\VSProjects\\aagenvoro"],
+          ["A", "AagenvoroOS", "D:\\VSProjects\\AagenvoroOS"],
+          ["a", "anyglade", "D:\\VSProjects\\anyglade"],
+          ["m", "mywwave/Marp", "D:\\VSProjects\\Marp"],
+        ]
+          .map(
+            ([m, n, p, on]) =>
+              `<button class="md-item${on ? " on" : ""}"><span class="mono-mark" style="width:28px;height:28px;border-radius:8px;font-size:12px">${m}</span><div class="tx"><b>${n}</b><span class="mono">${p}</span></div></button>`,
+          )
+          .join("")}
+        <button class="md-add">${I("plus")}Add project</button>
+      </div>
+      <div class="md-detail">
+        <div class="md-head"><span class="mono-mark" style="width:36px;height:36px;border-radius:10px;font-size:14px">M</span><div><div class="t">Modelion</div><div class="t-caption ink-3 mono">D:\\VSProjects\\platform · 2 checkouts</div></div><div class="r2">${btn("Open folder", "ghost", "folder")}</div></div>
+        <div class="tabs-u" role="tablist"><button aria-selected="true">General</button><button aria-selected="false">Scripts <span class="t-caption ink-3">3</span></button><button aria-selected="false">Thread defaults</button><button aria-selected="false">Checkouts <span class="t-caption ink-3">2</span></button></div>
+        <div class="rows">${row("Name", "", inp("Modelion"))}${row("Icon", "Favicon from the repository, or pick one.", btn("Change", "ghost"))}${row("Model", "Overrides Threads & models for this project.", `<button class="btn sm"><span class="pmark s16">Cl</span>Claude Opus 4.5</button>`, { inh: inh() })}${row("Permissions", "", sel("Supervised"), { inh: inh() })}</div>
+        <section class="sec"><div class="sec-h"><span class="t-title">Danger zone</span></div><div class="rows">${row("Remove project", "Removes it from Marp. Files and git history stay on disk.", btn("Remove…", "danger"))}</div></section>
+      </div>
+    </div>`,
+        };
+
+        // ───── Git
+        P.git = {
+          title: "Git & pull requests",
+          desc: "Repositories, pull requests, diffs and AI-written commit messages.",
+          store: "scoped",
+          attrs: 'data-perm="write"',
+          body:
+            `<div class="alert perm-note" style="margin-top:var(--space-8)"><i data-i="shield"></i><div class="grow"><b>View only</b>This connection can't change settings on DESKTOP-UC7VC6O. Ask its owner for write access.</div></div>` +
+            sec("Repositories", [
+              row(
+                "Automatically pull",
+                "Keep the default branch current when the checkout is clean. Projects can override this.",
+                sw(false),
+              ),
+              row(
+                "Remove agent credits when merging",
+                "Strip agent co-author lines from merge and squash messages.",
+                sw(false),
+              ),
+              row(
+                "Default merge method",
+                "Pull requests start with this method.",
+                sel("Last selected"),
+              ),
+            ]) +
+            sec(
+              "Pull requests",
+              [
+                row(
+                  "Open pull requests in Marp",
+                  "Turn off to open PR links in your browser.",
+                  sw(true),
+                ),
+                row("Proactive panels", "Open the PR panel first for bigger changes.", sw(false)),
+              ],
+              { dev: true },
+            ) +
+            sec(
+              "Diffs",
+              [
+                row(
+                  "Diff layout",
+                  "Also switchable from the diff toolbar.",
+                  seg(["Stacked", "Side by side"], 0),
+                ),
+                row("Hide whitespace changes", "", sw(true)),
+                row("Files start", "", seg(["Collapsed", "Expanded"], 0)),
+                row("Diff colors", "", sel("Red & green")),
+              ],
+              { dev: true },
+            ) +
+            sec("Writing", [
+              row("Commit message style", "", sel("Conventional")),
+              row(
+                "Writer model",
+                "Overrides the text generation model for commits and PRs.",
+                `<button class="btn sm"><span class="pmark s16">Cl</span>Same as Threads & models</button>`,
+              ),
+              row("Branch names", "", btn("Edit rules", "ghost")),
+            ]) +
+            sec("Tools & hosts", [], {
+              r: `<button class="btn ghost icon sm" aria-label="Refresh tools" data-tip="Refresh">${I("undo")}</button>`,
+              raw: `<div class="rows"><div class="lrow"><span class="pmark s28">Gi</span><div class="tx"><b>Git</b><span class="mono">git version 2.54.0.windows.1</span></div><span class="badge success dot">Found</span></div><div class="lrow"><span class="pmark s28">GH</span><div class="tx"><b>GitHub</b><span>Signed in as mywwave · gh 2.95.0</span></div><span class="badge success dot">Connected</span><button class="btn ghost sm">Manage</button></div><div class="lrow"><span class="pmark s28">GL</span><div class="tx"><b>GitLab</b><span>Install the glab CLI to connect.</span></div><button class="btn ghost sm">${I("external-link")}How to install</button></div><div class="lrow"><span class="pmark s28">JJ</span><div class="tx"><b>Jujutsu</b><span>Support is coming.</span></div><span class="badge">Soon</span></div></div>`,
+            }),
+        };
+
+        // ───── Worktrees
+        P.worktrees = {
+          title: "Worktrees",
+          desc: "Where thread worktrees live and when they're cleaned up.",
+          store: "scoped",
+          body:
+            sec("New worktrees", [
+              row("Location", "", inp("~/.marp/worktrees", "", true)),
+              row(
+                "Start from remote",
+                "Branch new worktrees from origin instead of the local branch.",
+                sw(true),
+              ),
+              row("Submodules", "", sel("Initialize")),
+            ]) +
+            sec("Cleanup rules", [
+              row(
+                "Delete settled worktrees",
+                "Run by Maintenance → Delete now, or automatically.",
+                sel("After 7 days"),
+              ),
+              row(
+                "Keep worktrees with changes",
+                "Never delete a worktree with uncommitted work.",
+                sw(true),
+              ),
+            ]),
+        };
+
+        // ───── Machines
+        const mach = (ic, n, s, dot, on) =>
+          `<button class="md-item${on ? " on" : ""}">${I(ic, "ink-3")}<div class="tx"><b>${n}</b><span><span class="sd ${dot}"></span>${s}</span></div></button>`;
+        P.machines = {
+          title: "Machines",
+          desc: "Every machine Marp runs on, and who can reach them.",
+          store: "none",
+          wide: true,
+          attrs: 'data-conn="online"',
+          actions: btn("Add machine", "primary", "plus"),
+          body: `
+    <div class="md" style="margin-top:var(--space-8)">
+      <div class="md-list">
+        ${mach("laptop", "DESKTOP-UC7VC6O", "This device · Windows", "", true)}
+        ${mach("server", "vps-hel1", "Offline · 2 h ago", "bad")}
+        ${mach("server", "mac-mini", "Tailscale · v0.1.4", "")}
+        <div class="sep" style="margin:var(--space-12) 0"></div>
+        <button class="md-item">${I("link", "ink-3")}<div class="tx"><b>Linked machines</b><span>Let agents work across machines</span></div></button>
+      </div>
+      <div class="md-detail">
+        <div class="md-head">${I("laptop", "i-20 ink-3")}<div><div class="t">DESKTOP-UC7VC6O</div><div class="t-caption ink-3">This device · Marp 0.1.4 · Windows 11</div></div><div class="r2"><span class="badge success dot mc-on">Online</span><span class="badge attention dot mc-off">Reconnecting</span></div></div>
+        <div class="tabs-u" role="tablist"><button aria-selected="false">Overview</button><button aria-selected="true">Access</button><button aria-selected="false">Clients <span class="t-caption ink-3">4</span></button><button aria-selected="false">Permissions</button></div>
+        <div class="rows">${row("Network access", "Let phones and other computers on your network connect. Restarts the local server.", sw(true))}${row("Tailscale", "desktop-uc7vc6o.tail1234.ts.net", `<span class="badge success dot">Serving</span>${btn("Manage", "ghost")}`)}${row("T3 Connect", "Reach this machine from anywhere, no network setup.", btn("Turn on"))}${row("WSL backend", "Run the server inside WSL. Restarts the local server.", sw(false))}</div>
+        <section class="sec"><div class="sec-h"><span class="t-title">Pair a device</span></div><div class="rows">${row("Pairing link", "One-time link with standard permissions. Expires in 5 minutes.", `${btn("Show QR", "ghost")}${btn("Copy link", "", "copy")}`)}</div></section>
+        <section class="sec"><div class="sec-h"><span class="t-title">Paired clients</span><div class="r"><button class="btn sm danger" data-modal="m-revoke">Revoke others…</button></div></div><div class="rows"><div class="lrow">${I("laptop", "ink-3")}<div class="tx"><b>This browser</b><span>Chrome · Windows · now</span></div><span class="badge">You</span></div><div class="lrow">${I("user", "ink-3")}<div class="tx"><b>iPhone 16</b><span>Marp mobile · 3 h ago</span></div><button class="btn ghost sm">Revoke…</button></div></div></section>
+      </div>
+    </div>`,
+        };
+
+        // ───── Maintenance
+        P.maintenance = {
+          title: "Maintenance",
+          desc: "Updates, background work and cleanup on your machines.",
+          store: "scoped",
+          actions: `<a class="btn ghost sm" href="#diagnostics">${I("wrench")}Diagnostics</a>`,
+          body:
+            `<div class="alert warning" style="margin-top:var(--space-8)"><i data-i="alert"></i><div class="grow"><b>The database is 1.2 GB</b>Compacting frees about 400 MB. Marp pauses for a minute while it runs.</div>${btn("Compact now")}</div>` +
+            sec("Updates", [
+              row(
+                "Provider update checks",
+                "Check provider CLIs for new versions and model lists.",
+                sw(true),
+              ),
+              row(
+                "Continue threads after restarts",
+                "Resume interrupted threads after an update, crash or restart.",
+                sw(true),
+              ),
+            ]) +
+            sec("Background activity", [
+              row(
+                `Background activity ${info("Background activity", "How often Marp checks git, providers and connected machines while you're away. Balanced pauses checks on idle or locked machines.")}`,
+                "Pauses checks on idle or locked machines and on battery.",
+                sel("Balanced"),
+              ),
+              row("Git fetch interval", "", sel("Every 5 minutes")),
+            ]) +
+            sec("Artifacts and logs", [
+              row("Delete old browser captures", "", sel("After 30 days")),
+              row("Delete old logs", "", sel("Off")),
+            ]) +
+            sec("Cleanup", [
+              row(
+                "Delete now",
+                "Runs your cleanup rules: captures, logs and settled worktrees.",
+                btn("Delete now", "", "trash"),
+              ),
+            ]),
+        };
+
+        P.diagnostics = {
+          title: "Diagnostics",
+          desc: "What Marp is using on DESKTOP-UC7VC6O right now.",
+          store: "machine",
+          crumb: ["maintenance", "Maintenance"],
+          wide: true,
+          body:
+            `<div class="ov-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-top:var(--space-8)">${[
+              ["CPU", "3.2%", "8 processes"],
+              ["Memory", "612 MB", "server + 3 agents"],
+              ["Disk I/O", "1.4 MB/s", "read · write 220 KB/s"],
+              ["Uptime", "4 h 12 m", "since last restart"],
+            ]
+              .map(
+                ([a, b, c]) =>
+                  `<div class="ov-card"><span class="t-caption ink-3">${a}</span><span style="font:600 24px/30px var(--font-sans);color:var(--ink)">${b}</span><span class="t-caption ink-3">${c}</span></div>`,
+              )
+              .join("")}</div>` +
+            sec("Processes", [], {
+              r: seg(["5 m", "15 m", "1 h"], 1),
+              raw: `<div class="rows">${[
+                ["Marp server", "312 MB", "1.1%"],
+                ["Claude · Refactor auth", "180 MB", "1.8%"],
+                ["Codex · Nightly audit", "96 MB", "0.2%"],
+                ["Terminal · pnpm dev", "24 MB", "0.1%"],
+              ]
+                .map(
+                  ([n, m, c]) =>
+                    `<div class="lrow"><div class="tx"><b>${n}</b></div><span class="num t-caption ink-3" style="width:80px;text-align:right">${m}</span><span class="num t-caption ink-3" style="width:56px;text-align:right">${c}</span><div class="acts2"><button class="btn ghost sm">Stop</button></div></div>`,
+                )
+                .join("")}</div>`,
+            }) +
+            sec("Telemetry export", [
+              row(
+                `OpenTelemetry endpoint ${info("OpenTelemetry", "Send traces to your own collector, for example Honeycomb or a local Jaeger.")}`,
+                "Takes effect after the server restarts.",
+                inp("", "https://otel.example.com", true),
+              ),
+              row("Restart server", "Applies the export settings.", btn("Restart now")),
+            ]),
+        };
+
+        // ───── Archive
+        const arch = (t, p, d) =>
+          `<div class="lrow"><span class="check" role="checkbox" aria-checked="false">${I("check")}</span><div class="tx"><b>${t}</b><span>${p} · archived ${d}</span></div><div class="acts2"><button class="btn ghost sm">${I("eye")}Open</button><button class="btn ghost sm">${I("undo")}Unarchive</button><button class="btn ghost icon sm" aria-label="Delete">${I("trash")}</button></div></div>`;
+        P.archive = {
+          title: "Archived threads",
+          desc: "Threads you archived. Open, bring back or delete them.",
+          store: "scoped",
+          attrs: 'data-sel="none"',
+          body:
+            `<div class="row" style="margin-top:var(--space-8)"><div class="input-wrap grow">${I("search")}<input class="input" placeholder="Search archived threads"></div><span class="nobulk t-caption ink-3">42 threads</span><span class="bulk row"><span class="t-caption ink-2">2 selected</span>${btn("Unarchive", "", "undo")}${btn("Delete…", "danger", "trash")}</span></div>` +
+            sec("This week", [
+              arch("Разделить цвета трат и агентств", "AagenvoroOS", "2 d ago"),
+              arch("SSR и события на фронте", "aagenvoro", "4 d ago"),
+            ]) +
+            sec("Earlier", [
+              arch("Review uncommitted changes", "aagenvoro", "Sep 14"),
+              arch("Ключевые ошибки ИИ сейчас", "aagenvoro", "Sep 14"),
+            ]) +
+            `<div class="row" style="justify-content:space-between;margin-top:var(--space-16)"><span class="t-caption ink-3">1–4 of 42</span><span class="row">${btn("Previous", "ghost")}<span class="t-caption ink-3">Page 1 of 11</span>${btn("Next")}</span></div>`,
+        };
+
+        // ───── Labs
+        P.labs = {
+          title: "Labs",
+          desc: "Early features. They may change or go away.",
+          store: "scoped",
+          body:
+            sec(
+              "Sidebar",
+              [
+                row(
+                  `Boring sidebar <span class="badge new">Beta</span>`,
+                  "Group threads into project folders.",
+                  sw(false),
+                ),
+                row(
+                  "Two-line folder rows",
+                  "Show branch, PR and agent under the title. Needs the boring sidebar.",
+                  sw(false),
+                  { dis: true },
+                ),
+              ],
+              { dev: true },
+            ) +
+            sec("Collaboration", [
+              row(
+                `Guest links <span class="badge new">Beta</span>`,
+                "Share a thread with a guest who watches live and sends messages you approve. Needs T3 Connect.",
+                sw(false),
+              ),
+              row(
+                `Linked machines <span class="badge new">Beta</span>`,
+                "Let agents here work on your other machines.",
+                sw(false),
+              ),
+            ]) +
+            sec("Devices", [
+              row(
+                `Simlock device hosts <span class="badge new">Alpha</span>`,
+                "Lease simulators from your own Simlock pool.",
+                sw(false),
+              ),
+            ]),
+        };
+
+        // ───── About
+        P.about = {
+          title: "About",
+          desc: "Version, updates and legal.",
+          store: "device",
+          body:
+            sec("Marp", [
+              row("Version", "0.1.4 · stable · up to date", btn("Check for updates", "ghost")),
+              row("Update track", "", seg(["Stable", "Nightly"], 0)),
+              row(
+                "t3 command",
+                "Run Marp's CLI as t3 from any terminal.",
+                `<span class="badge success dot">Installed</span>`,
+              ),
+              row(
+                "Mobile app",
+                "Connect to your machines from your phone.",
+                `${btn("iPhone and iPad", "ghost")}${btn("Android", "ghost")}`,
+              ),
+            ]) +
+            sec("Legal", [
+              row(
+                "Privacy policy",
+                "What data Marp collects and why.",
+                btn("View", "ghost", "external-link"),
+              ),
+              row(
+                "Open source licenses",
+                "461 notices for dependencies and tools.",
+                `<a class="btn ghost sm" href="#licenses">View${I("chevron-right")}</a>`,
+              ),
+            ]),
+        };
+        P.licenses = {
+          title: "Open source licenses",
+          desc: "Notices for dependencies, assets and optional tools.",
+          store: "none",
+          crumb: ["about", "About"],
+          nav: "about",
+          body:
+            `<div class="input-wrap" style="margin-top:var(--space-8)">${I("search")}<input class="input" placeholder="Search 461 notices"></div>` +
+            sec("Third-party notices", [], {
+              raw: `<div class="rows">${[
+                ["@anthropic-ai/claude-agent-sdk", "0.3.276", "See license · Server"],
+                ["@base-ui/react", "1.5.0", "MIT · Web"],
+                ["@fontsource-variable/onest", "5.3.1", "OFL-1.1 · Web"],
+                ["effect", "4.0.2", "MIT · Server, Web"],
+              ]
+                .map(
+                  ([n, v, l]) =>
+                    `<div class="lrow">${I("chevron-right", "i-14 ink-4")}<div class="tx"><b class="mono t-code-sm">${n} <span class="ink-3">${v}</span></b></div><span class="t-caption ink-3">${l}</span></div>`,
+                )
+                .join("")}</div>`,
+            }),
+        };
+
+        // ───── Scope, search, narrow, dialogs
+        P.scope = Object.assign({}, P.threads, { nav: "threads" });
+        P.search = Object.assign({}, P.general, { nav: "general" });
+
+        const host = document.getElementById("screens");
+        const doc = {
+          overview:
+            "Вход в настройки. «Needs attention» собирает то, что мешает работать, с кнопкой исправления; сводки ведут в разделы. Пустое состояние — «All set» зелёной плиткой.",
+          general:
+            "Только устройство: бейдж «This device». «Restore defaults» переехала из шапки вниз и честно предупреждает, что часть значений хранится на машинах.",
+          appearance:
+            "Схема и темы — плитками, интерфейс и шрифты — строками; редкое — в «Advanced». Редактор тем открывается окном 880 «форма + живой предпросмотр».",
+          chat: "Всё про композер в одном месте: «Composer context» пришёл из Appearance, «Skills in the slash menu» вынесен из Advanced, legacy-флаги — из Labs.",
+          keybindings:
+            "Поиск по команде и клавишам, фильтр «Changed / Conflicts», команда «Open settings» (Ctrl+,) — новая.",
+          snapshots:
+            "Ветки настройки по платформам сохранены (macOS, Windows, GNOME, KDE, Hyprland, Niri); показывается только своя.",
+          providers:
+            "Список + детали. Машина выбирается в шапке (раньше — сегмент «Devices»). Демо-панель: вход, выход, обновление.",
+          threads:
+            "Модели и поведение тредов собраны с четырёх страниц. Значок слоя у строки — значение переопределено в проекте.",
+          scheduled: "Список задач; в меню — Duplicate (новое) и Delete с подтверждением.",
+          browser: "Строки, хранимые на устройстве, помечены «This device» в заголовке секции.",
+          devices: "Источники устройств списком; удаление источника — с подтверждением.",
+          projects:
+            "Список + детали во вкладках General / Scripts / Thread defaults / Checkouts. Удаление — в «Danger zone».",
+          git: "Source control + Diffs & PRs. Демо: «View only» — подключение без права записи.",
+          worktrees:
+            "Расположение и правила очистки; «Delete now» живёт в Maintenance и ссылается сюда.",
+          machines:
+            "Все машины, включая эту. Вкладки Overview / Access / Clients / Permissions вместо двух страниц. «Revoke others» подтверждается.",
+          maintenance:
+            "Обновления, фон, артефакты, очистка; заметка о базе данных — баннером с действием.",
+          diagnostics:
+            "Вложенная страница с крошкой «← Maintenance». Две истории процессов объединены в одну.",
+          archive: "Новое: открыть, вернуть, удалить, выбор нескольких, пагинация. Демо: выбор.",
+          labs: "Флаги с меткой Beta / Alpha, сгруппированы по теме; зависимый флаг выключен с подсказкой.",
+          about: "Версия, канал обновлений, CLI, мобильное приложение, юридическое.",
+          licenses: "Вложенная страница с крошкой «← About» и поиском.",
+          scope:
+            "Пилюля «Saved to» открывает выбор проекта, машины и checkout (checkout — новое, после выбора проекта).",
+          search: "Поиск в навигации: «/» или Ctrl+F; результаты заменяют список разделов.",
+        };
+        const order = [
+          "overview",
+          "general",
+          "appearance",
+          "chat",
+          "keybindings",
+          "snapshots",
+          "providers",
+          "threads",
+          "scheduled",
+          "browser",
+          "devices",
+          "projects",
+          "git",
+          "worktrees",
+          "machines",
+          "maintenance",
+          "diagnostics",
+          "archive",
+          "labs",
+          "about",
+          "licenses",
+          "scope",
+          "search",
+        ];
+        const demos = {
+          providers: `<div class="demo-bar doc-only" data-target="#s-providers"><label>Account</label><div class="seg sm" data-demo="pstate"><button data-v="signed-in">Signed in</button><button data-v="signed-out">Not signed in</button><button data-v="update">Update available</button></div></div>`,
+          machines: `<div class="demo-bar doc-only" data-target="#s-machines"><label>Connection</label><div class="seg sm" data-demo="conn"><button data-v="online">Online</button><button data-v="offline">Reconnecting</button></div></div>`,
+          git: `<div class="demo-bar doc-only" data-target="#s-git"><label>Permission</label><div class="seg sm" data-demo="perm"><button data-v="write">Can edit</button><button data-v="read">View only</button></div></div>`,
+          archive: `<div class="demo-bar doc-only" data-target="#s-archive"><label>Selection</label><div class="seg sm" data-demo="sel"><button data-v="none">None</button><button data-v="some">2 selected</button></div></div>`,
+        };
+        let html = "";
+        for (const id of order) {
+          const p = P[id];
+          let extra = "";
+          if (id === "scope")
+            extra = `<div class="doc-note doc-only"><b>Открыто:</b> поповер «Saved to» (кнопка в шапке).</div>`;
+          html += `<div data-screen-panel="${id}">${demos[id] || ""}${frame(id, p, p.body)}<div class="screen-doc doc-only"><div class="doc-note">${doc[id]}</div>${extra}</div></div>`;
+        }
+        html += `<div data-screen-panel="narrow"><div class="row" style="gap:var(--space-24);align-items:flex-start;flex-wrap:wrap">
+    <div class="frame" style="width:auto"><div class="app st narrow"><main class="s-sheet"><header class="s-head"><div class="grow"><h2>Settings</h2></div><button class="btn ghost icon sm" aria-label="Close">${I("x")}</button></header><div class="s-body"><div class="input-wrap" style="margin-bottom:var(--space-16)">${I("search")}<input class="input" placeholder="Search settings"></div>${NAV.slice(
+      1,
+    )
+      .map(
+        ([h, items]) =>
+          `<div class="opt-group" style="padding-left:4px">${h}</div><div class="rows" style="margin-bottom:var(--space-12)">${items.map(([id, ic, label, a]) => `<div class="lrow" style="min-height:48px">${I(ic, "ink-3")}<div class="tx"><b>${label}</b></div>${a ? `<span class="attn${a === "bad" ? " bad" : ""}" style="margin-left:0"></span>` : ""}${I("chevron-right", "i-14 ink-4")}</div>`).join("")}</div>`,
+      )
+      .join("")}</div></main></div></div>
+    <div class="frame" style="width:auto"><div class="app st narrow"><main class="s-sheet"><header class="s-head"><div class="grow"><a class="crumb">${I("arrow-left", "i-14")}Settings</a><h2>General</h2><p>Notifications, the sidebar and confirmations on this device.</p></div></header><div class="s-body">${P.general.body}</div></main></div></div>
+  </div><div class="screen-doc doc-only"><div class="doc-note">Узкое окно и телефон (390): список разделов карточками → раздел с «← Settings». Раньше — иконочная рейка. Строки переносят контрол под подпись, если не помещается.</div></div></div>`;
+        html += `<div data-screen-panel="dialogs"><div class="grid grid-2">
+    <div class="on-bg" style="background:var(--bg);border-radius:var(--radius-lg);padding:var(--space-24)">${document.getElementById("m-restore").innerHTML}</div>
+    <div class="stack"><div class="on-bg" style="background:var(--bg);border-radius:var(--radius-lg);padding:var(--space-24)">${document.getElementById("m-del-inst").innerHTML}</div><div class="on-bg" style="background:var(--bg);border-radius:var(--radius-lg);padding:var(--space-24)">${document.getElementById("m-revoke").innerHTML}</div></div>
+  </div><div style="margin-top:var(--space-12);background:var(--bg);border-radius:var(--radius-lg);padding:var(--space-24)">${document.getElementById("m-add-provider").innerHTML}</div>
+  <div class="row" style="margin-top:var(--space-12);gap:var(--space-12);align-items:flex-start"><div class="pop static" style="width:340px">${document.getElementById("pop-scope").innerHTML}</div><div class="pop static" style="width:260px">${document.getElementById("pop-inst").innerHTML}</div><div class="toast static">${I("check", "ok")}<div class="grow"><b>Removed shortcut</b><small>Toggle sidebar · Ctrl+B</small></div><button class="act">Undo</button></div></div>
+  <div class="screen-doc doc-only"><div class="doc-note">Все удаления и отзывы доступа — одно окно: иконка в мягком красном круге, вопрос с именем, что пропадёт, кнопка-действие. Обратимые действия (удалить шорткат) — тост с «Undo» вместо окна.</div></div></div>`;
+        html += `<div data-screen-panel="checklist"><div id="checklist" class="specimen">Loading inventory…</div></div>`;
+        host.innerHTML = html;
+
+        // Переходы по навигации внутри макета.
+        document.addEventListener("click", (e) => {
+          const go = e.target.closest("[data-go]");
+          if (go) {
+            location.hash = go.dataset.go;
+          }
+          const tab = e.target.closest(".tabs-u > button");
+          if (tab)
+            [...tab.parentElement.children].forEach((b) =>
+              b.setAttribute("aria-selected", String(b === tab)),
+            );
+        });
+
+        // Чек-лист из инвентаризации.
+        fetch("inventory/settings.md")
+          .then((r) => r.text())
+          .then((md) => {
+            const out = [];
+            let n = 0,
+              nNew = 0;
+            for (const line of md.split("\n")) {
+              const h = line.match(/^## (.+)/);
+              if (h) {
+                out.push(`<div class="check-group">${h[1].replace(/`/g, "")}</div>`);
+                continue;
+              }
+              const m = line.match(/^- \*\*([A-Z]+-\d+)\*\* (.*?) ⟶ (.*)$/);
+              if (!m) continue;
+              n++;
+              const isNew = m[3].startsWith("＋") || m[3].includes("＋");
+              if (isNew) nNew++;
+              const text = m[2]
+                .replace(/ — `[^`]*`.*$/, "")
+                .replace(/`/g, "")
+                .slice(0, 180);
+              out.push(
+                `<div class="check-row"><code>${m[1]}</code><span>${text}</span><span class="st${isNew ? " new" : ""}">${m[3]}</span></div>`,
+              );
+            }
+            document.getElementById("checklist").innerHTML =
+              `<div class="row" style="margin-bottom:var(--space-12)"><span class="t-title">${n} items</span><span class="badge success">${n} with status</span><span class="badge new">${nNew} new or improved</span></div>` +
+              out.join("");
+          })
+          .catch(() => {
+            document.getElementById("checklist").textContent =
+              "Open over http (python -m http.server) to render the checklist.";
+          });
+      })();
+    </script>
+  </body>
+</html>
