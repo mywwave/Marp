@@ -356,9 +356,7 @@ function AccessGatedProviderSettings({
     operateAccess,
   });
   if (access.kind !== "editable" && access.kind !== "read-only") {
-    return (
-      <EnvironmentUnavailablePlaceholder environment={environment} access={access} />
-    );
+    return <EnvironmentUnavailablePlaceholder environment={environment} access={access} />;
   }
   return (
     <EnvironmentProviderSettings
@@ -936,15 +934,16 @@ export function EnvironmentProviderSettings({
                   <span className="inline-flex items-center gap-1.5">
                     {searchableSetting("provider-health-check-interval").title}
                     <PolicyTooltip>
-                      This interval is configured here, then the shared Background activity policy decides
-                      whether provider probes may run when the timer fires. Custom intervals appear as
-                      Advanced in Maintenance settings.
+                      This interval is configured here, then the shared Background activity policy
+                      decides whether provider probes may run when the timer fires. Custom intervals
+                      appear as Advanced in Maintenance settings.
                     </PolicyTooltip>
                   </span>
                 }
                 description="Refresh provider status, versions, and models in the background. Set to 0 to disable."
                 resetAction={
-                  providerHealthRefreshIntervalSeconds !== defaultProviderHealthRefreshIntervalSeconds ? (
+                  providerHealthRefreshIntervalSeconds !==
+                  defaultProviderHealthRefreshIntervalSeconds ? (
                     <span
                       inert={!canWriteSettings}
                       className={!canWriteSettings ? "opacity-50" : undefined}
@@ -1234,7 +1233,7 @@ function ProviderInstanceRow({
           ? () =>
               void confirmDestructiveAction({
                 title: `Delete “${instance.displayName ?? instanceId}”?`,
-                description: `Removes this ${resetLabel} instance and its settings from ${environmentLabel}. You can't undo this.`,
+                description: `Removes this provider instance and its settings from ${environmentLabel}. You can't undo this.`,
                 confirmLabel: "Delete instance",
               }).then((confirmed) => {
                 if (confirmed) void actions.deleteInstance(instanceId, instance);
