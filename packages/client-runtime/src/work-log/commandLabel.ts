@@ -1972,14 +1972,20 @@ const PROGRAM_INTENTS: Readonly<Record<string, CommandIntent["verbs"]>> = {
   prettier: FORMAT,
   oxfmt: FORMAT,
 };
-const GIT_INTENTS: Readonly<Record<string, CommandIntent["verbs"]>> = {
+const GIT_STAGE = verbs("Staging changes", "Staged changes", "Stage changes");
+const GIT_COMMIT = verbs("Committing", "Committed", "Commit");
+const GIT_VIEWS = {
   status: verbs("Viewing git status", "Viewed git status", "View git status"),
   diff: verbs("Viewing git diff", "Viewed git diff", "View git diff"),
   log: verbs("Viewing git log", "Viewed git log", "View git log"),
   show: verbs("Viewing commit", "Viewed commit", "View commit"),
   blame: verbs("Viewing git blame", "Viewed git blame", "View git blame"),
-  add: verbs("Staging changes", "Staged changes", "Stage changes"),
-  commit: verbs("Committing", "Committed", "Commit"),
+};
+const GIT_VIEW_VERBS = new Set<CommandIntent["verbs"]>(Object.values(GIT_VIEWS));
+const GIT_INTENTS: Readonly<Record<string, CommandIntent["verbs"]>> = {
+  ...GIT_VIEWS,
+  add: GIT_STAGE,
+  commit: GIT_COMMIT,
   push: verbs("Pushing", "Pushed", "Push"),
   pull: verbs("Pulling", "Pulled", "Pull"),
   fetch: verbs("Fetching", "Fetched", "Fetch"),
@@ -2101,9 +2107,29 @@ function packageManagerIntent(program: string, args: ReadonlyArray<string>): Com
   return withObject(scriptVerbs, scriptVerbs === TESTS ? intentObject(rest) : undefined);
 }
 
-function gitIntent(args: ReadonlyArray<string>): CommandIntent | null {
+const MAX_COMMIT_SUBJECT_CHARS = 60;
+
+// The subject of `-m "msg"`, of `-m "$(cat <<'EOF' … EOF)"`, or of `-F -` fed by a heredoc.
+function commitSubject(args: ReadonlyArray<string>, stdin: string | undefined): string | undefined {
+  let message: string | undefined;
+  for (const [index, arg] of args.entries()) {
+    if (arg === "-m" || arg === "--message") message ??= args[index + 1];
+    else if (arg.startsWith("--message=")) message ??= arg.slice("--message=".length);
+    else if ((arg === "-F" || arg === "--file") && args[index + 1] === "-") message ??= stdin;
+  }
+  if (message === undefined) return undefined;
+  const lines = message.split("\n");
+  const subject = (/<<-?\s*['"]?\w+['"]?\s*$/u.test(lines[0]!) ? lines[1] : lines[0])?.trim();
+  if (!subject) return undefined;
+  return subject.length <= MAX_COMMIT_SUBJECT_CHARS
+    ? subject
+    : `${subject.slice(0, MAX_COMMIT_SUBJECT_CHARS - 1).trimEnd()}…`;
+}
+
+function gitIntent(args: ReadonlyArray<string>, stdin: string | undefined): CommandIntent | null {
   const [first, second] = args;
   if (first === undefined) return null;
+  if (first === "commit") return withObject(GIT_COMMIT, commitSubject(args.slice(1), stdin));
   if (first === "stash" && (second === "list" || second === "show")) {
     return { verbs: verbs("Viewing stashes", "Viewed stashes", "View stashes") };
   }
@@ -2120,7 +2146,7 @@ function gitIntent(args: ReadonlyArray<string>): CommandIntent | null {
   );
 }
 
-function segmentIntent(tokens: ReadonlyArray<string>): CommandIntent | null {
+function segmentIntent(tokens: ReadonlyArray<string>, stdin?: string): CommandIntent | null {
   let words = tokens.filter((token) => !HARMLESS_REDIRECTIONS.has(token.toLowerCase()));
   while (words.length > 0 && ENV_ASSIGNMENT.test(words[0]!)) words = words.slice(1);
   for (;;) {
@@ -2158,7 +2184,7 @@ function segmentIntent(tokens: ReadonlyArray<string>): CommandIntent | null {
       ? { verbs: INSTALL }
       : withObject(ADD, target);
   }
-  if (program === "git") return gitIntent(args);
+  if (program === "git") return gitIntent(args, stdin);
   const fileVerbs = FILE_INTENTS[program];
   if (fileVerbs !== undefined) return withObject(fileVerbs, intentObject(args));
   if (LOOKUP_PROGRAMS.has(program) && first !== undefined) return withObject(LOOKUP, first);
@@ -2189,12 +2215,17 @@ export function commandIntent(command: string): CommandIntent | null {
   let rest: string | null = scriptPayload(command).trim();
   const intents: CommandIntent[] = [];
   for (let segment = 0; rest && segment < MAX_COMMAND_SEGMENTS; segment += 1) {
+    const segmentText = rest;
     const { firstCommand, remainingCommand } = splitFirstShellCommand(rest);
     rest = remainingCommand;
     const tokens = tokenizeShellCommand(firstCommand);
     if (!tokens || tokens.length === 0) break;
     if (LOCATION_PROGRAMS.has(tokens[0]!.toLowerCase()) || /^\$env:/iu.test(tokens[0]!)) continue;
-    const intent = segmentIntent(tokens);
+    // A heredoc's body follows the command's line; its first line is what a commit needs.
+    const stdin = tokens.some((token) => /^<<(?!<)/u.test(token))
+      ? /^[^\n]*\n([^\n]*)/u.exec(segmentText.slice(firstCommand.length))?.[1]
+      : undefined;
+    const intent = segmentIntent(tokens, stdin);
     if (
       intent !== null &&
       !intents.some((seen) => seen.verbs.completed === intent.verbs.completed)
@@ -2202,9 +2233,16 @@ export function commandIntent(command: string): CommandIntent | null {
       intents.push(intent);
     }
   }
-  if (intents.length <= 1) return intents[0] ?? null;
-  const shown = intents.slice(0, MAX_INTENTS);
-  const more = intents.length - shown.length;
+  // Next to a real step, a look at git status or log only checks it, and staging is part of a
+  // commit, so neither is named.
+  const acting = intents.filter((intent) => !GIT_VIEW_VERBS.has(intent.verbs));
+  const steps = (acting.length > 0 ? acting : intents).filter(
+    (intent, _index, all) =>
+      intent.verbs !== GIT_STAGE || !all.some((other) => other.verbs === GIT_COMMIT),
+  );
+  if (steps.length <= 1) return steps[0] ?? null;
+  const shown = steps.slice(0, MAX_INTENTS);
+  const more = steps.length - shown.length;
   const joined = (phase: IntentPhase) =>
     shown
       .map((intent, index) => {

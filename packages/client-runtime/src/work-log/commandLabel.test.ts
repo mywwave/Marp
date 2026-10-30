@@ -345,7 +345,18 @@ describe("commandIntent", () => {
     ["git branch -D old", "Changed branches"],
     ["git stash list", "Viewed stashes"],
     ["git stash", "Stashed changes"],
-    ['git commit -m "fix"', "Committed"],
+    ['git commit -m "fix: x"', "Committed fix: x"],
+    ["git commit --amend --no-edit", "Committed"],
+    [
+      "cd /w && git add a.ts && git commit -q -F - <<'EOF'\nfix(web): one line\n\nBody\nEOF\ngit log --oneline -1",
+      "Committed fix(web): one line",
+    ],
+    [
+      "git add -A && git commit -m \"$(cat <<'EOF'\nfeat: subject\n\nbody\nEOF\n)\" && git push",
+      "Committed feat: subject, pushed",
+    ],
+    ["vp test run && git status", "Ran tests"],
+    ["git status && git diff", "Viewed git status, viewed git diff"],
     ["git push origin main", "Pushed"],
     ["git checkout -b feature/x", "Switched to feature/x"],
     ["git switch main", "Switched to main"],
@@ -369,7 +380,7 @@ describe("commandIntent", () => {
       "Ran Python script, ran tests src/a.test.ts, typechecked",
     ],
     [
-      "vp fmt && vp lint && vp test run && git status && git diff",
+      "vp fmt && vp lint && vp test run && vp run typecheck && git push",
       "Formatted, linted, ran tests +2",
     ],
   ])("labels %s as %s", (command, expected) => {
