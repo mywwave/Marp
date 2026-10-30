@@ -22,6 +22,11 @@ import { Button } from "../ui/button";
 import ChatMarkdown from "../ChatMarkdown";
 import { ChatMarkdownAssetImage } from "./ChatMarkdownMedia";
 import { RenderErrorBoundary } from "../RenderErrorBoundary";
+import {
+  CommandCodeOutput,
+  commandCodeLanguage,
+  type CommandCodeTarget,
+} from "./CommandCodeOutput";
 import { CommandOutputPanel, useCommandOutputStreaming } from "./CommandOutputPanel";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { resolveExternalWebLinkHref } from "./externalLinkContextMenu";
@@ -198,6 +203,7 @@ export function CommandItemOutput(props: {
   readonly projectedItem: OrchestrationV2ProjectedTurnItem;
   readonly environmentId: EnvironmentId;
   readonly source?: TurnItemSource | undefined;
+  readonly code?: CommandCodeTarget | undefined;
 }) {
   const environmentStreamsOutput = useCommandOutputStreaming(props.environmentId);
   const streams = props.source !== undefined || environmentStreamsOutput;
@@ -207,6 +213,10 @@ export function CommandItemOutput(props: {
     props.source,
     streams,
   );
+  const codeLanguage =
+    props.code && output.output && !output.output.includes("\u001b")
+      ? commandCodeLanguage(props.code, output.output)
+      : null;
   return (
     <div className={cn("space-y-1.5", monoClassName)}>
       {streams ? (
@@ -216,6 +226,7 @@ export function CommandItemOutput(props: {
           itemId={props.projectedItem.sourceItemId}
           source={props.source?.commandOutput}
           copyable
+          code={props.code}
         />
       ) : (
         <>
@@ -229,7 +240,17 @@ export function CommandItemOutput(props: {
               />
             </div>
           ) : null}
-          <ToolOutput {...output} />
+          {codeLanguage && output.output ? (
+            <div className="max-h-80 overflow-auto">
+              <CommandCodeOutput
+                text={output.output}
+                language={codeLanguage}
+                startLine={props.code?.startLine ?? 1}
+              />
+            </div>
+          ) : (
+            <ToolOutput {...output} />
+          )}
         </>
       )}
     </div>

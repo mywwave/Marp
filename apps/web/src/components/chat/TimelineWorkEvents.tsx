@@ -56,6 +56,7 @@ import { workEntryIconName } from "./TimelineWorkEntryRow.logic";
 import { formatWorkingTimerNow } from "./TimelineWorkGroupRows.logic";
 import { WorkLogButton, WorkLogRow } from "./WorkLog";
 import { CommandItemOutput } from "./V2ItemInspector";
+import { commandCodeTarget } from "./CommandCodeOutput";
 import { TimelineRowCtx, type TimelineWorkEntry } from "./timelineRowContext";
 
 export function WorkingTimer({ createdAt }: { createdAt: string }) {
@@ -803,6 +804,7 @@ export function CommandCard({
             projectedItem={projectedItem}
             environmentId={ctx.activeThreadEnvironmentId}
             source={ctx.turnItemSource}
+            code={command ? commandCodeTarget(command) : undefined}
           />
         </div>
       ) : null}

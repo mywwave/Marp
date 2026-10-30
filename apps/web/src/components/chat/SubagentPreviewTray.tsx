@@ -10,10 +10,11 @@ import { subagentCardState } from "@marp/client-runtime/work-log/live-cards";
 import type { ScopedThreadRef, ThreadId } from "@marp/contracts";
 import { formatModelSlugName } from "@marp/shared/model";
 import { ExternalLinkIcon, XIcon } from "lucide-react";
-import { useEffect, useRef, useState, type ComponentProps } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 
 import { useIncrementalTimelineEntries } from "../../hooks/useIncrementalTimelineEntries";
 import { usePresence } from "../../hooks/usePresence";
+import { observeResize } from "../../lib/observeResize";
 import { deriveActiveWorkStartedAt, derivePhase } from "../../session-logic";
 import { useThreadVisibleTurnItems } from "../../state/entities";
 import { environmentThreadDetails } from "../../state/threads";
@@ -96,6 +97,8 @@ function SubagentPreviewLayer({
       thread?.projection.subagents.find((agent) => agent.id === target.subagentId) ?? null,
   );
   const state = agent === null ? null : subagentCardState(agent.status);
+  // A short transcript gets a short tray; a long one stops at 60vh and scrolls.
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
 
   // oxlint-disable-next-line marp/no-unreasoned-state-sync -- Esc anywhere in the window closes the preview
   useEffect(() => {
@@ -132,7 +135,13 @@ function SubagentPreviewLayer({
           role="dialog"
           aria-label={`Subagent preview: ${target.title}`}
           data-closing={closing || undefined}
-          className={`pointer-events-auto mx-auto flex h-[60vh] max-h-full w-full max-w-(--chat-content-max-width) flex-col overflow-hidden rounded-card bg-popover shadow-pop starting:translate-y-2 motion-reduce:starting:translate-y-0 ${fade}`}
+          style={{
+            height:
+              contentHeight === null
+                ? "60vh"
+                : `min(60vh, ${Math.ceil(contentHeight) + TRAY_HEADER_PX}px)`,
+          }}
+          className={`pointer-events-auto mx-auto flex max-h-full w-full max-w-(--chat-content-max-width) flex-col overflow-hidden rounded-card bg-popover shadow-pop starting:translate-y-2 motion-reduce:starting:translate-y-0 ${fade}`}
         >
           <header className="flex h-11 shrink-0 items-center gap-2 ps-4 pe-2 text-sm">
             <h2 className="min-w-0 truncate font-medium">{target.title}</h2>
@@ -180,6 +189,7 @@ function SubagentPreviewLayer({
               threadRef={scopeThreadRef(target.environmentId, target.childThreadId)}
               settings={settings}
               onOpenThread={onOpenThread}
+              onContentHeight={setContentHeight}
             />
           </div>
         </section>
@@ -188,6 +198,7 @@ function SubagentPreviewLayer({
   );
 }
 
+const TRAY_HEADER_PX = 44;
 const NO_TURN_DIFFS: ReadonlyArray<never> = [];
 const NO_MESSAGES: ReadonlyArray<never> = [];
 const ignore = () => {};
@@ -197,10 +208,12 @@ function SubagentTranscript({
   threadRef,
   settings,
   onOpenThread,
+  onContentHeight,
 }: {
   threadRef: ScopedThreadRef;
   settings: SubagentTranscriptSettings;
   onOpenThread: (threadId: ThreadId) => void;
+  onContentHeight: (height: number) => void;
 }) {
   const listRef = useRef<LegendListRef | null>(null);
   const threadKey = scopedThreadKey(threadRef);
@@ -216,6 +229,17 @@ function SubagentTranscript({
   const activityRun = projection ? deriveThreadActivityRun(projection) : null;
   const runtime = projection ? deriveThreadStructureRuntime(projection) : null;
   const runlessWorkStartedAt = projection ? deriveRunlessWorkStartedAt(projection) : null;
+  const hasEntries = entries.length > 0;
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- observes the list's content size so the tray fits it
+  useLayoutEffect(() => {
+    // The list mounts with the first entry; before that there is nothing to fit.
+    const content = hasEntries
+      ? listRef.current?.getScrollableNode()?.firstElementChild
+      : undefined;
+    if (!content) return;
+    onContentHeight(content.getBoundingClientRect().height);
+    return observeResize(content, () => onContentHeight(content.getBoundingClientRect().height));
+  }, [hasEntries, onContentHeight]);
   return (
     // The parent's thread find must not drive this timeline.
     <ThreadFindTimelineContext value={null}>

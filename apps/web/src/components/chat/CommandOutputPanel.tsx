@@ -11,6 +11,11 @@ import { cn } from "~/lib/utils";
 import { useServerConfigs } from "../../state/entities";
 import { orchestrationEnvironment } from "../../state/orchestration";
 import { useEnvironmentQuery } from "../../state/query";
+import {
+  CommandCodeOutput,
+  commandCodeLanguage,
+  type CommandCodeTarget,
+} from "./CommandCodeOutput";
 import { MessageCopyButton } from "./MessageCopyButton";
 import type { TurnItemSource } from "./timelineRowContext";
 
@@ -84,6 +89,8 @@ export function CommandOutputPanel(props: {
   readonly itemId: TurnItemId;
   readonly source?: TurnItemSource["commandOutput"] | undefined;
   readonly copyable?: boolean;
+  /** The output is one file's lines: shown as code with line numbers. */
+  readonly code?: CommandCodeTarget | undefined;
 }) {
   const input = { threadId: props.threadId, itemId: props.itemId };
   const { data, error } = useEnvironmentQuery<CommandOutputView, unknown>(
@@ -108,8 +115,13 @@ export function CommandOutputPanel(props: {
       return <div className="min-h-16 text-muted-foreground italic">Loading output…</div>;
     return data.running ? null : <div className="text-muted-foreground italic">No output.</div>;
   }
+  // Colored output keeps its own colors; a printed file is highlighted once it has finished.
+  const codeLanguage =
+    props.code && !data?.running && !text.includes("\u001b") && !data?.output.truncated
+      ? commandCodeLanguage(props.code, text)
+      : null;
   // Parse after all hooks to preserve the text/theme compiler cache.
-  const spans = terminalOutputSpans(text, TERMINAL_PALETTES[resolvedTheme]);
+  const spans = codeLanguage ? [] : terminalOutputSpans(text, TERMINAL_PALETTES[resolvedTheme]);
   return (
     <div>
       {props.copyable ? (
@@ -129,6 +141,9 @@ export function CommandOutputPanel(props: {
         }}
         className="max-h-80 overflow-auto text-muted-foreground"
       >
+        {props.code && codeLanguage ? (
+          <CommandCodeOutput text={text} language={codeLanguage} startLine={props.code.startLine} />
+        ) : null}
         {spans.map((span, index) =>
           span.style === null ? (
             span.text
