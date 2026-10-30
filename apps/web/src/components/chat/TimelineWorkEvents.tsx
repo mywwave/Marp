@@ -14,7 +14,7 @@ import {
 import type { FileDiffMetadata } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import { CheckIcon, ChevronRightIcon, TerminalIcon } from "lucide-react";
-import { use, useState, type MouseEvent, type ReactNode } from "react";
+import { use, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
 import {
   resolveFileContextMenuAbsolutePath,
@@ -229,9 +229,9 @@ export function FileEditCard({
     !fileChange?.diffStr &&
     (summary?.additions ?? 0) === 0 &&
     (summary?.deletions ?? 0) === 0;
-  // Cursor's default density: a finished edit is one line and its diff opens on demand. A live
-  // edit keeps its tail, and a proposal awaiting approval (with a footer) keeps the full card.
-  const minimal = !bare && !failed && !running && footer === undefined;
+  // Cursor's default density: an edit is one line and, once written, opens its diff on demand.
+  // A proposal awaiting approval (with a footer) keeps the full card.
+  const minimal = !bare && !failed && footer === undefined;
   const detail = useEditDetail(
     projectedItem,
     (minimal ? expanded : near) && !failed && !running && !bare,
@@ -347,42 +347,51 @@ export function FileEditCard({
         ref={nearRef}
         data-v2-item-type="file_change"
         data-edit-row="minimal"
-        role="button"
-        tabIndex={0}
-        aria-label={`${summary?.action.verb ?? "Edited"} ${displayPath}`}
-        aria-expanded={expanded}
-        onClick={onToggleExpanded}
-        onKeyDown={(event) => {
-          if (
-            event.target === event.currentTarget &&
-            (event.key === "Enter" || event.key === " ")
-          ) {
-            event.preventDefault();
-            onToggleExpanded();
-          }
-        }}
+        {...(running
+          ? {}
+          : {
+              role: "button",
+              tabIndex: 0,
+              "aria-label": `${summary?.action.verb ?? "Edited"} ${displayPath}`,
+              "aria-expanded": expanded,
+              onClick: onToggleExpanded,
+              onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+                if (
+                  event.target === event.currentTarget &&
+                  (event.key === "Enter" || event.key === " ")
+                ) {
+                  event.preventDefault();
+                  onToggleExpanded();
+                }
+              },
+            })}
         icon={icon}
         label={
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="flex min-w-0 items-baseline gap-1.5">{label}</span>
-            <DiffStatLabel
-              additions={counts.additions}
-              deletions={created ? 0 : counts.deletions}
-              layout="inline"
-              hideZero
-              className="shrink-0 text-xs"
-            />
-            <ChevronRightIcon
-              aria-hidden
-              className={cn(
-                "size-3 shrink-0 text-icon-muted opacity-0 transition-[opacity,rotate] duration-150 ease-out group-hover/timeline-row:opacity-100 group-focus-visible/timeline-row:opacity-100",
-                expanded && "rotate-90 opacity-100",
-              )}
-            />
+            {/* A running edit's counts are estimates, so they wait until it is written. */}
+            {running ? null : (
+              <>
+                <DiffStatLabel
+                  additions={counts.additions}
+                  deletions={created ? 0 : counts.deletions}
+                  layout="inline"
+                  hideZero
+                  className="shrink-0 text-xs"
+                />
+                <ChevronRightIcon
+                  aria-hidden
+                  className={cn(
+                    "size-3 shrink-0 text-icon-muted opacity-0 transition-[opacity,rotate] duration-150 ease-out group-hover/timeline-row:opacity-100 group-focus-visible/timeline-row:opacity-100",
+                    expanded && "rotate-90 opacity-100",
+                  )}
+                />
+              </>
+            )}
           </span>
         }
       >
-        {expanded ? (
+        {expanded && !running ? (
           <div
             className="ms-7 mt-0.5 mb-1.5 cursor-auto overflow-hidden rounded-field bg-muted"
             onClick={(event) => event.stopPropagation()}
@@ -770,12 +779,8 @@ export function CommandCard({
   );
   const status = (
     <span className="ms-auto flex shrink-0 items-center gap-1 text-xs tabular-nums">
-      {running ? (
+      {running ? null : failed ? (
         <span className="text-muted-foreground">
-          <WorkingTimer createdAt={workEntry.createdAt} />
-        </span>
-      ) : failed ? (
-        <span className="text-destructive">
           {exitCode !== undefined && exitCode !== 0 ? `exit ${exitCode}` : "Failed"}
         </span>
       ) : exitCode === 0 ? (

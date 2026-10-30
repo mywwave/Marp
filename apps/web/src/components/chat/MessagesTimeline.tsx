@@ -472,6 +472,33 @@ const ConversationTimeline = memo(function ConversationTimeline({
     setExpandedWorkGroupIds(paintedExpandedWorkGroupIds);
     setExpandedAttemptIds(paintedExpandedAttemptIds);
   }
+  // As in Cursor, a turn watched live stays unfolded once it ends and folds when the next starts.
+  const liveRunId = isWorking ? (latestRun?.runId ?? null) : null;
+  const [watchedRun, setWatchedRun] = useState<{
+    readonly identity: string;
+    readonly runId: RunId | null;
+    readonly live: boolean;
+  }>({ identity: listIdentityKey, runId: liveRunId, live: liveRunId !== null });
+  if (watchedRun.identity !== listIdentityKey) {
+    setWatchedRun({ identity: listIdentityKey, runId: liveRunId, live: liveRunId !== null });
+  } else if (liveRunId !== null && watchedRun.runId !== liveRunId) {
+    const finishedRunId = watchedRun.runId;
+    if (finishedRunId !== null) {
+      setExpandedRunIds((previous) => {
+        if (!previous.has(finishedRunId)) return previous;
+        const next = new Set(previous);
+        next.delete(finishedRunId);
+        return next;
+      });
+    }
+    setWatchedRun({ identity: listIdentityKey, runId: liveRunId, live: true });
+  } else if (liveRunId === null && watchedRun.live && watchedRun.runId !== null) {
+    const watchedRunId = watchedRun.runId;
+    setExpandedRunIds((previous) =>
+      previous.has(watchedRunId) ? previous : new Set(previous).add(watchedRunId),
+    );
+    setWatchedRun({ identity: listIdentityKey, runId: watchedRunId, live: false });
+  }
   const citationThreadRef = parseScopedThreadKey(routeThreadKey);
   const openPullRequest = useOpenPrLink(citationThreadRef ?? undefined);
   const [minimapStripMap] = useState(() => new Map<string, HTMLSpanElement>());

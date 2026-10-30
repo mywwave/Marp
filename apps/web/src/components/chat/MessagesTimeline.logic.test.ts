@@ -1128,13 +1128,13 @@ describe("deriveMessagesTimelineRows", () => {
       supportsConversationRollback: false,
     });
 
+    // As in Cursor: "Worked for" over the turn, its run a collapsed group inside.
     const fold = rows.find((row) => row.kind === "turn-fold");
-    expect(fold?.kind === "turn-fold" && fold.title).toBe("Ran 2 commands");
-    expect(rows.some((row) => row.kind === "work-toggle")).toBe(false);
-    const steps = rows.find((row) => row.kind === "work" && row.isExpandedToolGroup);
-    expect(steps?.kind === "work" && steps.groupedEntries.map((entry) => entry.id)).toEqual([
-      "test",
-      "lint",
+    expect(fold?.kind === "turn-fold" && fold.title).toBe("Worked for 4s");
+    const run = rows.find((row) => row.kind === "work-toggle");
+    expect(run?.kind === "work-toggle" && [run.summary, run.expanded]).toEqual([
+      "Ran 2 commands",
+      false,
     ]);
   });
 
@@ -1182,54 +1182,29 @@ describe("deriveMessagesTimelineRows", () => {
         turnDiffSummaries: [],
         supportsConversationRollback: false,
       });
+    // A collapsed run counts its steps; a single step stands as its own row.
     const stepIds = (rows: ReadonlyArray<MessagesTimelineRow>) =>
-      rows.flatMap((row) =>
-        row.kind === "work" ? [row.groupedEntries.map((entry) => entry.id)] : [],
+      rows.flatMap((row): Array<number | string[]> =>
+        row.kind === "work"
+          ? [row.groupedEntries.map((entry) => entry.id)]
+          : row.kind === "work-toggle"
+            ? [row.hiddenCount]
+            : [],
       );
 
+    // Like Cursor's main chat: any assistant text splits the run, however short.
     it.each([
-      ["short text joins the run", "Now the lint.", true],
-      ["two short lines join the run", "Tests pass.\nNow the lint.", true],
-      ["three lines split the run", "Tests pass.\nNow the lint.\nThen types.", false],
-      [
-        "long text splits the run",
-        `Tests pass. ${"Next I will run the linter. ".repeat(4)}`,
-        false,
-      ],
-    ])("%s", (_name, text, joins) => {
+      ["short text", "Now the lint."],
+      ["long text", `Tests pass. ${"Next I will run the linter. ".repeat(4)}`],
+    ])("%s splits the run", (_name, text) => {
       const rows = derive([
         command("test", 1),
         assistant("between", 2, text),
         command("lint", 3),
         assistant("final", 5, "Both pass."),
       ]);
-      expect(stepIds(rows)).toEqual(
-        joins ? [["test", "between-entry", "lint"]] : [["test"], ["lint"]],
-      );
-      expect(rows.some((row) => row.id === "between-entry" && row.kind === "message")).toBe(!joins);
-      expect(rows.some((row) => row.id === "final-entry" && row.kind === "message")).toBe(true);
-    });
-
-    it("lets short text join a child thread's runless steps", () => {
-      const runless = (entry: TimelineEntry): TimelineEntry =>
-        entry.kind === "work"
-          ? { ...entry, entry: { ...entry.entry, runId: null } }
-          : entry.kind === "message"
-            ? { ...entry, message: { ...entry.message, runId: null } }
-            : entry;
-      const rows = derive(
-        [
-          command("test", 1),
-          assistant("between", 2, "Now the lint."),
-          command("lint", 3),
-          assistant("final", 5, "Both pass."),
-        ].map(runless),
-      );
-      // One run of three steps, not two runs split by the note.
-      expect(rows.map((row) => [row.kind, row.kind === "work-toggle" && row.hiddenCount])).toEqual([
-        ["work-toggle", 3],
-        ["message", false],
-      ]);
+      expect(stepIds(rows)).toEqual([["test"], ["lint"]]);
+      expect(rows.some((row) => row.id === "between-entry" && row.kind === "message")).toBe(true);
     });
 
     it("keeps a short final answer out of the run, even with work after it", () => {
@@ -1238,9 +1213,9 @@ describe("deriveMessagesTimelineRows", () => {
     });
 
     it.each([
-      [2, [["a"], ["b"]]],
-      [3, [["a", "b", "c"]]],
-    ])("shows %i reads as a group only from three", (count, expected) => {
+      [1, [["a"]]],
+      [2, [2]],
+    ])("groups %i reads only past a single step", (count, expected) => {
       const reads = ["a", "b", "c"].slice(0, count).map((id, index) => read(id, index + 1));
       const rows = derive([...reads, assistant("final", 5, "Read them.")]);
       expect(stepIds(rows)).toEqual(expected);
@@ -1248,7 +1223,7 @@ describe("deriveMessagesTimelineRows", () => {
 
     it("keeps two commands grouped", () => {
       const rows = derive([command("test", 1), command("lint", 2), assistant("final", 5, "Ok.")]);
-      expect(stepIds(rows)).toEqual([["test", "lint"]]);
+      expect(stepIds(rows)).toEqual([2]);
     });
   });
 
@@ -1477,7 +1452,7 @@ describe("deriveMessagesTimelineRows", () => {
     );
     expect(foldRow?.runId).toBe("turn-1");
     expect(foldRow?.label).toBe("Worked for 12s");
-    expect(foldRow?.duration).toBe("12s");
+    expect(foldRow?.title).toBe("Worked for 12s");
   });
 
   it("uses latest-turn timings and the stopped label for an interrupted latest turn", () => {
@@ -2100,10 +2075,10 @@ describe("deriveMessagesTimelineRows", () => {
     const settled = rows({ resume: "completed", working: false });
     expect(shape(settled)).toEqual([
       "user:launch",
-      "fold:Worked for 8.0s",
+      "fold:Worked for 8s",
       "assistant:launch-answer",
       "user:resume",
-      "fold:Worked for 8.0s",
+      "fold:Worked for 8s",
       "assistant:resume-answer",
     ]);
 
@@ -2116,17 +2091,17 @@ describe("deriveMessagesTimelineRows", () => {
     });
     expect(shape(expanded)).toEqual([
       "user:launch",
-      "fold:Worked for 8.0s",
-      "work",
+      "fold:Worked for 8s",
+      "work-toggle",
       "assistant:launch-answer",
       "user:resume",
-      "fold:Worked for 8.0s",
+      "fold:Worked for 8s",
       "assistant:resume-answer",
     ]);
 
     expect(shape(rows({ resume: "running", working: true }))).toEqual([
       "user:launch",
-      "fold:Worked for 8.0s",
+      "fold:Worked for 8s",
       "assistant:launch-answer",
       "user:resume",
       "working",
@@ -2135,7 +2110,7 @@ describe("deriveMessagesTimelineRows", () => {
 
     expect(shape(rows({ resume: "failed", working: false }))).toEqual([
       "user:launch",
-      "fold:Worked for 8.0s",
+      "fold:Worked for 8s",
       "assistant:launch-answer",
       "user:resume",
       "work",
@@ -2981,7 +2956,7 @@ describe("v2 run and attempt history", () => {
       "user-entry",
       "turn-fold:turn-1",
       "assistant-thought-entry",
-      "work-group:work-entry-1:details",
+      "work-toggle:work-entry-1",
       "thread-created-entry",
       "assistant-final-entry",
     ]);

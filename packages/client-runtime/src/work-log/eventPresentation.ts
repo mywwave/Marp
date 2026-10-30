@@ -439,18 +439,25 @@ export function workEventAction(
   const kind = workEventKind(entry);
   if (kind === null) return null;
   const phase = workEventPhase(entry, live);
+  // Like Cursor: a command that exited non-zero still ran; another failed step was "attempted".
+  const verbOf = (verbs: Record<WorkEventPhase, string>) =>
+    phase !== "error"
+      ? verbs[phase]
+      : kind === "shell"
+        ? verbs.completed
+        : `${verbs.error} attempted`;
   const command = kind === "shell" ? entry.command?.trim() : undefined;
   const intent = command ? commandIntent(command) : null;
   if (intent !== null) {
     const target = intent.object ? { text: intent.object, path: false, mono: true } : null;
-    return { kind, phase, verb: intent.verbs[phase], target };
+    return { kind, phase, verb: verbOf(intent.verbs), target };
   }
   const target = workEventTarget(entry, kind);
   const others = otherCommandSteps(entry, kind);
   return {
     kind,
     phase,
-    verb: WORK_EVENT_VERBS[kind][phase],
+    verb: verbOf(WORK_EVENT_VERBS[kind]),
     target:
       target === null || others === 0
         ? target
@@ -503,9 +510,11 @@ function reasoningDurationMs(item: OrchestrationV2TurnItem | undefined): number 
   );
 }
 
+/** Cursor's thought times: under half a second is "briefly", under a second one decimal. */
 function formatThoughtDuration(ms: number): string | null {
+  if (ms < 500) return null;
+  if (ms < 1_000) return `${(ms / 1_000).toFixed(1)}s`;
   const seconds = Math.round(ms / 1_000);
-  if (seconds < 1) return null;
   return seconds < 60 ? `${seconds}s` : formatDuration(ms);
 }
 
@@ -526,7 +535,7 @@ export function thoughtTitle(
     if (heading) return heading;
   }
   const duration = thoughtsDuration(entries);
-  return duration ? `Thought for ${duration}` : "Thought briefly";
+  return duration ? `Thought ${duration}` : "Thought briefly";
 }
 
 /** The duration shown after a heading title; null when the title already says how long, or live. */
@@ -611,13 +620,12 @@ function fileChangeHeader(
         : "Created"
       : WORK_EVENT_VERBS[kind][live ? "loading" : "completed"];
   const fileCount = Math.max(files.length, 1);
-  if (live && files.length > 1) return `${verb}…`;
   return `${verb} ${files.length === 1 ? pathBaseName(files[0]!) : plural(fileCount, "file")}`;
 }
 
 function shellHeader(entries: ReadonlyArray<WorkLogPresentationEntry>, live: boolean): string {
   const verb = live ? "Running" : "Ran";
-  if (entries.length > 1) return live ? "Running…" : `${verb} ${plural(entries.length, "command")}`;
+  if (entries.length > 1) return `${verb} ${plural(entries.length, "command")}`;
   const [entry] = entries;
   const item = entry?.structuredPayload;
   const description = item?.type === "command_execution" ? item.description?.trim() : undefined;
@@ -708,59 +716,38 @@ export function workRunHeader(
   if (kinds.every((kind) => kind === null || kind === "todos" || kind === "ask")) {
     return { rule: "tools", title: summarizeToolGroup(tools).summary };
   }
-  // Edits, then commands that change things, outrank reading: "Explored" is for reads only.
+  // Cursor's order: edits lead, then what was explored, then "ran N commands". A live run shows
+  // the same counts under its loading verb ("Exploring 3 files, 1 search").
+  const pick = (indexes: ReadonlyArray<number>) => indexes.map((index) => tools[index]!);
   const editIndexes = kinds.flatMap((kind, index) => (workEventIsFileChange(kind) ? [index] : []));
   const commandIndexes = kinds.flatMap((kind, index) =>
     kind === "shell" || kind === "await" ? [index] : [],
   );
-  if (editIndexes.length > 0 || commandIndexes.length > 0) {
-    const pick = (indexes: ReadonlyArray<number>) => indexes.map((index) => tools[index]!);
-    const leadsWithEdits = editIndexes.length > 0;
-    const lead = leadsWithEdits
-      ? fileChangeHeader(
-          pick(editIndexes),
-          editIndexes.map((index) => kinds[index]!),
-          live,
-        )
-      : shellHeader(pick(commandIndexes), live);
-    const rule = leadsWithEdits ? "edit" : "shell";
-    // A live run's counts would tick up under the reader; its live step names the activity.
-    if (live) {
-      const current = kinds.at(-1) ?? null;
-      if (workEventIsFileChange(current)) return { rule: "edit", title: lead };
-      return current === "shell" || current === "await"
-        ? { rule: "shell", title: shellHeader(pick(commandIndexes), live) }
-        : { rule: "explore", title: "Exploring…" };
-    }
-    const restIndexes = kinds.flatMap((kind, index) =>
-      workEventIsFileChange(kind) || kind === "shell" || kind === "await" ? [] : [index],
+  const restIndexes = kinds.flatMap((kind, index) =>
+    workEventIsFileChange(kind) || kind === "shell" || kind === "await" ? [] : [index],
+  );
+  // A file the run edited is already named by the lead, so reading it adds nothing.
+  const editedFiles = new Set(pick(editIndexes).flatMap((entry) => entryPaths(entry)));
+  const explored = explorationParts(
+    pick(restIndexes),
+    restIndexes.map((index) => kinds[index]!),
+    editedFiles,
+  );
+  const ran = commandIndexes.length > 0 ? [`ran ${plural(commandIndexes.length, "command")}`] : [];
+  if (editIndexes.length > 0) {
+    const lead = fileChangeHeader(
+      pick(editIndexes),
+      editIndexes.map((index) => kinds[index]!),
+      live,
     );
-    // A file the run edited is already named by the lead, so reading it adds nothing.
-    const editedFiles = new Set(pick(editIndexes).flatMap((entry) => entryPaths(entry)));
-    const rest = explorationParts(
-      pick(restIndexes),
-      restIndexes.map((index) => kinds[index]!),
-      editedFiles,
-    );
-    // Commands among reads read as part of exploring: "Explored 3 files, ran tests".
-    if (!leadsWithEdits && rest.length > 0) {
-      const ran = `${lead.charAt(0).toLowerCase()}${lead.slice(1)}`;
-      return { rule: "explore", title: `Explored ${rest.join(", ")}, ${ran}` };
-    }
-    const title = [
-      lead,
-      ...rest,
-      ...(leadsWithEdits && commandIndexes.length > 0
-        ? [`ran ${plural(commandIndexes.length, "command")}`]
-        : []),
-    ].join(", ");
-    return withDiffStats({ rule, title }, tools);
+    const rest = explored.length > 0 ? [`explored ${explored[0]}`, ...explored.slice(1)] : [];
+    const header: WorkRunHeader = { rule: "edit", title: [lead, ...rest, ...ran].join(", ") };
+    return live ? header : withDiffStats(header, tools);
   }
-  // A live run's counts would tick up under the reader; it names only the activity.
-  if (live) return { rule: "explore", title: "Exploring…" };
-  const parts = explorationParts(tools, kinds);
-  const verb = "Explored";
-  return { rule: "explore", title: parts.length > 0 ? `${verb} ${parts.join(", ")}` : verb };
+  if (explored.length === 0)
+    return { rule: "shell", title: shellHeader(pick(commandIndexes), live) };
+  const verb = live ? "Exploring" : "Explored";
+  return { rule: "explore", title: `${verb} ${[...explored, ...ran].join(", ")}` };
 }
 
 const CREATE_VERBS: Record<WorkEventPhase, string> = {

@@ -1171,7 +1171,7 @@ it("shows an edit with nothing recorded as a plain step, not an empty card", asy
   await using screen = await renderElement(
     <MessagesTimeline {...baseProps()} timelineEntries={timelineEntries} />,
   );
-  await userEvent.click(screen.getByRole("button", { name: /^Edited session.ts/ }));
+  await userEvent.click(screen.getByRole("button", { name: /^Worked/ }));
   await expect.element(screen.getByText("session.ts", { exact: true })).toBeVisible();
   const edit = screen.container.querySelector<HTMLElement>('[data-v2-item-type="file_change"]')!;
   expect(edit.dataset.editRow).toBe("bare");
@@ -1292,7 +1292,7 @@ it("shows an edit's line counts only once it is written", async () => {
     <MessagesTimeline {...baseProps()} timelineEntries={entries("completed")} />,
   );
   // The settled turn folds; opening it shows the written edit.
-  await userEvent.click(screen.getByRole("button", { name: /^Edited session.ts/ }));
+  await userEvent.click(screen.getByRole("button", { name: /^Worked/ }));
   await vi.waitFor(() => expect(counts()).not.toBeNull());
 });
 
@@ -1487,19 +1487,61 @@ describe("MessagesTimeline live runs", () => {
     } as TimelineProps;
   };
 
-  it("streams a thought's body while it thinks and closes it when the next step starts", async () => {
+  it("keeps a turn the user watched unfolded once it ends", async () => {
+    setup();
+    const fixture = makeStreamingTimelineFixture("Done.");
+    const entries = (finished: boolean) =>
+      deriveTimelineEntriesFromVisibleTurnItems({
+        visibleTurnItems: fixture.visibleTurnItems.map((row) =>
+          finished && row.item.type === "assistant_message" && row.item.streaming
+            ? {
+                ...row,
+                item: {
+                  ...row.item,
+                  streaming: false,
+                  status: "completed",
+                  completedAt: row.item.startedAt,
+                },
+              }
+            : row,
+        ) as never,
+        optimisticMessages: [],
+      });
+    const props = liveProps();
+    const expandedFolds = () =>
+      screen.buttons(/^Worked/).filter((button) => button.getAttribute("aria-expanded") === "true");
+    await using screen = await renderElement(
+      <MessagesTimeline {...props} timelineEntries={entries(false)} />,
+    );
+    await screen.rerender(
+      <MessagesTimeline
+        {...props}
+        isWorking={false}
+        activeTurnStartedAt={null}
+        latestRun={{ ...props.latestRun!, status: "completed", completedAt: fixture.time(9) }}
+        timelineEntries={entries(true)}
+      />,
+    );
+    await vi.waitFor(() => expect(expandedFolds()).toHaveLength(1));
+  });
+
+  it("keeps a streaming thought closed until the user opens it", async () => {
     setup();
     const props = liveProps();
     await using screen = await renderElement(
       <MessagesTimeline {...props} timelineEntries={liveThought("thinking")} />,
     );
-    await vi.waitFor(() => expect(screen.text()).toContain("Reading the session code."));
+    await vi.waitFor(() => expect(screen.buttons(/^Thinking/).length).toBeGreaterThan(0));
+    expect(screen.text()).not.toContain("Reading the session code.");
 
     await screen.rerender(
       <MessagesTimeline {...props} timelineEntries={liveThought("next-step")} />,
     );
+    // The finished thought now sits in the collapsed run; its status line opens it.
+    await click(
+      await vi.waitFor(() => screen.container.querySelector<HTMLElement>("[data-live-status]")!),
+    );
     await vi.waitFor(() => expect(screen.text()).toContain("Planning the fix"));
-    expect(screen.text()).toContain("8s");
     expect(screen.text()).not.toContain("Reading the session code.");
   });
 
@@ -1509,39 +1551,36 @@ describe("MessagesTimeline live runs", () => {
     await using screen = await renderElement(
       <MessagesTimeline {...props} timelineEntries={liveThought("thinking")} />,
     );
-    await vi.waitFor(() => expect(screen.text()).toContain("Reading the session code."));
     const thinking = () => screen.button(/^Thinking/);
-    await click(thinking());
-    expect(screen.text()).not.toContain("Reading the session code.");
-    await click(thinking());
-    expect(screen.text()).toContain("Reading the session code.");
+    await click(await vi.waitFor(() => thinking()));
+    await vi.waitFor(() => expect(screen.text()).toContain("Reading the session code."));
 
     await screen.rerender(
       <MessagesTimeline {...props} timelineEntries={liveThought("next-step")} />,
+    );
+    await click(
+      await vi.waitFor(() => screen.container.querySelector<HTMLElement>("[data-live-status]")!),
     );
     await vi.waitFor(() => expect(screen.text()).toContain("Planning the fix"));
     expect(screen.text()).toContain("Reading the session code.");
   });
 
-  it("shows a long run's last three steps as one-line commands and folds the rest", async () => {
+  it("shows a live run as one collapsed group with its current step below", async () => {
     setup();
     const { entries, props } = liveCommandRun(30);
     await using screen = await renderTimeline(entries, props);
     const compactRows = () =>
       screen.container.querySelectorAll<HTMLElement>('[data-command-row="compact"]');
 
-    await vi.waitFor(() => expect(screen.buttons("26 earlier steps")).toHaveLength(1));
-    expect(screen.text()).toContain("Running…");
-    expect(compactRows()).toHaveLength(4);
-    expect(screen.text()).toContain("Test step 29");
-    expect(screen.text()).not.toContain("Test step 25");
-    expect(screen.buttons("Show output")).toHaveLength(0);
+    await vi.waitFor(() => expect(screen.buttons("Running 30 commands")).toHaveLength(1));
+    expect(screen.container.querySelector("[data-live-status]")?.textContent).toContain(
+      "Test step 29",
+    );
+    expect(compactRows()).toHaveLength(0);
 
-    await click(compactRows()[0]!);
-    expect(screen.buttons("Show output")).toHaveLength(1);
-
-    await click(screen.button("26 earlier steps"));
+    await click(screen.button("Running 30 commands"));
     await vi.waitFor(() => expect(compactRows()).toHaveLength(30));
+    expect(screen.container.querySelector("[data-live-status]")).toBeNull();
   });
 
   it("opens a very long run in the page scroll and pages in its older steps", async () => {
@@ -1551,7 +1590,7 @@ describe("MessagesTimeline live runs", () => {
     const compactRows = () =>
       screen.container.querySelectorAll<HTMLElement>('[data-command-row="compact"]');
 
-    await click(await vi.waitFor(() => screen.button("76 earlier steps")));
+    await click(await vi.waitFor(() => screen.button("Running 80 commands")));
     await vi.waitFor(() => expect(screen.buttons("30 earlier steps")).toHaveLength(1));
     expect(compactRows()).toHaveLength(50);
     expect(screen.container.querySelector('[role="region"][aria-label="Tool calls"]')).toBeNull();

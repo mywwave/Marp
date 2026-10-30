@@ -158,18 +158,19 @@ describe("workEventAction", () => {
     expect(action && workEventActionText(action)).toBe(text);
   });
 
-  it("uses the loading verb while live and the imperative when failed", () => {
+  it("uses the loading verb while live; a failed command still ran, a failed read was attempted", () => {
     expect(workEventAction(command("node build.mjs"), true)?.verb).toBe("Running");
-    expect(workEventAction(command("node build.mjs", { exitCode: 1 }))?.verb).toBe("Run");
+    expect(workEventAction(command("node build.mjs", { exitCode: 1 }))?.verb).toBe("Ran");
     expect(workEventAction(command("pnpm test"), true)?.verb).toBe("Running tests");
   });
 });
 
 describe("thoughtTitle", () => {
   it.each([
-    [[thought("Looking at the session code.", 8)], false, "Thought for 8s"],
+    [[thought("Looking at the session code.", 8)], false, "Thought 8s"],
     [[thought("Quick check.")], false, "Thought briefly"],
     [[thought("Quick check.", 0.2)], false, "Thought briefly"],
+    [[thought("Quick check.", 0.7)], false, "Thought 0.7s"],
     [[thought("**Planning the fix**\n\nThe token expires.", 12)], false, "Planning the fix"],
     [[thought("Still going.")], true, "Thinking"],
   ] as const)("titles %#", (entries, live, title) => {
@@ -197,12 +198,12 @@ describe("thoughtTitle", () => {
 
 describe("workRunHeader", () => {
   it.each([
-    ["thinking only", [thought("Hmm.", 3)], false, "thought", "Thought for 3s"],
+    ["thinking only", [thought("Hmm.", 3)], false, "thought", "Thought 3s"],
     ["thinking while live", [thought("Hmm.")], true, "thought", "Thinking"],
     ["one edit", [edit("src/a.ts")], false, "edit", "Edited a.ts"],
     ["new file", [edit("src/new.ts", "add")], false, "edit", "Created new.ts"],
     ["edits", [edit("src/a.ts"), edit("src/b.ts")], false, "edit", "Edited 2 files"],
-    ["live edits", [edit("src/a.ts"), edit("src/b.ts")], true, "edit", "Editing…"],
+    ["live edits", [edit("src/a.ts"), edit("src/b.ts")], true, "edit", "Editing 2 files"],
     ["deletes", [edit("a.ts", "delete"), edit("b.ts", "delete")], false, "edit", "Deleted 2 files"],
     [
       "one described command",
@@ -213,7 +214,13 @@ describe("workRunHeader", () => {
     ],
     ["one bare command", [command("git status")], true, "shell", "Viewing git status"],
     ["commands", [command("git status"), command("pnpm test")], false, "shell", "Ran 2 commands"],
-    ["live commands", [command("git status"), command("pnpm test")], true, "shell", "Running…"],
+    [
+      "live commands",
+      [command("git status"), command("pnpm test")],
+      true,
+      "shell",
+      "Running 2 commands",
+    ],
     [
       "monitors",
       [command("tail -f log", { monitor: true })],
@@ -233,29 +240,35 @@ describe("workRunHeader", () => {
       [read("a.ts"), read("b.ts"), read("a.ts"), read("c.ts"), grep("x"), command("pnpm test")],
       false,
       "explore",
-      "Explored 3 files, 1 search, ran tests",
+      "Explored 3 files, 1 search, ran 1 command",
     ],
     [
       "reading live between commands",
       [command("pnpm test"), read("a.ts")],
       true,
       "explore",
-      "Exploring…",
+      "Exploring a.ts, ran 1 command",
     ],
-    ["a live read after an edit", [edit("src/a.ts"), read("b.ts")], true, "explore", "Exploring…"],
+    [
+      "a live read after an edit",
+      [edit("src/a.ts"), read("b.ts")],
+      true,
+      "edit",
+      "Editing a.ts, explored b.ts",
+    ],
     [
       "a live command after reads",
       [read("a.ts"), command("pnpm test")],
       true,
-      "shell",
-      "Running tests",
+      "explore",
+      "Exploring a.ts, ran 1 command",
     ],
     [
       "edits, commands and reads",
       [edit("src/a.ts"), command("pnpm test"), command("git status"), read("b.ts"), edit("c.ts")],
       false,
       "edit",
-      "Edited 2 files, b.ts, ran 2 commands",
+      "Edited 2 files, explored b.ts, ran 2 commands",
     ],
     [
       "an edit and a command",
@@ -264,7 +277,13 @@ describe("workRunHeader", () => {
       "edit",
       "Edited a.ts, ran 1 command",
     ],
-    ["live edits and reads", [read("b.ts"), edit("src/a.ts")], true, "edit", "Editing a.ts"],
+    [
+      "live edits and reads",
+      [read("b.ts"), edit("src/a.ts")],
+      true,
+      "edit",
+      "Editing a.ts, explored b.ts",
+    ],
     [
       "read-only commands",
       [command("cat src/a.ts"), command("rg token src"), command("ls src")],
@@ -272,7 +291,7 @@ describe("workRunHeader", () => {
       "explore",
       "Explored a.ts, 1 search, 1 folder",
     ],
-    ["live exploration", [read("a.ts"), list("src")], true, "explore", "Exploring…"],
+    ["live exploration", [read("a.ts"), list("src")], true, "explore", "Exploring a.ts, 1 folder"],
     [
       "mcp with a read",
       [read("a.ts"), mcp("mcp__linear__get")],
@@ -285,7 +304,9 @@ describe("workRunHeader", () => {
   });
 
   it("never heads a run with edits as exploration", () => {
-    expect(workRunHeader([edit("a.ts"), command("ls")]).title).toBe("Edited a.ts, 1 folder");
+    expect(workRunHeader([edit("a.ts"), command("ls")]).title).toBe(
+      "Edited a.ts, explored 1 folder",
+    );
     expect(workRunHeader([edit("a.ts"), thought("ok")]).rule).toBe("edit");
   });
 
@@ -311,7 +332,7 @@ describe("workRunHeader", () => {
       ]),
     ).toEqual({
       rule: "edit",
-      title: "Edited a.ts, b.ts, ran 1 command",
+      title: "Edited a.ts, explored b.ts, ran 1 command",
       diffStats: { additions: 12, deletions: 3 },
     });
     const writing = { ...counted("src/a.ts", 4, 4), toolLifecycleStatus: "inProgress" as const };
@@ -364,7 +385,7 @@ describe("fileEditSummary", () => {
       "a failed edit",
       counted(edit("a.ts"), { status: "failed" }, { toolLifecycleStatus: "failed" }),
       false,
-      "Edit",
+      "Edit attempted",
       0,
       0,
     ],

@@ -3,7 +3,6 @@ import { WorkLogButton, WorkLogList, WorkLogRow } from "./WorkLog";
 import type { WorktreeSetupSnapshot } from "@marp/contracts";
 import { type ToolActivityIcon } from "@marp/contracts";
 import {
-  thoughtBody,
   thoughtTitle,
   workEventAction,
   workEventActionText,
@@ -15,7 +14,7 @@ import {
 import { responseStalled } from "@marp/client-runtime/work-log/live-cards";
 import { observeVisibleAnimation } from "../../lib/visibleAnimation";
 import { tickTextContent } from "../../lib/tickTextContent";
-import { memo, use, useState, type ReactNode } from "react";
+import { memo, use, useEffect, useState, type ReactNode } from "react";
 import { workEntryDisplayIndicatesToolFailure } from "../../session-logic";
 import { ChevronRightIcon, Minimize2Icon, XIcon } from "lucide-react";
 import { DiffStatLabel } from "./DiffStatLabel";
@@ -56,6 +55,7 @@ import {
 } from "./TimelineWorkEntryRow";
 import { toolGroupSummaryIconName, workEntryIconName } from "./TimelineWorkEntryRow.logic";
 import { WorkEventLabel, WorkingTimer } from "./TimelineWorkEvents";
+import { CommandOutputTail, useCommandOutputStreaming } from "./CommandOutputPanel";
 import { preActivityLabel } from "./TimelineWorkGroupRows.logic";
 
 export const WorkGroupSection = memo(function WorkGroupSection({
@@ -429,10 +429,30 @@ function workEntryShowsAsCard(entry: TimelineWorkEntry): boolean {
   );
 }
 
-/** While a run is live, its newest steps stay readable above the live one; older ones fold. */
-const LIVE_PREVIEW_STEPS = 3;
+/** Cursor holds each live status for at least this long, so quick steps stay readable. */
+const LIVE_STATUS_HOLD_MS = 1_200;
 
-/** A live run shows one header with the loading verb, its newest steps, and its live step. */
+/** The step the status line names: the newest one, but never replaced sooner than the hold. */
+function useHeldLiveEntry(
+  entry: TimelineWorkEntry,
+  entries: ReadonlyArray<TimelineWorkEntry>,
+): TimelineWorkEntry {
+  const [held, setHeld] = useState({ id: entry.id, since: 0 });
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- a wall-clock hold before the status names the next step
+  useEffect(() => {
+    if (held.id === entry.id) return;
+    const wait = Math.max(0, held.since + LIVE_STATUS_HOLD_MS - Date.now());
+    const timer = window.setTimeout(() => setHeld({ id: entry.id, since: Date.now() }), wait);
+    return () => window.clearTimeout(timer);
+  }, [entry.id, held]);
+  return entries.find((candidate) => candidate.id === held.id) ?? entry;
+}
+
+/**
+ * A live run, as in Cursor: a run of several steps is one collapsed group whose header counts what
+ * it has done so far under its loading verb, with the current step on a status line below it.
+ * A run of one step is that step's own row.
+ */
 export function LiveWorkEntryTimelineRow({
   row,
 }: {
@@ -440,12 +460,16 @@ export function LiveWorkEntryTimelineRow({
 }) {
   const ctx = use(TimelineRowCtx);
   const { awaitingUser } = use(TimelineRowActivityCtx);
+  const grouped = row.groupedEntries.length > 1;
+  const heldEntry = useHeldLiveEntry(row.entry, row.groupedEntries);
+  const entry = grouped ? heldEntry : row.entry;
   // The step this row mounted with replaces "Planning" or a remount in place; later steps fade in.
-  const [mountedEntryId] = useState(row.entry.id);
-  const stepEnters = row.entry.id !== mountedEntryId;
-  const threadTarget = useThreadReadTarget(row.entry, ctx.activeThreadEnvironmentId);
-  const label = liveWorkEntryLabel(row.entry, ctx.workspaceRoot, row.active);
+  const [mountedEntryId] = useState(entry.id);
+  const stepEnters = entry.id !== mountedEntryId;
+  const threadTarget = useThreadReadTarget(entry, ctx.activeThreadEnvironmentId);
+  const label = liveWorkEntryLabel(entry, ctx.workspaceRoot, row.active);
   const threadLabel = threadReadLabel(label, threadTarget);
+  const streamsOutput = useCommandOutputStreaming(ctx.activeThreadEnvironmentId);
 
   const item = row.entry.projectedItem?.item;
   const pendingApproval =
@@ -453,44 +477,40 @@ export function LiveWorkEntryTimelineRow({
   const approvalResolved = useApprovalResolved(pendingApproval !== undefined, () =>
     ctx.onToggleWorkEntry(row.id, true),
   );
-  // A streaming thought shows its body until the next step starts, unless the user closed it.
+  // A streaming thought stays closed, as in Cursor, until the user opens it.
   const [thoughtToggle, setThoughtToggle] = useState<{ id: string; open: boolean } | null>(null);
   if (pendingApproval) return <TimelinePendingApprovalRow approval={pendingApproval} />;
 
-  const failed = workEntryDisplayIndicatesToolFailure(row.entry);
+  const failed = workEntryDisplayIndicatesToolFailure(entry);
   const toggleGroup = () => ctx.onToggleWorkGroup(row.groupId, row.id);
-  // Waiting on the user is not work in progress: no spinner, sweep, or ticking timer.
+  // Waiting on the user is not work in progress: no spinner or sweep.
   const live = row.active && !awaitingUser;
-  const isReasoning = row.entry.itemType === "reasoning";
+  const isReasoning = entry.itemType === "reasoning";
   const toolIsRunning = live && !isReasoning;
   const thoughtText =
-    isReasoning && live && row.entry.toolLifecycleStatus === "inProgress"
-      ? (row.entry.detail?.trim() ?? "")
+    isReasoning && live && entry.toolLifecycleStatus === "inProgress"
+      ? (entry.detail?.trim() ?? "")
       : "";
-  const thoughtOpen = thoughtToggle?.id === row.entry.id ? thoughtToggle.open : true;
+  const thoughtOpen = thoughtToggle?.id === entry.id ? thoughtToggle.open : false;
   const toggleThought = () => {
     const open = !thoughtOpen;
-    setThoughtToggle({ id: row.entry.id, open });
+    setThoughtToggle({ id: entry.id, open });
     // What the user chose while it streamed is how the finished thought opens.
-    if (open) ctx.workGroupViewState.expandedEntries.add(row.entry.id);
-    else ctx.workGroupViewState.expandedEntries.delete(row.entry.id);
+    if (open) ctx.workGroupViewState.expandedEntries.add(entry.id);
+    else ctx.workGroupViewState.expandedEntries.delete(entry.id);
   };
-  const grouped = row.groupedEntries.length > 1;
   const header = grouped ? workRunHeader(row.groupedEntries, live) : null;
-  // A finished thought stays in the run as its closed "Thought for Ns" row.
-  const finishedSteps =
-    grouped && !row.expanded
-      ? row.groupedEntries.filter(
-          (entry) =>
-            entry.id !== row.entry.id &&
-            (entry.itemType !== "reasoning" || thoughtBody(entry.detail).length > 0),
-        )
-      : [];
-  const previewSteps = finishedSteps.slice(-LIVE_PREVIEW_STEPS);
-  const earlierStepCount = finishedSteps.length - previewSteps.length;
-  const action = isReasoning || threadLabel ? null : workEventAction(row.entry, live);
-  const stepLabel = isReasoning ? (
-    thoughtTitle([row.entry], row.active)
+  const action = isReasoning || threadLabel ? null : workEventAction(entry, live);
+  const projected = entry.projectedItem;
+  // A command reads as its description, as its card does.
+  const description =
+    action?.kind === "shell" && projected?.item.type === "command_execution"
+      ? projected.item.description?.trim()
+      : undefined;
+  const stepLabel = description ? (
+    description
+  ) : isReasoning ? (
+    thoughtTitle([entry], row.active)
   ) : threadLabel ? (
     <ThreadReadLabel
       label={threadLabel}
@@ -502,9 +522,26 @@ export function LiveWorkEntryTimelineRow({
   ) : (
     label
   );
-  const stepText = isReasoning
-    ? thoughtTitle([row.entry], row.active)
-    : (threadLabel?.text ?? (action ? workEventActionText(action) : label));
+  const stepText =
+    description ??
+    (isReasoning
+      ? thoughtTitle([entry], row.active)
+      : (threadLabel?.text ?? (action ? workEventActionText(action) : label)));
+  // Beyond Cursor: a running command's newest output shows under the status line.
+  const outputTail =
+    toolIsRunning &&
+    projected?.item.type === "command_execution" &&
+    workEventKind(entry) === "shell" &&
+    (ctx.turnItemSource !== undefined || streamsOutput) ? (
+      <CommandOutputTail
+        environmentId={ctx.activeThreadEnvironmentId}
+        threadId={projected.sourceThreadId}
+        itemId={projected.sourceItemId}
+        source={ctx.turnItemSource?.commandOutput}
+        className="ms-6 mt-0.5 mb-1"
+        onOpen={toggleGroup}
+      />
+    ) : null;
 
   return (
     <div
@@ -515,81 +552,48 @@ export function LiveWorkEntryTimelineRow({
       )}
     >
       {header ? (
-        <button
-          type="button"
-          className="group/live-work flex min-h-7 w-full max-w-full cursor-pointer items-center gap-1 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
-          aria-expanded={row.expanded}
-          onClick={toggleGroup}
-        >
-          <LiveActivityRow
-            label={header.title}
-            iconName={RUN_HEADER_ICONS[header.rule]}
-            active={row.active}
-            shimmer={live}
-          />
-          <WorkGroupChevron expanded={row.expanded} />
-        </button>
-      ) : null}
-      {earlierStepCount > 0 ? (
-        <WorkLogButton
-          aria-expanded={false}
-          onClick={toggleGroup}
-          icon={<span className="size-4" />}
-          label={`${earlierStepCount} earlier ${earlierStepCount === 1 ? "step" : "steps"}`}
+        <WorkGroupHeader
+          label={header.title}
+          iconName={RUN_HEADER_ICONS[header.rule]}
+          expanded={row.expanded}
+          onToggle={toggleGroup}
         />
       ) : null}
-      {previewSteps.map((entry) => (
+      {grouped && row.expanded ? null : !grouped && workEntryShowsAsCard(entry) ? (
         <SimpleWorkEntryRow
-          key={entry.id}
           workEntry={entry}
           workspaceRoot={ctx.workspaceRoot}
+          live={toolIsRunning}
+          shimmer={toolIsRunning}
           onToggleEntry={(collapsed) => ctx.onToggleWorkEntry(row.id, collapsed)}
-          compact
         />
-      ))}
-      {grouped && row.expanded ? null : workEntryShowsAsCard(row.entry) ? (
-        <div
-          key={row.entry.id}
-          data-live={stepEnters || undefined}
-          className={stepEnters ? "live-enter" : undefined}
-        >
-          <SimpleWorkEntryRow
-            workEntry={row.entry}
-            workspaceRoot={ctx.workspaceRoot}
-            live={toolIsRunning}
-            shimmer={toolIsRunning && !grouped}
-            onToggleEntry={(collapsed) => ctx.onToggleWorkEntry(row.id, collapsed)}
-            compact={grouped}
-          />
-        </div>
       ) : (
-        <button
-          key={row.entry.id}
-          type="button"
-          data-live={stepEnters || undefined}
-          className={cn(
-            "group/live-work flex min-h-7 w-full max-w-full cursor-pointer items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
-            stepEnters && "live-enter",
-          )}
-          aria-label={failed ? `${stepText}, tool call failed` : undefined}
-          aria-expanded={thoughtText ? thoughtOpen : row.expanded}
-          onClick={thoughtText ? toggleThought : toggleGroup}
-        >
-          <LiveActivityRow
-            label={stepLabel}
-            iconName={workEntryIconName(row.entry)}
-            toolIcon={row.entry.toolIcon ?? row.entry.toolSource?.icon}
-            failed={failed}
-            active={row.active}
-            shimmer={live && !grouped}
-            spinner={toolIsRunning}
-          />
-          {toolIsRunning && !failed ? (
-            <span className="ms-auto shrink-0 pe-1 text-xs text-muted-foreground tabular-nums">
-              <WorkingTimer createdAt={row.entry.createdAt} />
-            </span>
-          ) : null}
-        </button>
+        <>
+          <button
+            key={entry.id}
+            type="button"
+            data-live={stepEnters || undefined}
+            data-live-status
+            className={cn(
+              "group/live-work flex min-h-7 w-full max-w-full cursor-pointer items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
+              stepEnters && "live-enter",
+            )}
+            aria-label={failed ? `${stepText}, tool call failed` : undefined}
+            aria-expanded={thoughtText ? thoughtOpen : row.expanded}
+            onClick={thoughtText ? toggleThought : toggleGroup}
+          >
+            <LiveActivityRow
+              label={stepLabel}
+              iconName={workEntryIconName(entry)}
+              toolIcon={entry.toolIcon ?? entry.toolSource?.icon}
+              failed={failed}
+              active={row.active}
+              shimmer={live}
+              spinner={toolIsRunning}
+            />
+          </button>
+          {outputTail}
+        </>
       )}
       {thoughtText && thoughtOpen && !(grouped && row.expanded) ? (
         <LiveThoughtBody text={thoughtText} />

@@ -23,13 +23,11 @@ import {
   type ToolGroupSummaryKind,
 } from "@marp/client-runtime/work-log/presentation";
 import {
-  workEventKind,
   workRunHeader,
   type WorkRunHeaderRule,
 } from "@marp/client-runtime/work-log/event-presentation";
 import {
   deriveRevertTurnCountByUserMessageId,
-  formatDuration,
   isStreamingMessageTextUpdate,
   isStreamingTurnItemTextUpdate,
   timelineEntryIsPersistentResourceCard,
@@ -779,22 +777,14 @@ function deriveTerminalAssistantMessageIds(timelineEntries: ReadonlyArray<Timeli
   return new Set(lastAssistantMessageIdByResponseKey.values());
 }
 
-/** Deferred work has not loaded, so counting what is here would undercount the turn. */
-function foldedWorkSummary(
-  entries: ReadonlyArray<TimelineEntry>,
-  hiddenEntryIds: ReadonlySet<string>,
-): string | null {
-  const work: WorkLogEntry[] = [];
-  for (const entry of entries) {
-    if (entry.kind !== "work" || !hiddenEntryIds.has(entry.id)) continue;
-    if (entry.entry.projectedItem?.item.deferredWork) return null;
-    if (workEntryIsVisibleInGroup(entry.entry, true)) work.push(entry.entry);
-  }
-  return work.some(
-    (entry) => entry.itemType !== "reasoning" && entry.itemType !== "assistant_message",
-  )
-    ? workRunHeader(work).title
-    : null;
+/** Cursor's turn time: whole seconds rounded up (never "0s"), then minutes, then hours. */
+function formatTurnDuration(ms: number): string {
+  const seconds = Math.max(1, Math.ceil(ms / 1_000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return seconds % 60 === 0 ? `${minutes}m` : `${minutes}m ${seconds % 60}s`;
+  const hours = Math.floor(minutes / 60);
+  return minutes % 60 === 0 ? `${hours}h` : `${hours}h ${minutes % 60}m`;
 }
 
 interface TurnFold {
@@ -1266,7 +1256,7 @@ function deriveTurnFolds(input: {
             maxIsoTimestamp(group.terminalEntry?.message.updatedAt ?? null, lastEntryEnd) ??
               lastEntryEnd,
           );
-    const duration = elapsedMs !== null ? formatDuration(elapsedMs) : null;
+    const duration = elapsedMs !== null ? formatTurnDuration(elapsedMs) : null;
     const label = isLatestInterruptedTurn
       ? duration
         ? `You stopped after ${duration}`
@@ -1290,7 +1280,7 @@ function deriveTurnFolds(input: {
       label,
       ...(isLatestInterruptedTurn
         ? { title: label, duration: null }
-        : { title: foldedWorkSummary(group.entries, hiddenEntryIds) ?? "Worked", duration }),
+        : { title: label, duration: null }),
     });
     for (const [index, { startIndex, steer }] of group.steerSegments.entries()) {
       const entries = group.entries.slice(startIndex, group.steerSegments[index + 1]?.startIndex);
@@ -1307,9 +1297,9 @@ function deriveTurnFolds(input: {
         createdAt: steer.createdAt,
         hiddenEntryIds: segmentHiddenIds(entries),
         entryIds: new Set(entries.map((entry) => entry.id)),
-        label: segmentMs !== null ? `Continued for ${formatDuration(segmentMs)}` : "Continued",
-        title: foldedWorkSummary(entries, hiddenEntryIds) ?? "Continued",
-        duration: segmentMs !== null ? formatDuration(segmentMs) : null,
+        label: segmentMs !== null ? `Continued for ${formatTurnDuration(segmentMs)}` : "Continued",
+        title: segmentMs !== null ? `Continued for ${formatTurnDuration(segmentMs)}` : "Continued",
+        duration: null,
       });
     }
   }
@@ -1460,113 +1450,17 @@ function settleSupersededReasoning(entries: ReadonlyArray<TimelineEntry>) {
   });
 }
 
-const BRIEF_EXPLORATION_MAX_STEPS = 2;
-
-/** One or two reads read better as their own rows than behind an "Explored" header. */
-function runIsBriefExploration(entries: ReadonlyArray<WorkLogEntry>): boolean {
-  const steps = entries.filter((entry) => entry.itemType !== "assistant_message");
-  return (
-    steps.length > 0 &&
-    steps.length <= BRIEF_EXPLORATION_MAX_STEPS &&
-    steps.every((entry) => {
-      const kind = workEventKind(entry);
-      return kind === "read" || kind === "list";
-    })
-  );
-}
-
-const RUN_TEXT_MAX_CHARS = 100;
-const RUN_TEXT_MAX_LINES = 2;
-
-// Child threads carry no run ids; a runless entry joins the runless steps beside it.
-function workEntryJoinsRun(
-  entry: TimelineEntry | undefined,
-  runId: RunId | null,
-  attemptId: string | undefined,
-): boolean {
-  return (
-    entry?.kind === "work" &&
-    (entry.entry.runId ?? null) === runId &&
-    entry.attempt?.id === attemptId &&
-    entry.entry.sourceActivityKind !== "context-compaction" &&
-    entry.entry.sourceActivityKind !== "runtime.error" &&
-    entry.entry.tone !== "error" &&
-    entry.entry.itemType !== "error" &&
-    entry.entry.itemType !== "system_notice" &&
-    entry.entry.itemType !== "notification" &&
-    entry.entry.itemType !== "todo_list" &&
-    entry.entry.questionAnswer === undefined &&
-    workEntryStatusUpdate(entry.entry) === undefined
-  );
-}
-
-const runTextEntries = new WeakMap<TimelineEntry, TimelineEntry>();
-
-/**
- * Short assistant text between two steps of one turn joins their run as a text row instead of
- * splitting it. Longer text, and the settled turn's final answer, keep their own rows.
- */
-function absorbShortAssistantText(
-  entries: ReadonlyArray<TimelineEntry>,
-  liveRunId: RunId | null,
-  runlessLive: boolean,
-): ReadonlyArray<TimelineEntry> {
-  const terminalIds = deriveTerminalAssistantMessageIds(entries);
-  return entries.map((entry, index) => {
-    if (entry.kind !== "message") return entry;
-    const { message } = entry;
-    const runId = message.runId;
-    const text = message.text.trim();
-    if (
-      message.role !== "assistant" ||
-      message.streaming ||
-      (terminalIds.has(message.id) && (runId === null ? !runlessLive : runId !== liveRunId)) ||
-      text.length === 0 ||
-      text.length > RUN_TEXT_MAX_CHARS ||
-      text.split("\n").length > RUN_TEXT_MAX_LINES ||
-      !workEntryJoinsRun(entries[index - 1], runId, entry.attempt?.id) ||
-      !workEntryJoinsRun(entries[index + 1], runId, entry.attempt?.id)
-    ) {
-      return entry;
-    }
-    let absorbed = runTextEntries.get(entry);
-    if (!absorbed) {
-      absorbed = {
-        id: entry.id,
-        kind: "work",
-        createdAt: entry.createdAt,
-        ...(entry.attempt ? { attempt: entry.attempt } : {}),
-        entry: {
-          id: entry.id,
-          createdAt: entry.createdAt,
-          runId,
-          label: text,
-          detail: text,
-          tone: "info",
-          itemType: "assistant_message",
-        },
-      };
-      runTextEntries.set(entry, absorbed);
-    }
-    return absorbed;
-  });
-}
-
 function timelineRowEntries(
   input: Pick<
     MessagesTimelineRowsInput,
-    "timelineEntries" | "latestRun" | "isWorking" | "runningRunId" | "runlessWorkActive"
+    "timelineEntries" | "latestRun" | "isWorking" | "runningRunId"
   >,
 ) {
   const liveRunId = input.isWorking
     ? deriveUnsettledRunId(input.latestRun ?? null, input.runningRunId ?? null)
     : null;
   return withoutSubagentDelegationRows(
-    absorbShortAssistantText(
-      settleSupersededReasoning(withLatestTodoLists(input.timelineEntries, liveRunId)),
-      liveRunId,
-      input.isWorking && input.runlessWorkActive === true,
-    ),
+    settleSupersededReasoning(withLatestTodoLists(input.timelineEntries, liveRunId)),
   );
 }
 
@@ -1694,12 +1588,6 @@ export function deriveMessagesTimelineRows(input: {
         collapsedFoldMemberIds.add(entryId);
       }
     }
-  }
-  // An open fold already names its work; a run that says the same thing shows its steps bare.
-  const openFoldTitleByEntryId = new Map<string, string>();
-  for (const fold of foldsByAnchorEntryId.values()) {
-    if (!input.expandedRunIds?.has(fold.runId)) continue;
-    for (const entryId of fold.entryIds) openFoldTitleByEntryId.set(entryId, fold.title);
   }
   const collapsedSupersededEntryIds = new Set<string>();
   for (const fold of supersededFoldsByAnchorEntryId.values()) {
@@ -2127,32 +2015,11 @@ export function deriveMessagesTimelineRows(input: {
                 ? summarizeToolGroup(visibleGroupedEntries).summary
                 : singleToolCallLabel(singleEntry),
           });
-        } else if (runIsBriefExploration(visibleGroupedEntries)) {
-          for (const [entryIndex, entry] of visibleGroupedEntries.entries()) {
-            nextRows.push({
-              kind: "work",
-              id: entryIndex === 0 ? timelineEntry.id : entry.id,
-              createdAt: entry.createdAt,
-              groupedEntries: [entry],
-              isExpandedToolGroup: false,
-              ...(workLogEntryIsToolLike(entry)
-                ? { displayLabel: singleToolCallLabel(entry) }
-                : {}),
-            });
-          }
         } else {
           const groupId = workGroupId(timelineEntry.id);
           const expanded = input.expandedWorkGroupIds?.has(groupId) ?? false;
           const summaryKind = toolGroupSummaryKind(visibleGroupedEntries);
           const header = workRunHeader(visibleGroupedEntries);
-          if (openFoldTitleByEntryId.get(timelineEntry.id) === header.title) {
-            nextRows.push(
-              expandedWorkGroupRow(groupId, timelineEntry.createdAt, visibleGroupedEntries),
-            );
-            pushToolMedia(timelineEntry, visibleGroupedEntries);
-            index = cursor - 1;
-            continue;
-          }
           const primarySourceEntry = visibleGroupedEntries.find(
             (entry) => entry.toolSource !== undefined,
           );
