@@ -105,8 +105,10 @@ import { PullRequestGlyph } from "../pull-requests/pullRequestGlyphs";
 import { useOpenLinkedThread } from "./useOpenLinkedThread";
 
 const SHIMMER_WIDTH = 72;
-const SHIMMER_SWEEP_MS = 1_350;
-const SHIMMER_PAUSE_MS = 1_450;
+// Cursor's sweep: one continuous pass a second.
+const SHIMMER_SWEEP_MS = 1_000;
+const TEXT_ROLL_MS = 300;
+const TEXT_ROLL_GAP = 6;
 const SHIMMER_ICON_AND_GAP_WIDTH = 30;
 export const THREAD_DISCLOSURE_TRANSITION_MS = 180;
 const WORK_LOG_LAYOUT_TRANSITION = LinearTransition.duration(THREAD_DISCLOSURE_TRANSITION_MS);
@@ -228,18 +230,116 @@ function ShimmerWorkContent(props: {
           )}
         </View>
       ) : null}
-      <Text
-        className={cn(
-          "min-w-0 shrink",
-          props.compact ? "text-xs" : "text-sm",
-          props.highlighted ? "text-foreground" : "text-foreground-muted",
-          props.textClassName,
+      <RollingLabel label={props.label}>
+        {(label, current) => (
+          <Text
+            className={cn(
+              "min-w-0 shrink",
+              props.compact ? "text-xs" : "text-sm",
+              props.highlighted ? "text-foreground" : "text-foreground-muted",
+              props.textClassName,
+            )}
+            numberOfLines={1}
+            onTextLayout={current ? props.onTextLayout : undefined}
+          >
+            {label}
+          </Text>
         )}
-        numberOfLines={1}
-        onTextLayout={props.onTextLayout}
+      </RollingLabel>
+    </View>
+  );
+}
+
+/**
+ * Cursor's TextRoll: a changed label rolls up, the old text out above and the new in from below.
+ * Native-driver Animated, like the shimmer, so it never commits per frame.
+ */
+function RollingLabel(props: {
+  readonly label: string;
+  readonly children: (label: string, current: boolean) => ReactNode;
+}) {
+  const reducedMotion = useReduceMotionEnabled();
+  const [roll, setRoll] = useState({
+    label: props.label,
+    previous: null as string | null,
+    sequence: 0,
+  });
+  if (roll.label !== props.label) {
+    setRoll({
+      label: props.label,
+      previous: reducedMotion ? null : roll.label,
+      sequence: roll.sequence + 1,
+    });
+  }
+  const [height, setHeight] = useState(0);
+  const progress = useAnimatedValue(1);
+  const rolling = roll.previous !== null;
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- runs the native roll before paint so the new label never shows unmoved
+  useLayoutEffect(() => {
+    if (!rolling) return;
+    const { sequence } = roll;
+    progress.setValue(0);
+    const animation = NativeAnimated.timing(progress, {
+      toValue: 1,
+      duration: TEXT_ROLL_MS,
+      easing: Easing.bezier(0.215, 0.61, 0.355, 1),
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (finished) {
+        setRoll((current) =>
+          current.sequence === sequence ? { ...current, previous: null } : current,
+        );
+      }
+    });
+    return () => animation.stop();
+  }, [progress, roll, rolling]);
+  const distance = height + TEXT_ROLL_GAP;
+  return (
+    <View
+      className="min-w-0 shrink overflow-hidden"
+      onLayout={(event) => setHeight(event.nativeEvent.layout.height)}
+    >
+      {rolling ? (
+        <NativeAnimated.View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            transform: [
+              {
+                translateY: progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -distance],
+                }),
+              },
+            ],
+          }}
+        >
+          {props.children(roll.previous ?? "", false)}
+        </NativeAnimated.View>
+      ) : null}
+      <NativeAnimated.View
+        style={
+          rolling
+            ? {
+                transform: [
+                  {
+                    translateY: progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [distance, 0],
+                    }),
+                  },
+                ],
+              }
+            : undefined
+        }
       >
-        {props.label}
-      </Text>
+        {props.children(props.label, true)}
+      </NativeAnimated.View>
     </View>
   );
 }
@@ -279,7 +379,7 @@ export function ShimmeringWorkContent(props: {
     const loop = NativeAnimated.loop(
       NativeAnimated.timing(progress, {
         toValue: 1,
-        duration: SHIMMER_SWEEP_MS + SHIMMER_PAUSE_MS,
+        duration: SHIMMER_SWEEP_MS,
         easing: Easing.linear,
         useNativeDriver: true,
       }),
@@ -288,17 +388,14 @@ export function ShimmeringWorkContent(props: {
     return () => loop.stop();
   }, [appIsActive, contentWidth, progress, reducedMotion, screenIsFocused]);
 
-  // One timing covers the sweep and the pause, so the native driver can loop it.
-  // The React Compiler memoizes these, so re-renders don't rebuild the native
-  // animation nodes.
-  const inputRange = [0, SHIMMER_SWEEP_MS / (SHIMMER_SWEEP_MS + SHIMMER_PAUSE_MS), 1];
+  // The React Compiler memoizes these, so re-renders don't rebuild the native animation nodes.
   const sweepTranslateX = progress.interpolate({
-    inputRange,
-    outputRange: [-SHIMMER_WIDTH, contentWidth, contentWidth],
+    inputRange: [0, 1],
+    outputRange: [-SHIMMER_WIDTH, contentWidth],
   });
   const counterSweepTranslateX = progress.interpolate({
-    inputRange,
-    outputRange: [SHIMMER_WIDTH, -contentWidth, -contentWidth],
+    inputRange: [0, 1],
+    outputRange: [SHIMMER_WIDTH, -contentWidth],
   });
 
   return (
