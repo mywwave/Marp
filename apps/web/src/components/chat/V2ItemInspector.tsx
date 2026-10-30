@@ -198,12 +198,18 @@ export function FetchedToolOutput(props: {
   );
 }
 
-/** A command's output alone, for the terminal card; it streams when the environment can. */
+/**
+ * A command's output alone, for the terminal card; it streams when the environment can. `lead`
+ * scrolls with the output, as the command line does in Cursor's shell card.
+ */
 export function CommandItemOutput(props: {
   readonly projectedItem: OrchestrationV2ProjectedTurnItem;
   readonly environmentId: EnvironmentId;
   readonly source?: TurnItemSource | undefined;
   readonly code?: CommandCodeTarget | undefined;
+  readonly lead?: ReactNode;
+  readonly actions?: ReactNode;
+  readonly scrollClassName?: string;
 }) {
   const environmentStreamsOutput = useCommandOutputStreaming(props.environmentId);
   const streams = props.source !== undefined || environmentStreamsOutput;
@@ -227,30 +233,37 @@ export function CommandItemOutput(props: {
           source={props.source?.commandOutput}
           copyable
           code={props.code}
+          lead={props.lead}
+          actions={props.actions}
+          {...(props.scrollClassName ? { scrollClassName: props.scrollClassName } : {})}
         />
       ) : (
         <>
-          {output.output ? (
-            <div className="flex justify-end">
-              <MessageCopyButton
-                text={output.output}
-                label="Copy output"
-                size="icon-xs"
-                variant="ghost"
-              />
+          {output.output || props.actions ? (
+            <div className="flex justify-end gap-0.5">
+              {props.actions}
+              {output.output ? (
+                <MessageCopyButton
+                  text={output.output}
+                  label="Copy output"
+                  size="icon-xs"
+                  variant="ghost"
+                />
+              ) : null}
             </div>
           ) : null}
-          {codeLanguage && output.output ? (
-            <div className="max-h-80 overflow-auto">
+          <div className={cn("overflow-auto", props.scrollClassName ?? "max-h-80")}>
+            {props.lead}
+            {codeLanguage && output.output ? (
               <CommandCodeOutput
                 text={output.output}
                 language={codeLanguage}
                 startLine={props.code?.startLine ?? 1}
               />
-            </div>
-          ) : (
-            <ToolOutput {...output} />
-          )}
+            ) : (
+              <ToolOutput {...output} />
+            )}
+          </div>
         </>
       )}
     </div>

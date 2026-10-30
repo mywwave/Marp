@@ -4,7 +4,7 @@ import {
 } from "@marp/client-runtime/state/command-output";
 import type { EnvironmentId, ThreadId, TurnItemId } from "@marp/contracts";
 import { TERMINAL_PALETTES, terminalOutputSpans } from "@marp/shared/terminalOutput";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 
 import { useTheme } from "../../hooks/useTheme";
 import { cn } from "~/lib/utils";
@@ -46,11 +46,25 @@ export function CommandOutputTail(props: {
       ? props.source(input)
       : orchestrationEnvironment.v2.commandOutput({ environmentId: props.environmentId, input }),
   );
-  const text = data?.output.text ?? "";
-  const preview = commandOutputPreview(text);
+  return (
+    <CommandOutputPreview
+      text={data?.output.text ?? ""}
+      className={props.className}
+      onOpen={props.onOpen}
+    />
+  );
+}
+
+/** The newest few lines of a command's output, as Cursor's collapsed shell card shows them. */
+export function CommandOutputPreview(props: {
+  readonly text: string;
+  readonly className?: string | undefined;
+  readonly onOpen?: (() => void) | undefined;
+}) {
+  const preview = commandOutputPreview(props.text);
   if (preview.length === 0) return null;
   // The preview keeps only the newest lines, so a shorter preview means earlier output is cut.
-  const clipped = preview.length < text.trimEnd().length;
+  const clipped = preview.length < props.text.trimEnd().length;
   const box = cn(
     "flex max-h-50 w-auto flex-col justify-end overflow-hidden rounded-sm bg-muted px-3 py-2 text-left font-mono text-xs leading-4.5 break-all whitespace-pre-wrap text-muted-foreground",
     clipped && "mask-t-from-70%",
@@ -91,6 +105,12 @@ export function CommandOutputPanel(props: {
   readonly copyable?: boolean;
   /** The output is one file's lines: shown as code with line numbers. */
   readonly code?: CommandCodeTarget | undefined;
+  /** Scrolls with the output above it, as the command line does in the terminal card. */
+  readonly lead?: ReactNode;
+  /** Beside the copy button. */
+  readonly actions?: ReactNode;
+  /** The scroller's height cap. */
+  readonly scrollClassName?: string;
 }) {
   const input = { threadId: props.threadId, itemId: props.itemId };
   const { data, error } = useEnvironmentQuery<CommandOutputView, unknown>(
@@ -110,10 +130,22 @@ export function CommandOutputPanel(props: {
   });
 
   if (text.length === 0) {
-    if (error) return <div className="text-destructive">Couldn&apos;t load output: {error}</div>;
-    if (data === null)
-      return <div className="min-h-16 text-muted-foreground italic">Loading output…</div>;
-    return data.running ? null : <div className="text-muted-foreground italic">No output.</div>;
+    const empty = error ? (
+      <div className="text-destructive">Couldn&apos;t load output: {error}</div>
+    ) : data === null ? (
+      <div className="min-h-16 text-muted-foreground italic">Loading output…</div>
+    ) : data.running ? null : (
+      <div className="text-muted-foreground italic">No output.</div>
+    );
+    return props.lead === undefined ? (
+      empty
+    ) : (
+      <div>
+        {props.actions ? <div className="flex justify-end gap-0.5">{props.actions}</div> : null}
+        {props.lead}
+        {empty}
+      </div>
+    );
   }
   // Colored output keeps its own colors; a printed file is highlighted once it has finished.
   const codeLanguage =
@@ -124,9 +156,12 @@ export function CommandOutputPanel(props: {
   const spans = codeLanguage ? [] : terminalOutputSpans(text, TERMINAL_PALETTES[resolvedTheme]);
   return (
     <div>
-      {props.copyable ? (
-        <div className="flex justify-end">
-          <MessageCopyButton text={text} label="Copy output" size="icon-xs" variant="ghost" />
+      {props.copyable || props.actions ? (
+        <div className="flex justify-end gap-0.5">
+          {props.actions}
+          {props.copyable ? (
+            <MessageCopyButton text={text} label="Copy output" size="icon-xs" variant="ghost" />
+          ) : null}
         </div>
       ) : null}
       {data?.output.truncated ? (
@@ -139,8 +174,9 @@ export function CommandOutputPanel(props: {
           followRef.current =
             element.scrollHeight - element.scrollTop - element.clientHeight <= FOLLOW_SLACK_PX;
         }}
-        className="max-h-80 overflow-auto text-muted-foreground"
+        className={cn("overflow-auto text-muted-foreground", props.scrollClassName ?? "max-h-80")}
       >
+        {props.lead}
         {props.code && codeLanguage ? (
           <CommandCodeOutput text={text} language={codeLanguage} startLine={props.code.startLine} />
         ) : null}

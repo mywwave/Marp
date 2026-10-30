@@ -47,7 +47,11 @@ import { Skeleton } from "../ui/skeleton";
 import { Spinner } from "../ui/spinner";
 import { toastManager } from "../ui/toast";
 import { DiffStatLabel } from "./DiffStatLabel";
-import { CommandOutputTail, useCommandOutputStreaming } from "./CommandOutputPanel";
+import {
+  CommandOutputPreview,
+  CommandOutputTail,
+  useCommandOutputStreaming,
+} from "./CommandOutputPanel";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { ShellCommandBlock } from "./ShellCommandBlock";
 import {
@@ -694,8 +698,9 @@ function InlineEditDiff({
 }
 
 /**
- * A command step. Inside a multi-step run (`compact`) it is one row (icon, purpose, exit status)
- * that opens into the full card; alone it is the card.
+ * A command step, laid out as Cursor's shell card. Inside a multi-step run (`compact`) it is one
+ * row (icon, purpose, exit status) that opens into the card. Alone, the card shows the newest
+ * output lines; opened, the command and its output share one scroller.
  */
 export function CommandCard({
   workEntry,
@@ -706,10 +711,10 @@ export function CommandCard({
   compact = false,
 }: CardProps & { compact?: boolean }) {
   const ctx = use(TimelineRowCtx);
-  const [commandExpanded, setCommandExpanded] = useState(false);
   const [open, setOpen] = useState(false);
-  // Only what the user's click opens fades in; restored or remounted output just appears.
+  // Only what the user's click opens grows in; restored or remounted output just appears.
   const [revealed, setRevealed] = useState(false);
+  const [near, nearRef] = useNearViewport();
   const projectedItem = workEntry.projectedItem;
   const item = projectedItem?.item ?? workEntry.structuredPayload;
   const commandItem = item?.type === "command_execution" ? item : undefined;
@@ -717,27 +722,34 @@ export function CommandCard({
   const failed = workEntryDisplayIndicatesToolFailure(workEntry);
   const running = live && !failed;
   const finished = useSpinnerFinished(running);
-  // A failed command keeps the tail it showed while running; a success folds back to its header.
-  const [sawRunning, setSawRunning] = useState(running);
-  if (running && !sawRunning) setSawRunning(true);
   const environmentStreamsOutput = useCommandOutputStreaming(ctx.activeThreadEnvironmentId);
-  const tail =
-    projectedItem &&
-    commandItem &&
-    !expanded &&
-    (running || (failed && sawRunning)) &&
-    (ctx.turnItemSource !== undefined || environmentStreamsOutput) ? (
+  const streams = ctx.turnItemSource !== undefined || environmentStreamsOutput;
+  const bodyOpen = compact ? open : expanded;
+  const toggle = () => {
+    setRevealed(true);
+    if (compact) setOpen((value) => !value);
+    else onToggleExpanded();
+  };
+  // Output the item already carries needs no subscription; otherwise subscribe while it runs, or
+  // for the card while it is near the viewport. A compact row shows output only while it runs.
+  const carriedOutput =
+    !running && commandItem?.output !== undefined && !commandItem.outputOmitted
+      ? commandItem.output
+      : undefined;
+  const preview =
+    bodyOpen || !projectedItem || !commandItem ? null : carriedOutput !== undefined ? (
+      compact ? null : (
+        <CommandOutputPreview text={carriedOutput} className="mx-3 mb-1.5" onOpen={toggle} />
+      )
+    ) : streams && (running || (!compact && near)) ? (
       <CommandOutputTail
         environmentId={ctx.activeThreadEnvironmentId}
         threadId={projectedItem.sourceThreadId}
         itemId={projectedItem.sourceItemId}
         source={ctx.turnItemSource?.commandOutput}
-        // Under the label column, past the icon slot, in the row or in the open card.
-        className={compact && !open ? "ms-6 mt-0.5 mb-1" : "mx-3 mb-1.5"}
-        onOpen={() => {
-          setRevealed(true);
-          onToggleExpanded();
-        }}
+        // Under the label column, past the icon slot, in the row or in the card.
+        className={compact ? "ms-6 mt-0.5 mb-1" : "mx-3 mb-1.5"}
+        onOpen={toggle}
       />
     ) : null;
   const description = commandItem?.description?.trim();
@@ -798,107 +810,84 @@ export function CommandCard({
       ) : null}
     </span>
   );
-  // In a multi-step run the header is the same row open or closed, so opening never moves it.
-  const compactRow = compact ? (
-    <WorkLogButton
-      data-v2-item-type="command_execution"
-      data-command-row="compact"
-      aria-expanded={open}
-      onClick={() => {
-        setRevealed(true);
-        setOpen((value) => !value);
-      }}
-      icon={icon}
-      label={<Shimmering active={shimmer && running}>{headerLabel}</Shimmering>}
-      trailing={<span className="flex shrink-0 pe-1">{status}</span>}
-    />
+  const commandLine = command ? (
+    <div className="mb-1.5 flex min-w-0 gap-1.5 font-mono text-xs leading-5">
+      <span aria-hidden className="shrink-0 select-none text-muted-foreground">
+        $
+      </span>
+      <span className="min-w-0">
+        <ShellCommandBlock command={command} />
+      </span>
+    </div>
   ) : null;
-  if (compactRow && !open) {
-    return tail ? (
+  const body =
+    bodyOpen && projectedItem && commandItem ? (
+      <ExpandIn grow={revealed}>
+        <div className="px-3 pb-2" onClick={(event) => event.stopPropagation()}>
+          <CommandItemOutput
+            projectedItem={projectedItem}
+            environmentId={ctx.activeThreadEnvironmentId}
+            source={ctx.turnItemSource}
+            code={command ? commandCodeTarget(command) : undefined}
+            lead={commandLine}
+            scrollClassName="max-h-50"
+            actions={
+              command ? (
+                <MessageCopyButton
+                  text={command}
+                  label="Copy command"
+                  size="icon-xs"
+                  variant="ghost"
+                />
+              ) : null
+            }
+          />
+        </div>
+      </ExpandIn>
+    ) : null;
+  if (compact) {
+    return (
       <>
-        {compactRow}
-        {tail}
+        <WorkLogButton
+          data-v2-item-type="command_execution"
+          data-command-row="compact"
+          aria-expanded={open}
+          onClick={toggle}
+          icon={icon}
+          label={<Shimmering active={shimmer && running}>{headerLabel}</Shimmering>}
+          trailing={<span className="flex shrink-0 pe-1">{status}</span>}
+        />
+        {preview}
+        {body ? <div className={cn(cardClassName, "mt-0.5 pt-2")}>{body}</div> : null}
       </>
-    ) : (
-      compactRow
     );
   }
-  const headerContent = (
-    <>
-      {icon}
-      <span className="min-w-0 flex-1 truncate text-secondary-label">
-        <Shimmering active={shimmer && running}>{headerLabel}</Shimmering>
-      </span>
-      {status}
-    </>
-  );
-  const card = (
-    <div
-      className={cn(cardClassName, compactRow && "mt-0.5 pt-2")}
-      data-v2-item-type={compactRow ? undefined : "command_execution"}
-    >
-      {compactRow ? null : (
-        <div className="flex h-8 min-w-0 items-center gap-2 px-3">{headerContent}</div>
-      )}
-      {command ? (
-        <button
-          type="button"
-          className={cn(
-            "block w-full cursor-pointer px-3 pb-1 text-left font-mono text-xs leading-5",
-            cardFocusClassName,
-          )}
-          aria-expanded={commandExpanded}
-          aria-label={commandExpanded ? "Collapse command" : "Expand command"}
-          onClick={() => setCommandExpanded((value) => !value)}
-        >
-          <span className="flex min-w-0 gap-1.5">
-            <span aria-hidden className="shrink-0 select-none text-muted-foreground">
-              $
-            </span>
-            <span className={cn("min-w-0", !commandExpanded && "line-clamp-2")}>
-              <ShellCommandBlock command={command} />
-            </span>
-          </span>
-        </button>
-      ) : null}
-      {tail}
-      {projectedItem && commandItem ? (
-        <div className="flex items-center gap-1 px-2 pb-1.5">
-          <Button
-            variant="ghost-muted"
-            size="micro"
-            aria-expanded={expanded}
-            onClick={() => {
-              setRevealed(true);
-              onToggleExpanded();
-            }}
-          >
-            {expanded ? "Hide output" : "Show output"}
-          </Button>
-          {command ? (
-            <MessageCopyButton text={command} label="Copy command" size="icon-xs" variant="ghost" />
-          ) : null}
-        </div>
-      ) : null}
-      {expanded && projectedItem && commandItem ? (
-        <ExpandIn grow={revealed}>
-          <div className="px-3 pb-3" onClick={(event) => event.stopPropagation()}>
-            <CommandItemOutput
-              projectedItem={projectedItem}
-              environmentId={ctx.activeThreadEnvironmentId}
-              source={ctx.turnItemSource}
-              code={command ? commandCodeTarget(command) : undefined}
-            />
-          </div>
-        </ExpandIn>
-      ) : null}
-    </div>
-  );
-  if (!compactRow) return card;
   return (
-    <>
-      {compactRow}
-      <ExpandIn grow={revealed}>{card}</ExpandIn>
-    </>
+    <div ref={nearRef} className={cardClassName} data-v2-item-type="command_execution">
+      <button
+        type="button"
+        aria-expanded={bodyOpen}
+        onClick={toggle}
+        className={cn(
+          "flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 px-3 text-left",
+          cardFocusClassName,
+        )}
+      >
+        {icon}
+        <span className="flex min-w-0 flex-1 items-center gap-1 text-secondary-label">
+          <Shimmering active={shimmer && running}>{headerLabel}</Shimmering>
+          <ChevronRightIcon
+            aria-hidden
+            className={cn(
+              "size-3 shrink-0 text-icon-muted opacity-0 transition-[opacity,rotate] duration-150 ease-out group-hover/work-card:opacity-100 group-focus-visible/work-card:opacity-100",
+              bodyOpen && "rotate-90 opacity-100",
+            )}
+          />
+        </span>
+        {status}
+      </button>
+      {preview}
+      {body}
+    </div>
   );
 }
