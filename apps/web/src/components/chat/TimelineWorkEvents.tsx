@@ -229,7 +229,13 @@ export function FileEditCard({
     !fileChange?.diffStr &&
     (summary?.additions ?? 0) === 0 &&
     (summary?.deletions ?? 0) === 0;
-  const detail = useEditDetail(projectedItem, near && !failed && !running && !bare);
+  // Cursor's default density: a finished edit is one line and its diff opens on demand. A live
+  // edit keeps its tail, and a proposal awaiting approval (with a footer) keeps the full card.
+  const minimal = !bare && !failed && !running && footer === undefined;
+  const detail = useEditDetail(
+    projectedItem,
+    (minimal ? expanded : near) && !failed && !running && !bare,
+  );
   const diff = detail.diff?.kind === "diff" ? detail.diff : undefined;
   const fits = diff === undefined || diff.fileDiff.unifiedLineCount <= EDIT_PREVIEW_LINES;
   const canExpand = !failed && !running && !fits;
@@ -335,6 +341,77 @@ export function FileEditCard({
       {more > 0 ? <span className="shrink-0 text-muted-foreground">+{more} more</span> : null}
     </Shimmering>
   );
+  if (minimal) {
+    return (
+      <WorkLogRow
+        ref={nearRef}
+        data-v2-item-type="file_change"
+        data-edit-row="minimal"
+        role="button"
+        tabIndex={0}
+        aria-label={`${summary?.action.verb ?? "Edited"} ${displayPath}`}
+        aria-expanded={expanded}
+        onClick={onToggleExpanded}
+        onKeyDown={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            (event.key === "Enter" || event.key === " ")
+          ) {
+            event.preventDefault();
+            onToggleExpanded();
+          }
+        }}
+        icon={icon}
+        label={
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="flex min-w-0 items-baseline gap-1.5">{label}</span>
+            <DiffStatLabel
+              additions={counts.additions}
+              deletions={created ? 0 : counts.deletions}
+              layout="inline"
+              hideZero
+              className="shrink-0 text-xs"
+            />
+            <ChevronRightIcon
+              aria-hidden
+              className={cn(
+                "size-3 shrink-0 text-icon-muted opacity-0 transition-[opacity,rotate] duration-150 ease-out group-hover/timeline-row:opacity-100 group-focus-visible/timeline-row:opacity-100",
+                expanded && "rotate-90 opacity-100",
+              )}
+            />
+          </span>
+        }
+      >
+        {expanded ? (
+          <div
+            className="ms-7 mt-0.5 mb-1.5 cursor-auto overflow-hidden rounded-field bg-muted"
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            {detail.pending ? (
+              <div className="flex flex-col gap-2 px-3 py-2" aria-busy>
+                <Skeleton className="h-3 w-3/4 shrink-0" />
+                <Skeleton className="h-3 w-1/2 shrink-0" />
+              </div>
+            ) : detail.diff?.kind === "too-large" ? (
+              <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                Diff too large to display
+                {openDiff ? (
+                  <Button variant="ghost-muted" size="micro" onClick={openDiff}>
+                    Open diff
+                  </Button>
+                ) : null}
+              </div>
+            ) : diff ? (
+              <InlineEditDiff diff={diff} full clipped={false} />
+            ) : (
+              <div className="px-3 py-2 text-xs text-muted-foreground">No changes recorded</div>
+            )}
+          </div>
+        ) : null}
+      </WorkLogRow>
+    );
+  }
   if (bare) {
     return (
       <WorkLogRow
