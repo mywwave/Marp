@@ -138,11 +138,14 @@ export function MarkdownCodeBlock({
   viewToggle,
   canWrap = true,
   diagram = false,
+  title,
   children,
 }: {
   code: string;
   language: string;
   fenceTitle: string | null;
+  /** Replaces the file or language title, as a code citation's file link does. */
+  title?: ReactNode;
   theme: "light" | "dark";
   onRunShellCommand?: ((command: string) => void) | undefined;
   isStreaming: boolean;
@@ -217,6 +220,7 @@ export function MarkdownCodeBlock({
       fenceTitle={fenceTitle}
       theme={theme}
       wrapped={wrapped}
+      title={title}
       headerProps={THREAD_FIND_IGNORE_PROPS}
       actions={
         <span className="flex items-center gap-0.5" role="toolbar" aria-label="Code block actions">

@@ -6,6 +6,7 @@ import type { Root, RootContent } from "mdast";
 import { ENRICHED_INLINE_FILE_LINK_REGEX } from "./enrichedLinkPresentation";
 import {
   markdownForNativeRendering,
+  markdownWithCodeCitations,
   markdownWithInlineFileLinks,
   markdownWithHtml,
 } from "./markdownDocument";
@@ -191,3 +192,17 @@ function previousTableBreaks(markdown: string): string {
   }
   return markdown;
 }
+
+describe("code citations", () => {
+  it("puts the cited file over a fence in its language, and only relabels a nested one", () => {
+    expect(markdownWithCodeCitations("Here:\n\n```12:15:src/app.ts\nconst a = 1;\n```\n")).toBe(
+      "Here:\n\n`src/app.ts:12` lines 12–15\n\n```ts\nconst a = 1;\n```\n",
+    );
+    expect(markdownWithCodeCitations("- item\n\n  ```3:3:a.py\n  x = 1\n  ```\n")).toBe(
+      "- item\n\n  ```py\n  x = 1\n  ```\n",
+    );
+    expect(markdownWithCodeCitations("```ts\nconst a = 1;\n```\n")).toBe(
+      "```ts\nconst a = 1;\n```\n",
+    );
+  });
+});

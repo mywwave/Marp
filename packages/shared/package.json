@@ -459,6 +459,10 @@
       "types": "./src/proposedPlanText.ts",
       "import": "./src/proposedPlanText.ts"
     },
+    "./markdownCodeCitation": {
+      "types": "./src/markdownCodeCitation.ts",
+      "import": "./src/markdownCodeCitation.ts"
+    },
     "./markdownWindowsPaths": {
       "types": "./src/markdownWindowsPaths.ts",
       "import": "./src/markdownWindowsPaths.ts"

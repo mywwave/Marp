@@ -90,6 +90,7 @@ import type {
   Options as ReactMarkdownOptions,
 } from "react-markdown";
 import ReactMarkdown from "react-markdown";
+import { getFiletypeFromFileName } from "@pierre/diffs";
 import { createIncrementalMarkdownPlugin } from "../markdown-incremental";
 import { defaultUrlTransform } from "react-markdown";
 import { parseAssistantCitationHref } from "@marp/shared/assistantCitations";
@@ -224,6 +225,7 @@ import {
   isClosedCodeFence,
   nodeToPlainText,
 } from "./chat/MarkdownCodeBlock.logic";
+import { codeCitationRange, parseCodeCitation } from "@marp/shared/markdownCodeCitation";
 import { reportMarkdownActionFailure } from "./chat/markdownActionFailure";
 
 const isAssetNotFoundError = Schema.is(AssetWorkspaceAssetNotFoundError);
@@ -1578,6 +1580,9 @@ const CHAT_MARKDOWN_COMPONENTS = {
       onRunShellCommand,
       inline,
       mathEnabled,
+      cwd,
+      imageBaseDir,
+      fileLinkChip,
     } = use(ChatMarkdownRendererContext);
     const text = use(ChatMarkdownTextContext);
     const codeBlock = extractCodeBlock(children);
@@ -1585,6 +1590,54 @@ const CHAT_MARKDOWN_COMPONENTS = {
       return <pre {...props}>{children}</pre>;
     }
 
+    const citation = parseCodeCitation(extractFenceLanguage(codeBlock.className));
+    if (citation) {
+      const citedLanguage = getFiletypeFromFileName(citation.path);
+      const meta = resolveInlineCodeFileLinkMeta(
+        `${citation.path}:${citation.startLine}`,
+        cwd,
+        imageBaseDir ?? cwd,
+      );
+      return (
+        <MarkdownCodeBlock
+          code={codeBlock.code}
+          language={citedLanguage}
+          fenceTitle={citation.path}
+          theme={resolvedTheme}
+          isStreaming={isStreaming}
+          title={
+            <span className="inline-flex min-w-0 items-center gap-1.5 text-2xs">
+              {meta ? (
+                fileLinkChip(meta, `${citation.path}:${citation.startLine}`)
+              ) : (
+                <span className="truncate font-mono">{citation.path}</span>
+              )}
+              <span className="shrink-0 text-muted-foreground">{codeCitationRange(citation)}</span>
+            </span>
+          }
+        >
+          <RenderErrorBoundary
+            resetKeys={[codeBlock.code, citedLanguage, diffThemeName, isStreaming]}
+            fallback={<pre {...props}>{children}</pre>}
+          >
+            <Suspense
+              fallback={
+                <pre {...props} className="invisible" aria-hidden>
+                  {children}
+                </pre>
+              }
+            >
+              <SuspenseShikiCodeBlock
+                className={`language-${citedLanguage}`}
+                code={codeBlock.code}
+                themeName={diffThemeName}
+                isStreaming={isStreaming}
+              />
+            </Suspense>
+          </RenderErrorBoundary>
+        </MarkdownCodeBlock>
+      );
+    }
     const language = extractFenceLanguage(codeBlock.className);
     if (
       mathEnabled &&

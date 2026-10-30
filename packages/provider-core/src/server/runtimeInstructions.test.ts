@@ -38,4 +38,18 @@ describe("buildRuntimeInstructions", () => {
     assert.include(instructions, "Never wait with sleep");
     assert.include(instructions, "call unwatch_pull_request");
   });
+
+  it("sets how the agent narrates, except where the harness's own prompt already does", () => {
+    const instructions = buildRuntimeInstructions({ harness: "Codex" });
+
+    assert.include(
+      instructions,
+      "Never send two batches of tool calls in a row without a sentence between them",
+    );
+    assert.include(instructions, "info string startLine:endLine:path");
+    assert.notInclude(
+      buildRuntimeInstructions({ harness: "Cursor", communication: false }),
+      "<communication>",
+    );
+  });
 });

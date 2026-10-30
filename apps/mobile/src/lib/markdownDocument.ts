@@ -4,6 +4,7 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import { remarkKeepWindowsProsePaths } from "@marp/shared/markdownWindowsPaths";
 import { isWindowsAbsolutePath } from "@marp/shared/path";
+import { codeCitationRange, parseCodeCitation } from "@marp/shared/markdownCodeCitation";
 
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkKeepWindowsProsePaths);
 export type MarkdownNode = Root | RootContent;
@@ -431,9 +432,42 @@ function markdownWithWindowsPathDestinations(markdown: string): string {
   return applyMarkdownEdits(markdown, edits);
 }
 
+const CODE_CITATION_FENCE = /^ {0,3}(`{3,}|~{3,})\d+:\d+:/m;
+
+/**
+ * A `startLine:endLine:path` fence becomes the file as an inline code span, which file linking
+ * turns into a link, over a fence in the file's language. Inside a list or quote only the
+ * language changes, since an added line would need the container's prefix.
+ */
+export function markdownWithCodeCitations(markdown: string): string {
+  if (!CODE_CITATION_FENCE.test(markdown)) return markdown;
+  const edits: MarkdownEdit[] = [];
+  const visit = (node: MarkdownNode) => {
+    if (node.type === "code") {
+      const citation = parseCodeCitation(node.lang);
+      const start = node.position?.start;
+      if (citation === null || start?.offset === undefined) return;
+      const opening = /^( {0,3})(`{3,}|~{3,})[^\r\n]*/.exec(markdown.slice(start.offset));
+      if (opening === null) return;
+      const extension = /\.([\w-]+)$/.exec(citation.path)?.[1] ?? "";
+      const fence = `${opening[1]}${opening[2]}${extension}`;
+      const label = `\`${citation.path}:${citation.startLine}\` ${codeCitationRange(citation)}`;
+      edits.push({
+        start: start.offset,
+        end: start.offset + opening[0].length,
+        content: start.column === 1 ? `${label}\n\n${fence}` : fence,
+      });
+      return;
+    }
+    if ("children" in node) node.children.forEach(visit);
+  };
+  visit(parser.parse(markdown));
+  return applyMarkdownEdits(markdown, edits);
+}
+
 // HTML wrappers can expose Markdown that wasn't in the first AST, so normalize them first.
 export function markdownForNativeParsing(markdown: string): string {
-  return markdownWithWindowsPathDestinations(markdownWithHtml(markdown));
+  return markdownWithCodeCitations(markdownWithWindowsPathDestinations(markdownWithHtml(markdown)));
 }
 
 export function parseMarkdownDocument(markdown: string): Root {
