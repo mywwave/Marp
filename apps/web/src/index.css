@@ -1818,6 +1818,8 @@ body {
   overscroll-behavior-y: none;
   padding-top: max(env(safe-area-inset-top), 0px);
   padding-right: var(--desktop-window-right-resize-inset);
+  /* The resize inset shows #root itself; the boot splash's body color would read as a band. */
+  background-color: var(--app-chrome-background);
 }
 
 .electron-windows {
