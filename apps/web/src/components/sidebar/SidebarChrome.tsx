@@ -212,30 +212,28 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
       <SidebarMenu className="flex-row items-center empty:hidden">
         <SidebarThreadUndoNotice />
       </SidebarMenu>
-      <SidebarMenu>
+      {isOnUtilityPage ? null : (
+        <SidebarMenu>
+          {pullRequestsSupported ? (
+            <SidebarFooterRow
+              icon={<PullRequestGlyph.pullRequest />}
+              label="Pull requests"
+              onClick={handlePullRequestsClick}
+            />
+          ) : null}
+          <SidebarFooterRow
+            icon={<ChartNoAxesColumnIcon />}
+            label="Usage"
+            shortcut={shortcutLabelForCommand(keybindings, "usage.open")}
+            onClick={handleUsageClick}
+          />
+        </SidebarMenu>
+      )}
+      {/* The update control keeps its place at the end of the last row. */}
+      <SidebarMenu className="flex-row items-center">
         {isOnUtilityPage ? (
           <SidebarFooterRow icon={<ArrowLeftIcon />} label="Back" onClick={handleBackClick} />
         ) : (
-          <>
-            {pullRequestsSupported ? (
-              <SidebarFooterRow
-                icon={<PullRequestGlyph.pullRequest />}
-                label="Pull requests"
-                onClick={handlePullRequestsClick}
-              />
-            ) : null}
-            <SidebarFooterRow
-              icon={<ChartNoAxesColumnIcon />}
-              label="Usage"
-              shortcut={shortcutLabelForCommand(keybindings, "usage.open")}
-              onClick={handleUsageClick}
-            />
-          </>
-        )}
-      </SidebarMenu>
-      {/* The update control keeps its place at the end of the last row. */}
-      <SidebarMenu className="flex-row items-center">
-        {isOnUtilityPage ? null : (
           <SidebarFooterRow
             icon={<SettingsIcon />}
             label="Settings"
