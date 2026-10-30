@@ -1895,7 +1895,8 @@ export function commandSummary(command: string): string {
   for (let segment = 0; rest && segment < MAX_COMMAND_SEGMENTS; segment += 1) {
     const { firstCommand, remainingCommand } = splitFirstShellCommand(rest);
     rest = remainingCommand;
-    const tokens = tokenizeShellCommand(firstCommand);
+    const parsed = tokenizeShellCommand(firstCommand);
+    const tokens = parsed && (afterTimedWrapper(parsed) ?? parsed);
     const program = tokens?.[0]
       ?.split(/[\\/]/u)
       .at(-1)
@@ -2011,7 +2012,49 @@ const FILE_INTENTS: Readonly<Record<string, CommandIntent["verbs"]>> = {
 const LOOKUP_PROGRAMS = new Set(["which", "where", "get-command", "gcm"]);
 const VERSION_FLAGS = new Set(["-v", "--version", "-version", "version"]);
 const ENV_ASSIGNMENT = /^[A-Za-z_]\w*=/u;
-const RUNNER_WRAPPERS: Readonly<Record<string, number>> = { npx: 1, bunx: 1, time: 1, sudo: 1 };
+const RUNNER_WRAPPERS: Readonly<Record<string, number>> = {
+  npx: 1,
+  bunx: 1,
+  time: 1,
+  sudo: 1,
+  nohup: 1,
+};
+// Interpreters reading a script from a flag or stdin (`python - <<EOF`, `node -e`); a script file
+// is left to the summary.
+const INLINE_SCRIPT_INTERPRETERS: Readonly<
+  Record<string, { readonly language: string; readonly flags: ReadonlySet<string> }>
+> = {
+  python: { language: "Python", flags: new Set(["-c"]) },
+  python3: { language: "Python", flags: new Set(["-c"]) },
+  py: { language: "Python", flags: new Set(["-c"]) },
+  node: { language: "Node", flags: new Set(["-e", "--eval", "-p", "--print"]) },
+  ruby: { language: "Ruby", flags: new Set(["-e"]) },
+  perl: { language: "Perl", flags: new Set(["-e", "-E"]) },
+  php: { language: "PHP", flags: new Set(["-r"]) },
+};
+
+// `timeout [-k 5] [-s KILL] 300 cmd` and `nice [-n 10] cmd` run the command after their options.
+function afterTimedWrapper(words: ReadonlyArray<string>): string[] | null {
+  const head = baseProgram(words[0]);
+  if (head !== "timeout" && head !== "nice") return null;
+  let index = 1;
+  while (words[index]?.startsWith("-")) {
+    index += /^-[ksn]$|^--(?:signal|kill-after|adjustment)$/u.test(words[index]!) ? 2 : 1;
+  }
+  return words.slice(head === "timeout" ? index + 1 : index);
+}
+
+function inlineScriptIntent(program: string, args: ReadonlyArray<string>): CommandIntent | null {
+  const interpreter = INLINE_SCRIPT_INTERPRETERS[program];
+  if (interpreter === undefined) return null;
+  const readsStdin =
+    args.includes("-") ||
+    (args.some((arg) => arg.startsWith("<<")) &&
+      args.every((arg) => arg.startsWith("-") || arg.startsWith("<<")));
+  if (!readsStdin && !args.some((arg) => interpreter.flags.has(arg))) return null;
+  const script = `${interpreter.language} script`;
+  return { verbs: verbs(`Running ${script}`, `Ran ${script}`, `Run ${script}`) };
+}
 
 function baseProgram(token: string | undefined): string | undefined {
   return token
@@ -2047,7 +2090,13 @@ function packageManagerIntent(program: string, args: ReadonlyArray<string>): Com
   }
   const script = first === "run" ? second : first;
   const scriptVerbs = script === undefined ? undefined : SCRIPT_INTENTS[script];
-  if (scriptVerbs === undefined) return null;
+  if (scriptVerbs === undefined) {
+    // `pnpm vitest`, `bun tsc`: package managers also run installed binaries by name.
+    const binary = baseProgram(script);
+    return binary !== undefined && (TEST_RUNNERS.has(binary) || binary in PROGRAM_INTENTS)
+      ? segmentIntent(args.slice(first === "run" ? 1 : 0))
+      : null;
+  }
   const rest = args.slice(first === "run" ? 2 : 1).filter((arg) => arg !== "run");
   return withObject(scriptVerbs, scriptVerbs === TESTS ? intentObject(rest) : undefined);
 }
@@ -2077,7 +2126,11 @@ function segmentIntent(tokens: ReadonlyArray<string>): CommandIntent | null {
   for (;;) {
     const head = baseProgram(words[0]);
     const skip = head === undefined ? undefined : RUNNER_WRAPPERS[head];
+    const timed = afterTimedWrapper(words);
     if (skip !== undefined) words = words.slice(skip);
+    else if (timed !== null) words = timed;
+    else if (head === "bun" && words[1] === "--bun") words = [words[0]!, ...words.slice(2)];
+    else if (head === "bun" && words[1] === "x") words = words.slice(2);
     else if ((head === "pnpm" || head === "yarn") && ["exec", "dlx"].includes(words[1] ?? "")) {
       words = words.slice(2);
     } else break;
@@ -2086,6 +2139,8 @@ function segmentIntent(tokens: ReadonlyArray<string>): CommandIntent | null {
   if (program === undefined) return null;
   const args = words.slice(1);
   const [first] = args;
+  const inlineScript = inlineScriptIntent(program, args);
+  if (inlineScript !== null) return inlineScript;
   if (TEST_RUNNERS.has(program)) {
     return withObject(TESTS, intentObject(args.filter((arg) => arg !== "run")));
   }
@@ -2118,20 +2173,46 @@ function segmentIntent(tokens: ReadonlyArray<string>): CommandIntent | null {
   return null;
 }
 
+const MAX_INTENTS = 3;
+
+function intentPhrase(intent: CommandIntent, phase: IntentPhase): string {
+  const verb = intent.verbs[phase];
+  return intent.object === undefined ? verb : `${verb} ${intent.object}`;
+}
+
 /**
- * What a command is for, when it is a well-known step: tests, a typecheck, an install, a git
- * write. In a chain the first such part names it; filters and `cd` around it change nothing.
+ * What a command is for, when it is made of well-known steps: tests, a typecheck, an install, a
+ * git write. A chain lists each step once ("Ran Python script, ran tests"); filters and `cd`
+ * around them change nothing.
  */
 export function commandIntent(command: string): CommandIntent | null {
   let rest: string | null = scriptPayload(command).trim();
+  const intents: CommandIntent[] = [];
   for (let segment = 0; rest && segment < MAX_COMMAND_SEGMENTS; segment += 1) {
     const { firstCommand, remainingCommand } = splitFirstShellCommand(rest);
     rest = remainingCommand;
     const tokens = tokenizeShellCommand(firstCommand);
-    if (!tokens || tokens.length === 0) return null;
+    if (!tokens || tokens.length === 0) break;
     if (LOCATION_PROGRAMS.has(tokens[0]!.toLowerCase()) || /^\$env:/iu.test(tokens[0]!)) continue;
     const intent = segmentIntent(tokens);
-    if (intent !== null) return intent;
+    if (
+      intent !== null &&
+      !intents.some((seen) => seen.verbs.completed === intent.verbs.completed)
+    ) {
+      intents.push(intent);
+    }
   }
-  return null;
+  if (intents.length <= 1) return intents[0] ?? null;
+  const shown = intents.slice(0, MAX_INTENTS);
+  const more = intents.length - shown.length;
+  const joined = (phase: IntentPhase) =>
+    shown
+      .map((intent, index) => {
+        const phrase = intentPhrase(intent, phase);
+        return index === 0 ? phrase : `${phrase[0]!.toLowerCase()}${phrase.slice(1)}`;
+      })
+      .join(", ") + (more > 0 ? ` +${more}` : "");
+  return {
+    verbs: { loading: joined("loading"), completed: joined("completed"), error: joined("error") },
+  };
 }

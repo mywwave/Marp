@@ -280,6 +280,7 @@ describe("commandSummary", () => {
     ],
     ['grep -rln "orphan" --include=*.go backend/ | head -20', "grep, head · backend"],
     ["pnpm test", "pnpm test"],
+    ["timeout 60 make check | tail -5", "make, tail"],
     ["ls", "ls"],
   ])("names the programs and their target: %s", (command, summary) => {
     expect(commandSummary(command)).toBe(summary);
@@ -357,11 +358,25 @@ describe("commandIntent", () => {
     ["Get-Command git", "Looked up git"],
     ["node --version", "Checked node version"],
     ["pwd", "Checked directory"],
+    ["python - <<'X'\nprint(1)\nX", "Ran Python script"],
+    ['python3 -c "print(1)"', "Ran Python script"],
+    ["node -e 'console.log(1)'", "Ran Node script"],
+    ["timeout 300 bun --bun vitest run src/a.test.ts", "Ran tests src/a.test.ts"],
+    ["bun --bun tsc --noEmit 2>&1 | tail -5", "Typechecked"],
+    ["pnpm vitest run", "Ran tests"],
+    [
+      "python - <<'EOF'\nopen('a.ts','w').write('')\nEOF\ntimeout 300 vitest run src/a.test.ts 2>&1 | grep -E \"×|Tests\" | head -20; timeout 300 tsc --noEmit 2>&1 | tail -5",
+      "Ran Python script, ran tests src/a.test.ts, typechecked",
+    ],
+    [
+      "vp fmt && vp lint && vp test run && git status && git diff",
+      "Formatted, linted, ran tests +2",
+    ],
   ])("labels %s as %s", (command, expected) => {
     expect(label(command)).toBe(expected);
   });
 
-  it.each(["node scripts/gen.mjs", "python - <<'X'\nprint(1)\nX", "make", "cat a.ts", "ls"])(
+  it.each(["node scripts/gen.mjs", "python tool.py <<'X'\nin\nX", "make", "cat a.ts", "ls"])(
     "leaves %s to the summary",
     (command) => {
       expect(commandIntent(command)).toBeNull();
