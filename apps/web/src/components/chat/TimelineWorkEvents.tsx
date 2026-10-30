@@ -50,7 +50,12 @@ import { DiffStatLabel } from "./DiffStatLabel";
 import { CommandOutputTail, useCommandOutputStreaming } from "./CommandOutputPanel";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { ShellCommandBlock } from "./ShellCommandBlock";
-import { ActivityShimmerOverlay, useSpinnerFinished } from "./TimelineRowParts";
+import {
+  ActivityShimmerOverlay,
+  ExpandIn,
+  useOpenedHere,
+  useSpinnerFinished,
+} from "./TimelineRowParts";
 import { failedToolIconClassName, ToolActivityIconView } from "./TimelineToolActivityIcon";
 import { workEntryIconName } from "./TimelineWorkEntryRow.logic";
 import { formatWorkingTimerNow } from "./TimelineWorkGroupRows.logic";
@@ -212,6 +217,7 @@ export function FileEditCard({
   const ctx = use(TimelineRowCtx);
   const contextMenu = useFileContextMenu(ctx.activeThreadEnvironmentId);
   const [near, nearRef] = useNearViewport();
+  const openedHere = useOpenedHere(expanded);
   const projectedItem = workEntry.projectedItem;
   const fileChange = projectedItem?.item.type === "file_change" ? projectedItem.item : undefined;
   const summary = fileEditSummary(workEntry, live);
@@ -392,31 +398,33 @@ export function FileEditCard({
         }
       >
         {expanded && !running ? (
-          <div
-            className="ms-7 mt-0.5 mb-1.5 cursor-auto overflow-hidden rounded-field bg-muted"
-            onClick={(event) => event.stopPropagation()}
-            onPointerDown={(event) => event.stopPropagation()}
-          >
-            {detail.pending ? (
-              <div className="flex flex-col gap-2 px-3 py-2" aria-busy>
-                <Skeleton className="h-3 w-3/4 shrink-0" />
-                <Skeleton className="h-3 w-1/2 shrink-0" />
-              </div>
-            ) : detail.diff?.kind === "too-large" ? (
-              <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
-                Diff too large to display
-                {openDiff ? (
-                  <Button variant="ghost-muted" size="micro" onClick={openDiff}>
-                    Open diff
-                  </Button>
-                ) : null}
-              </div>
-            ) : diff ? (
-              <InlineEditDiff diff={diff} full clipped={false} />
-            ) : (
-              <div className="px-3 py-2 text-xs text-muted-foreground">No changes recorded</div>
-            )}
-          </div>
+          <ExpandIn grow={openedHere}>
+            <div
+              className="ms-7 mt-0.5 mb-1.5 cursor-auto overflow-hidden rounded-field bg-muted"
+              onClick={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              {detail.pending ? (
+                <div className="flex flex-col gap-2 px-3 py-2" aria-busy>
+                  <Skeleton className="h-3 w-3/4 shrink-0" />
+                  <Skeleton className="h-3 w-1/2 shrink-0" />
+                </div>
+              ) : detail.diff?.kind === "too-large" ? (
+                <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                  Diff too large to display
+                  {openDiff ? (
+                    <Button variant="ghost-muted" size="micro" onClick={openDiff}>
+                      Open diff
+                    </Button>
+                  ) : null}
+                </div>
+              ) : diff ? (
+                <InlineEditDiff diff={diff} full clipped={false} />
+              ) : (
+                <div className="px-3 py-2 text-xs text-muted-foreground">No changes recorded</div>
+              )}
+            </div>
+          </ExpandIn>
         ) : null}
       </WorkLogRow>
     );
@@ -826,12 +834,7 @@ export function CommandCard({
   );
   const card = (
     <div
-      className={cn(
-        cardClassName,
-        compactRow && "mt-0.5 pt-2",
-        revealed && "live-enter [--live-enter-duration:150ms]",
-      )}
-      data-live={revealed || undefined}
+      className={cn(cardClassName, compactRow && "mt-0.5 pt-2")}
       data-v2-item-type={compactRow ? undefined : "command_execution"}
     >
       {compactRow ? null : (
@@ -878,17 +881,16 @@ export function CommandCard({
         </div>
       ) : null}
       {expanded && projectedItem && commandItem ? (
-        <div
-          className={cn("px-3 pb-3", revealed && "live-enter [--live-enter-duration:150ms]")}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <CommandItemOutput
-            projectedItem={projectedItem}
-            environmentId={ctx.activeThreadEnvironmentId}
-            source={ctx.turnItemSource}
-            code={command ? commandCodeTarget(command) : undefined}
-          />
-        </div>
+        <ExpandIn grow={revealed}>
+          <div className="px-3 pb-3" onClick={(event) => event.stopPropagation()}>
+            <CommandItemOutput
+              projectedItem={projectedItem}
+              environmentId={ctx.activeThreadEnvironmentId}
+              source={ctx.turnItemSource}
+              code={command ? commandCodeTarget(command) : undefined}
+            />
+          </div>
+        </ExpandIn>
       ) : null}
     </div>
   );
@@ -896,7 +898,7 @@ export function CommandCard({
   return (
     <>
       {compactRow}
-      {card}
+      <ExpandIn grow={revealed}>{card}</ExpandIn>
     </>
   );
 }

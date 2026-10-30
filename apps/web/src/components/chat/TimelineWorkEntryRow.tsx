@@ -62,9 +62,11 @@ import {
   type TimelineWorkEntry,
 } from "./timelineRowContext";
 import {
+  ExpandIn,
   MESSAGE_HEADING_LEVEL,
   TimelineRowTimestamp,
   useApprovalResolved,
+  useOpenedHere,
 } from "./TimelineRowParts";
 import {
   failedToolIconClassName,
@@ -279,6 +281,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       workEntry.itemType === "reasoning" &&
       ctx.workGroupViewState.expandedEntries.has(workEntry.id),
   );
+  const openedHere = useOpenedHere(expanded);
   const toggleExpanded = () => {
     const next = !expanded;
     props.onToggleEntry?.(!next);
@@ -636,33 +639,35 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       (expandedBody ||
         plainOutputFetches ||
         (workEntry.projectedItem && plainOutput === undefined)) ? (
-        <WorkLogDetails kind="panel">
-          {workEntry.projectedItem && plainOutput === undefined ? (
-            <V2ItemInspector
-              projectedItem={workEntry.projectedItem}
-              environmentId={ctx.activeThreadEnvironmentId}
-              cwd={ctx.markdownCwd}
-              workspaceRoot={workspaceRoot}
-              onOpenToolDiff={ctx.onOpenToolDiff}
-              onImageExpand={ctx.onImageExpand}
-              source={ctx.turnItemSource}
-            />
-          ) : (
-            <>
-              {expandedBody ? (
-                <pre className={toolCallExpandedBodyClassName}>{expandedBody}</pre>
-              ) : null}
-              {plainOutputFetches && workEntry.projectedItem ? (
-                <FetchedToolOutput
-                  projectedItem={workEntry.projectedItem}
-                  environmentId={ctx.activeThreadEnvironmentId}
-                  onImageExpand={onImageExpand}
-                  source={ctx.turnItemSource}
-                />
-              ) : null}
-            </>
-          )}
-        </WorkLogDetails>
+        <ExpandIn grow={openedHere}>
+          <WorkLogDetails kind="panel">
+            {workEntry.projectedItem && plainOutput === undefined ? (
+              <V2ItemInspector
+                projectedItem={workEntry.projectedItem}
+                environmentId={ctx.activeThreadEnvironmentId}
+                cwd={ctx.markdownCwd}
+                workspaceRoot={workspaceRoot}
+                onOpenToolDiff={ctx.onOpenToolDiff}
+                onImageExpand={ctx.onImageExpand}
+                source={ctx.turnItemSource}
+              />
+            ) : (
+              <>
+                {expandedBody ? (
+                  <pre className={toolCallExpandedBodyClassName}>{expandedBody}</pre>
+                ) : null}
+                {plainOutputFetches && workEntry.projectedItem ? (
+                  <FetchedToolOutput
+                    projectedItem={workEntry.projectedItem}
+                    environmentId={ctx.activeThreadEnvironmentId}
+                    onImageExpand={onImageExpand}
+                    source={ctx.turnItemSource}
+                  />
+                ) : null}
+              </>
+            )}
+          </WorkLogDetails>
+        </ExpandIn>
       ) : null}
     </WorkLogRow>
   );

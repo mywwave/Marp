@@ -15,7 +15,7 @@ import { responseStalled } from "@marp/client-runtime/work-log/live-cards";
 import { workEntryWasSkipped } from "@marp/client-runtime/work-log/presentation";
 import { observeVisibleAnimation } from "../../lib/visibleAnimation";
 import { tickTextContent } from "../../lib/tickTextContent";
-import { memo, use, useEffect, useState, type ReactNode } from "react";
+import { memo, use, useEffect, useId, useState, type ReactNode } from "react";
 import { workEntryDisplayIndicatesToolFailure } from "../../session-logic";
 import { ChevronRightIcon, Minimize2Icon, XIcon } from "lucide-react";
 import { DiffStatLabel } from "./DiffStatLabel";
@@ -242,14 +242,28 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
   if (isPreparingWorktree || isCompacting) return <WorkLogRow label="" />;
   if (row.preActivity) {
     if (awaitingUser)
-      return <LiveActivityRow label={AWAITING_USER_LABELS[awaitingUser]} active shimmer />;
+      return (
+        <LiveActivityRow
+          label={AWAITING_USER_LABELS[awaitingUser]}
+          labelKey={AWAITING_USER_LABELS[awaitingUser]}
+          active
+          shimmer
+        />
+      );
     const label = (
       <span ref={tickTextContent((nowMs) => preActivityLabel(row.createdAt, nowMs), true)} />
     );
-    return <LiveActivityRow label={label} active shimmer />;
+    return <LiveActivityRow label={label} labelKey="Planning next moves" active shimmer />;
   }
   if (row.waitingForSubagent && !awaitingUser) {
-    return <LiveActivityRow label="Waiting for subagent" active shimmer />;
+    return (
+      <LiveActivityRow
+        label="Waiting for subagent"
+        labelKey="Waiting for subagent"
+        active
+        shimmer
+      />
+    );
   }
   // A failed group keeps this disclosure while an approval waits, but nothing is thinking then.
   const live = ctx.pendingApprovals.size === 0;
@@ -265,7 +279,15 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
     ) : (
       "Thinking"
     );
-  const activity = <LiveActivityRow label={label} iconName="brain" active={live} shimmer={live} />;
+  const activity = (
+    <LiveActivityRow
+      label={label}
+      labelKey="Thinking"
+      iconName="brain"
+      active={live}
+      shimmer={live}
+    />
+  );
   const { groupId } = row;
   if (groupId === undefined) return activity;
   return (
@@ -278,6 +300,35 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
       {activity}
     </button>
   );
+}
+
+/**
+ * Cursor's status line is one row, so planning rolls into the first step and a live header into
+ * its settled title. Ours are separate rows: a label still on screen when the row replacing it
+ * mounts hands over its text, and the new row rolls from it once.
+ */
+function useLabelHandoff(slot: string, text: string | undefined): string | null {
+  const labels = use(TimelineRowCtx).workGroupViewState.liveLabels;
+  const owner = useId();
+  const [from, setFrom] = useState(() => {
+    const shown = text === undefined ? undefined : labels.get(slot);
+    return shown !== undefined && shown.text !== text ? shown.text : null;
+  });
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- registers the shown label for the row that replaces this one
+  useEffect(() => {
+    if (text === undefined) return;
+    labels.set(slot, { text, owner });
+    return () => {
+      if (labels.get(slot)?.owner === owner) labels.delete(slot);
+    };
+  }, [labels, slot, text, owner]);
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- the handover rolls the labels mounted with it, never one mounted later
+  useEffect(() => {
+    if (from === null) return;
+    const timer = window.setTimeout(() => setFrom(null), 0);
+    return () => window.clearTimeout(timer);
+  }, [from]);
+  return from;
 }
 
 function LiveActivityRow({
@@ -301,6 +352,15 @@ function LiveActivityRow({
   /** A running tool shows the spinner in place of its icon. */
   spinner?: boolean;
 }) {
+  const from = useLabelHandoff("status", labelKey);
+  const rolled =
+    labelKey === undefined ? (
+      label
+    ) : (
+      <RollingText rollKey={labelKey} from={from}>
+        {label}
+      </RollingText>
+    );
   const animated = active && !failed;
   const showShimmer = animated && shimmer;
   const showSpinner = animated && spinner;
@@ -311,9 +371,7 @@ function LiveActivityRow({
       className="relative min-h-7 w-fit max-w-full min-w-0 overflow-hidden rounded-md text-sm leading-relaxed"
     >
       <LiveActivityContent
-        label={
-          labelKey === undefined ? label : <RollingText rollKey={labelKey}>{label}</RollingText>
-        }
+        label={rolled}
         iconName={iconName}
         toolIcon={toolIcon}
         failed={failed}
@@ -325,9 +383,7 @@ function LiveActivityRow({
         <ActivityShimmerOverlay>
           {/* The sweep copies the label only; a second spinner would double the animation. */}
           <LiveActivityContent
-            label={
-              labelKey === undefined ? label : <RollingText rollKey={labelKey}>{label}</RollingText>
-            }
+            label={rolled}
             iconName={iconName}
             toolIcon={toolIcon}
             highlighted
@@ -485,7 +541,9 @@ export function LiveWorkEntryTimelineRow({
   const [thoughtToggle, setThoughtToggle] = useState<{ id: string; open: boolean } | null>(null);
   // As in Cursor, the status line keeps saying what the turn is blocked on.
   const waiting = awaitingUser === null ? null : AWAITING_USER_LABELS[awaitingUser];
-  const waitingStatus = waiting ? <LiveActivityRow label={waiting} active shimmer /> : null;
+  const waitingStatus = waiting ? (
+    <LiveActivityRow label={waiting} labelKey={waiting} active shimmer />
+  ) : null;
   if (pendingApproval) {
     return (
       <div className="flex min-w-0 flex-col">
@@ -567,6 +625,7 @@ export function LiveWorkEntryTimelineRow({
     >
       {header ? (
         <WorkGroupHeader
+          groupId={row.groupId}
           label={header.title}
           iconName={RUN_HEADER_ICONS[header.rule]}
           expanded={row.expanded}
@@ -635,6 +694,7 @@ export function WorkGroupToggleTimelineRow({
   const ctx = use(TimelineRowCtx);
   return (
     <WorkGroupHeader
+      groupId={row.groupId}
       label={row.summary}
       iconName={
         row.toolSurface ??
@@ -653,6 +713,8 @@ export function WorkGroupToggleTimelineRow({
 
 function WorkGroupHeader(props: {
   label: string;
+  /** The run this header titles, so its live title rolls into the settled one. */
+  groupId: string;
   iconName: WorkEntryIconName;
   toolIcon?: ToolActivityIcon | undefined;
   failed?: boolean | undefined;
@@ -660,6 +722,7 @@ function WorkGroupHeader(props: {
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const from = useLabelHandoff(`header:${props.groupId}`, props.label);
   return (
     <WorkLogButton
       aria-label={props.failed ? `${props.label}, tool call failed` : props.label}
@@ -676,7 +739,9 @@ function WorkGroupHeader(props: {
       label={
         <span className="flex min-w-0 items-center gap-1">
           <span className="min-w-0 truncate">
-            <RollingText rollKey={props.label}>{props.label}</RollingText>
+            <RollingText rollKey={props.label} from={from}>
+              {props.label}
+            </RollingText>
           </span>
           {props.stats ? (
             <DiffStatLabel

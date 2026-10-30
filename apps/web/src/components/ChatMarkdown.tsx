@@ -214,6 +214,7 @@ import { MarkdownFileLink } from "./chat/MarkdownFileLink";
 import { canUseMarkdownFileShellActions } from "./chat/MarkdownFileLink.logic";
 import { handleMarkdownFragmentClick, rehypeHeadingIds } from "./chat/markdownFragments";
 import { rehypeTextDirection } from "./chat/markdownTextDirection";
+import { nextStreamBoundaries, rehypeStreamChunks } from "./chat/markdownStreamChunks";
 import { hastHasText, hastPlainTextDeep, plainHastText } from "./chat/markdownHast.logic";
 import {
   extractCodeBlock,
@@ -1665,6 +1666,23 @@ function ChatMarkdown({
     localMediaPreview,
     closeLocalMediaPreview,
   } = useChatMarkdownState({ text, inline, ...props });
+  // Where each earlier render's text ended, so text that arrives after it fades in.
+  const [stream, setStream] = useState<{ length: number; boundaries: ReadonlyArray<number> }>(
+    () => ({ length: text.length, boundaries: [] }),
+  );
+  if (props.isStreaming === true && stream.length !== text.length) {
+    setStream({
+      length: text.length,
+      boundaries: nextStreamBoundaries(stream.boundaries, stream.length, text.length),
+    });
+  }
+  const baseRehypePlugins = parseRawHtml
+    ? CHAT_MARKDOWN_RENDER_REHYPE_PLUGINS
+    : CHAT_MARKDOWN_LITERAL_HTML_REHYPE_PLUGINS;
+  const rehypePlugins =
+    props.isStreaming === true && stream.boundaries.length > 0
+      ? [...baseRehypePlugins, rehypeStreamChunks(stream.boundaries)]
+      : baseRehypePlugins;
   const incrementalParsing =
     props.isStreaming === true &&
     extraRemarkPlugins.length === 0 &&
@@ -1696,11 +1714,7 @@ function ChatMarkdown({
         <ChatMarkdownTextContext value={text}>
           <ReactMarkdown
             remarkPlugins={remarkPlugins}
-            rehypePlugins={
-              parseRawHtml
-                ? CHAT_MARKDOWN_RENDER_REHYPE_PLUGINS
-                : CHAT_MARKDOWN_LITERAL_HTML_REHYPE_PLUGINS
-            }
+            rehypePlugins={rehypePlugins}
             skipHtml={false}
             components={CHAT_MARKDOWN_COMPONENTS}
             urlTransform={markdownUrlTransform}

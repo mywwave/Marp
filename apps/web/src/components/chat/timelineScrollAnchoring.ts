@@ -1,4 +1,5 @@
 import type { MessageId, RunId } from "@marp/contracts";
+import type { WorkGroupViewState } from "./timelineRowContext";
 
 export interface TimelineRunObservation {
   readonly threadKey: string | null;
@@ -100,9 +101,7 @@ export interface RememberedTimelinePosition {
     readonly runs: ReadonlySet<RunId>;
     readonly workGroups: ReadonlySet<string>;
     readonly attempts: ReadonlySet<RunAttemptId>;
-    readonly workGroupState: {
-      expandedEntries: Set<string>;
-    };
+    readonly workGroupState: WorkGroupViewState;
   };
 }
 

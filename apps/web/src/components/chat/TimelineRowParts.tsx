@@ -63,13 +63,22 @@ const TEXT_ROLL_MS = 300;
  * Cursor's TextRoll: when `rollKey` changes, the old label rolls up and out while the new one rolls
  * in from below. A remount starts settled, so only a change the user watches rolls.
  */
-export function RollingText({ rollKey, children }: { rollKey: string; children: ReactNode }) {
+export function RollingText({
+  rollKey,
+  from = null,
+  children,
+}: {
+  rollKey: string;
+  /** The label this one replaced in another row, to roll from on mount. */
+  from?: string | null;
+  children: ReactNode;
+}) {
   const [roll, setRoll] = useState<{
     key: string;
     node: ReactNode;
     previous: ReactNode;
     sequence: number;
-  }>(() => ({ key: rollKey, node: children, previous: null, sequence: 0 }));
+  }>(() => ({ key: rollKey, node: children, previous: from, sequence: from === null ? 0 : 1 }));
   if (roll.key !== rollKey) {
     setRoll({ key: rollKey, node: children, previous: roll.node, sequence: roll.sequence + 1 });
   }
@@ -105,6 +114,22 @@ export function RollingText({ rollKey, children }: { rollKey: string; children: 
         {children}
       </span>
     </span>
+  );
+}
+
+/** True once `open` turned on during this mount, so a restored open state never animates. */
+export function useOpenedHere(open: boolean): boolean {
+  const [seen, setSeen] = useState({ open, openedHere: false });
+  if (seen.open !== open) setSeen({ open, openedHere: open });
+  return open && seen.openedHere;
+}
+
+/** Opened content, grown from nothing as Cursor's collapsible does when `grow` is set. */
+export function ExpandIn({ grow, children }: { grow: boolean; children: ReactNode }) {
+  return (
+    <div data-live={grow || undefined} className="expand-in">
+      <div>{children}</div>
+    </div>
   );
 }
 

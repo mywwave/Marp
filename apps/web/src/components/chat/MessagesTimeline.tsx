@@ -156,6 +156,7 @@ function timelineListStateFor(identity: string): {
     rememberedPosition,
     workGroupViewState: rememberedPosition?.disclosures?.workGroupState ?? {
       expandedEntries: new Set(),
+      liveLabels: new Map(),
     },
   };
 }

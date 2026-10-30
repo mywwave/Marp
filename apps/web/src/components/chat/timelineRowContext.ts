@@ -125,6 +125,8 @@ export const TimelineRowActivityCtx = createContext<TimelineRowActivityState>(nu
 
 export interface WorkGroupViewState {
   expandedEntries: Set<string>;
+  /** Labels on screen by slot, so the row that replaces one can roll from its text. */
+  liveLabels: Map<string, { readonly text: string; readonly owner: string }>;
 }
 
 export type TimelineWorkEntry = Extract<
