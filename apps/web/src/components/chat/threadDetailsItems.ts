@@ -1,13 +1,15 @@
 import type { ClientSettings } from "@marp/contracts";
 
 // Ids are stored in client settings, so never rename one.
+// The header always shows git actions, changes and Open in, so the card leaves them out unless the
+// user adds them back. The branch row keeps its pull request rows, which only the card shows.
 export const THREAD_DETAILS_ITEMS = [
   { id: "environment", label: "Environment and worktree", defaultVisible: true },
-  { id: "openIn", label: "Open in editor", defaultVisible: true },
+  { id: "openIn", label: "Open in editor", defaultVisible: false },
   { id: "scripts", label: "Project scripts", defaultVisible: true },
-  { id: "branch", label: "Branch and pull request", defaultVisible: true },
-  { id: "gitActions", label: "Git actions", defaultVisible: true },
-  { id: "changes", label: "Changes", defaultVisible: true },
+  { id: "branch", label: "Pull requests", defaultVisible: true },
+  { id: "gitActions", label: "Git actions", defaultVisible: false },
+  { id: "changes", label: "Changes", defaultVisible: false },
   { id: "servers", label: "Servers", defaultVisible: true },
   { id: "automations", label: "Automations", defaultVisible: true },
   { id: "lineage", label: "Lineage", defaultVisible: true },

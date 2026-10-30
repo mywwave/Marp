@@ -688,6 +688,28 @@ export const BranchToolbar = memo(function BranchToolbar({
 
   if (!activeProject) return null;
 
+  const panelBranchSelector = (
+    <BranchToolbarBranchSelector
+      displayMode="panel"
+      // The details card's branch section sits under the header's branch picker.
+      pullRequestsOnly={panelSection === "branch"}
+      className="w-full"
+      environmentId={environmentId}
+      threadId={threadId}
+      {...(draftId ? { draftId } : {})}
+      envLocked={envLocked}
+      effectiveEnvModeOverride={effectiveEnvMode}
+      {...(activeThreadBranchOverride !== undefined ? { activeThreadBranchOverride } : {})}
+      {...(onActiveThreadBranchOverrideChange ? { onActiveThreadBranchOverrideChange } : {})}
+      startFromOrigin={startFromOrigin}
+      onStartFromOriginChange={onStartFromOriginChange}
+      {...(onCheckoutPullRequestRequest ? { onCheckoutPullRequestRequest } : {})}
+      {...(onComposerFocusRequest ? { onComposerFocusRequest } : {})}
+    />
+  );
+  // Unwrapped, so the details card's section collapses when there is no pull request to show.
+  if (layout === "panel" && panelSection === "branch") return panelBranchSelector;
+
   if (layout === "panel") {
     return (
       <div className="flex w-full flex-col" data-thread-panel-run-context>
@@ -715,23 +737,7 @@ export const BranchToolbar = memo(function BranchToolbar({
             onAddToMachine={onAddToMachine}
           />
         ) : null}
-        {panelSection !== "workspace" ? (
-          <BranchToolbarBranchSelector
-            displayMode="panel"
-            className="w-full"
-            environmentId={environmentId}
-            threadId={threadId}
-            {...(draftId ? { draftId } : {})}
-            envLocked={envLocked}
-            effectiveEnvModeOverride={effectiveEnvMode}
-            {...(activeThreadBranchOverride !== undefined ? { activeThreadBranchOverride } : {})}
-            {...(onActiveThreadBranchOverrideChange ? { onActiveThreadBranchOverrideChange } : {})}
-            startFromOrigin={startFromOrigin}
-            onStartFromOriginChange={onStartFromOriginChange}
-            {...(onCheckoutPullRequestRequest ? { onCheckoutPullRequestRequest } : {})}
-            {...(onComposerFocusRequest ? { onComposerFocusRequest } : {})}
-          />
-        ) : null}
+        {panelSection !== "workspace" ? panelBranchSelector : null}
       </div>
     );
   }

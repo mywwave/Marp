@@ -22,6 +22,12 @@ describe("thread details items", () => {
     });
     expect(visibility.usage).toBe(row.usage);
     expect(visibility.servers).toBe(true);
+    // The header carries these, so the card does not repeat them by default.
+    expect([visibility.gitActions, visibility.changes, visibility.openIn]).toEqual([
+      false,
+      false,
+      false,
+    ]);
   });
 
   it("stores only choices that differ from the default", () => {

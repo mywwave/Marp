@@ -79,6 +79,8 @@ interface BranchToolbarBranchSelectorProps {
   className?: string;
   /** `header`: the thread header's branch chip; its picker opens below. */
   displayMode?: "toolbar" | "panel" | "header";
+  /** Panel only: the header already shows the branch, so only its pull request rows render. */
+  pullRequestsOnly?: boolean;
   environmentId: EnvironmentId;
   threadId: ThreadId;
   draftId?: DraftId;
@@ -101,6 +103,7 @@ export function BranchToolbarBranchSelector({
   ref,
   className,
   displayMode = "toolbar",
+  pullRequestsOnly = false,
   environmentId,
   threadId,
   draftId,
@@ -645,6 +648,33 @@ export function BranchToolbarBranchSelector({
     );
   }
 
+  const panelPullRequestRows =
+    displayMode === "panel" && prNumber !== undefined && prUrl !== undefined ? (
+      <ThreadDetailsPrRows
+        threadRef={threadRef}
+        links={serverThread?.pullRequests ?? []}
+        currentLink={currentLinkedPr}
+        onOpenLink={openPrLink}
+        environmentId={environmentId}
+        pr={displayedPr}
+        number={prNumber}
+        reference={currentLinkedPr}
+        status={displayedPrStatus}
+        project={activeProject}
+        label={panelPrLabel}
+        openAriaLabel={prUrl ?? `Open ${sourceControlPresentation.terminology.singular}`}
+        onOpen={(event) => openPrLink(event, prUrl)}
+        onActed={() => branchStatusQuery.refresh()}
+      />
+    ) : null;
+  if (pullRequestsOnly && displayMode === "panel") {
+    return panelPullRequestRows ? (
+      <div className={cn("flex w-full min-w-0 flex-col items-stretch", className)}>
+        {panelPullRequestRows}
+      </div>
+    ) : null;
+  }
+
   return (
     <BranchPicker
       items={branchPickerItems}
@@ -735,24 +765,7 @@ export function BranchToolbarBranchSelector({
             </ComposerContextLabel>
           </ComboboxTrigger>
         </span>
-        {displayMode === "panel" && prNumber !== undefined && prUrl !== undefined ? (
-          <ThreadDetailsPrRows
-            threadRef={threadRef}
-            links={serverThread?.pullRequests ?? []}
-            currentLink={currentLinkedPr}
-            onOpenLink={openPrLink}
-            environmentId={environmentId}
-            pr={displayedPr}
-            number={prNumber}
-            reference={currentLinkedPr}
-            status={displayedPrStatus}
-            project={activeProject}
-            label={panelPrLabel}
-            openAriaLabel={prUrl ?? `Open ${sourceControlPresentation.terminology.singular}`}
-            onOpen={(event) => openPrLink(event, prUrl)}
-            onActed={() => branchStatusQuery.refresh()}
-          />
-        ) : null}
+        {panelPullRequestRows}
       </div>
     </BranchPicker>
   );
