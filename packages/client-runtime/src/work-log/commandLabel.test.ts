@@ -220,6 +220,16 @@ describe("readOnlyCommandActions", () => {
         { type: "read", path: "b.ts", lines: "L20-40" },
       ],
     ],
+    ["wc -l src/a.ts", [{ type: "read", path: "src/a.ts" }]],
+    ["awk -F: '{print $1}' /etc/passwd | sort", [{ type: "read", path: "/etc/passwd" }]],
+    ["jq '.scripts' package.json", [{ type: "read", path: "package.json" }]],
+    ["rg -l foo | awk '{print $1}'", [{ type: "search", query: "foo" }]],
+    ["fd -e ts session src", [{ type: "list", path: "src" }]],
+    ["ag TODO apps", [{ type: "search", query: "TODO", path: "apps" }]],
+    ["git grep -n expiresAt -- src", [{ type: "search", query: "expiresAt", path: "src" }]],
+    ["git ls-files apps/web", [{ type: "list", path: "apps/web" }]],
+    ["git show HEAD~1:src/a.ts", [{ type: "read", path: "src/a.ts" }]],
+    ["git blame -L 10,20 src/a.ts", [{ type: "read", path: "src/a.ts" }]],
   ])("classifies %s", (command, actions) => {
     expect(readOnlyCommandActions(command)).toEqual(actions);
   });
@@ -249,6 +259,14 @@ describe("readOnlyCommandActions", () => {
     "cd X && grep a f > out",
     "cd X",
     "cd X && cd Y && cat a",
+    "awk '{print > \"out\"}' a.ts",
+    "awk '{system(\"rm \" $1)}' list",
+    "awk -i inplace '{print}' a.ts",
+    "fd -e tmp -x rm",
+    "git show HEAD",
+    "git checkout a.ts",
+    "jq .",
+    "echo {a,b}",
   ])("leaves %s as a command", (command) => {
     expect(readOnlyCommandActions(command)).toBeNull();
   });

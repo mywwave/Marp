@@ -295,33 +295,6 @@ export const TIMELINE_MINIMAP_MIN_ITEMS = 2;
 const TIMELINE_MINIMAP_MAX_HEIGHT_CSS = "calc(100vh - 18rem)";
 const TIMELINE_MINIMAP_PERSISTENT_GUTTER = 48;
 
-export interface WorkGroupScrollAnchor {
-  readonly entryId: string;
-  readonly offset: number;
-}
-
-export function resolveWorkGroupScrollIndex(
-  entries: ReadonlyArray<{ readonly id: string }>,
-  anchor: WorkGroupScrollAnchor | undefined,
-): { index: number; viewOffset: number } | undefined {
-  if (!anchor) return undefined;
-  const index = entries.findIndex((entry) => entry.id === anchor.entryId);
-  return index < 0 ? undefined : { index, viewOffset: -anchor.offset };
-}
-
-export function shouldFollowWorkGroupAppend(
-  previous: ReadonlyArray<{ readonly id: string }>,
-  entries: ReadonlyArray<{ readonly id: string }>,
-  distanceFromEnd: number,
-): boolean {
-  return (
-    previous.length > 0 &&
-    entries.length > previous.length &&
-    distanceFromEnd <= 1 &&
-    previous.every((entry, index) => entry.id === entries[index]?.id)
-  );
-}
-
 interface TimelineEndState {
   readonly isAtEnd?: boolean;
   readonly isNearEnd?: boolean;
@@ -2334,7 +2307,10 @@ export function deriveMessagesTimelineRows(input: {
         ? {}
         : { projectedItem: timelineEntry.projectedItem }),
       showAssistantMeta,
-      ...(terminalAssistantMessage && assistantResponseStillInProgress
+      // Only the newest entry can become the turn's end; text with steps after it reserves nothing.
+      ...(terminalAssistantMessage &&
+      assistantResponseStillInProgress &&
+      index === timelineEntries.length - 1
         ? { reserveAssistantMeta: true as const }
         : {}),
       showAssistantCopyButton: showAssistantMeta,

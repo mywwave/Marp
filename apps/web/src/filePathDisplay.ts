@@ -56,3 +56,31 @@ export function formatWorkspaceRelativePath(
 
   return formatFilePathPosition({ ...position, path: displayPath });
 }
+
+const TIMELINE_PATH_FOLDERS = 2;
+
+/** A timeline step's path: its name, then at most its last two folders below the workspace. */
+export function timelinePathParts(
+  path: string,
+  workspaceRoot: string | undefined,
+): { readonly name: string; readonly dir: string } {
+  // Git Bash spells `D:\w` as `/d/w`, which `cd /d/w && grep …` passes through.
+  const drivePath =
+    workspaceRoot && isWindowsAbsolutePath(stripSlashPrefixedWindowsDrive(workspaceRoot))
+      ? path.replace(/^\/([A-Za-z])(?=\/)/u, (_, drive: string) => `${drive.toUpperCase()}:`)
+      : path;
+  const display = formatWorkspaceRelativePath(drivePath, workspaceRoot);
+  const label = workspaceRoot
+    ? fileBasename(trimTrailingPathSeparators(normalizePathSeparators(workspaceRoot)))
+    : "";
+  const insideWorkspace =
+    label.length > 0 && display.toLowerCase().startsWith(`${label.toLowerCase()}/`);
+  const relative = insideWorkspace ? display.slice(label.length + 1) : display;
+  const folders = relative.split("/");
+  const name = folders.pop() || relative;
+  const named = folders.filter((folder) => folder.length > 0);
+  if (named.length > TIMELINE_PATH_FOLDERS) {
+    return { name, dir: `…/${named.slice(-TIMELINE_PATH_FOLDERS).join("/")}` };
+  }
+  return { name, dir: folders.join("/") };
+}

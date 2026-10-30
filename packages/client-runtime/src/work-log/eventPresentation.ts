@@ -331,6 +331,22 @@ function pathTarget(paths: readonly string[], suffix?: string): WorkEventTarget 
   return { text: first, path: true, mono: true, ...(combined ? { suffix: combined } : {}) };
 }
 
+/** Regex alternation and escapes read as plain terms: `old\|new` shows as "old | new". */
+function readableSearchPattern(pattern: string): string {
+  return pattern
+    .replace(/\\[bB<>]/gu, "")
+    .split(/\\?\|/u)
+    .map((term) =>
+      term
+        .replace(/\\s[*+?]?/gu, " ")
+        .replace(/^\s*\^|\$\s*$/gu, "")
+        .replace(/\\([.()[\]{}*+?^$/-])/gu, "$1")
+        .trim(),
+    )
+    .filter((term) => term.length > 0)
+    .join(" | ");
+}
+
 function searchTarget(
   entry: WorkLogPresentationEntry,
   kind: WorkEventKind,
@@ -347,7 +363,7 @@ function searchTarget(
   const target = commandSearch?.path ?? firstString(input, SEARCH_TARGET_KEYS);
   if (!query) return target ? { text: target, path: true, mono: true } : null;
   return {
-    text: query,
+    text: readableSearchPattern(query) || query,
     path: false,
     mono: true,
     ...(target ? { suffix: ` in ${pathBaseName(target)}` } : {}),
@@ -708,8 +724,14 @@ export function workRunHeader(
         )
       : shellHeader(pick(commandIndexes), live);
     const rule = leadsWithEdits ? "edit" : "shell";
-    // A live run's counts would tick up under the reader; it names only the lead activity.
-    if (live) return { rule, title: lead };
+    // A live run's counts would tick up under the reader; its live step names the activity.
+    if (live) {
+      const current = kinds.at(-1) ?? null;
+      if (workEventIsFileChange(current)) return { rule: "edit", title: lead };
+      return current === "shell" || current === "await"
+        ? { rule: "shell", title: shellHeader(pick(commandIndexes), live) }
+        : { rule: "explore", title: "Exploring…" };
+    }
     const restIndexes = kinds.flatMap((kind, index) =>
       workEventIsFileChange(kind) || kind === "shell" || kind === "await" ? [] : [index],
     );
@@ -720,6 +742,11 @@ export function workRunHeader(
       restIndexes.map((index) => kinds[index]!),
       editedFiles,
     );
+    // Commands among reads read as part of exploring: "Explored 3 files, ran tests".
+    if (!leadsWithEdits && rest.length > 0) {
+      const ran = `${lead.charAt(0).toLowerCase()}${lead.slice(1)}`;
+      return { rule: "explore", title: `Explored ${rest.join(", ")}, ${ran}` };
+    }
     const title = [
       lead,
       ...rest,

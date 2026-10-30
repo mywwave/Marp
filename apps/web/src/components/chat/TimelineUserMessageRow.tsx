@@ -202,7 +202,7 @@ function AutomationMessageRow({ row }: { row: Extract<TimelineRow, { kind: "mess
       </div>
       <UserMessageProjectedStatus row={row} />
       {expanded ? (
-        <div className="flex w-full max-w-[80%] items-center justify-end pe-1 text-xs tabular-nums opacity-0 transition-opacity duration-100 pointer-coarse:opacity-100 focus-within:opacity-100 focus-within:duration-150 group-hover:opacity-100 group-hover:duration-150">
+        <div className="flex w-full max-w-[80%] items-center justify-end pe-1 text-xs tabular-nums opacity-0 transition-opacity duration-100 pointer-coarse:opacity-100 has-focus-visible:opacity-100 has-data-popup-open:opacity-100 has-focus-visible:duration-150 group-hover:opacity-100 group-hover:duration-150">
           <div className="flex shrink-0 items-center gap-2">
             {scheduledTaskId ? (
               <Link
@@ -702,7 +702,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         <div
           inert={editing}
           className={cn(
-            "flex w-full max-w-[80%] items-center justify-end pe-1 text-xs tabular-nums opacity-0 transition-opacity duration-100 pointer-coarse:opacity-100 focus-within:opacity-100 focus-within:duration-150 group-hover:opacity-100 group-hover:duration-150",
+            "flex w-full max-w-[80%] items-center justify-end pe-1 text-xs tabular-nums opacity-0 transition-opacity duration-100 pointer-coarse:opacity-100 has-focus-visible:opacity-100 has-data-popup-open:opacity-100 has-focus-visible:duration-150 group-hover:opacity-100 group-hover:duration-150",
             editing && "invisible",
           )}
         >

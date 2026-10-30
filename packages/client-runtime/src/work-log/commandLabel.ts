@@ -1634,7 +1634,9 @@ function classifyReadOnlyProgram(
     case "rg":
     case "grep":
     case "egrep":
-    case "fgrep": {
+    case "fgrep":
+    case "ag":
+    case "ack": {
       const parsed = parsePosixArguments(args, GREP_OPTIONS_WITH_VALUE);
       if (parsed.options.has("--pre")) return null;
       if (program === "rg" && parsed.options.has("--files")) {
@@ -1643,6 +1645,38 @@ function classifyReadOnlyProgram(
       const explicit = optionValue(parsed, "-e", "--regexp");
       const [query, path] = explicit ? [explicit, parsed.positionals[0]] : parsed.positionals;
       return [searchAction(query, path)];
+    }
+    case "git": {
+      const [subcommand, ...rest] = args;
+      if (subcommand === "grep") return classifyReadOnlyProgram("grep", rest);
+      if (subcommand === "ls-files") return [listAction(parsePosixArguments(rest).positionals[0])];
+      if (subcommand === "blame") {
+        return readActions(parsePosixArguments(rest, GIT_BLAME_OPTIONS_WITH_VALUE).positionals);
+      }
+      // `git show HEAD:src/a.ts` prints one file; other shows are commits, left as commands.
+      const spec = subcommand === "show" ? parsePosixArguments(rest).positionals : [];
+      const path = spec.length === 1 ? spec[0]!.slice(spec[0]!.indexOf(":") + 1) : "";
+      return spec[0]?.includes(":") && path ? [{ type: "read", path }] : null;
+    }
+    case "wc":
+      return readActions(parsePosixArguments(args).positionals);
+    case "awk":
+    case "gawk": {
+      const parsed = parsePosixArguments(args, AWK_OPTIONS_WITH_VALUE);
+      const [script, ...paths] = parsed.positionals;
+      return awkScriptReadsOnly(parsed, script) ? readActions(paths) : null;
+    }
+    case "jq": {
+      const parsed = jqArguments(args);
+      const fromFile = parsed.options.has("-f") || parsed.options.has("--from-file");
+      return readActions(parsed.positionals.slice(fromFile ? 0 : 1));
+    }
+    case "fd":
+    case "fdfind": {
+      const parsed = parsePosixArguments(args, FD_OPTIONS_WITH_VALUE);
+      if (parsed.options.has("-x") || parsed.options.has("-X")) return null;
+      if (parsed.options.has("--exec") || parsed.options.has("--exec-batch")) return null;
+      return [listAction(parsed.positionals[1])];
     }
     case "select-string":
     case "sls":
@@ -1698,7 +1732,37 @@ function classifyReadOnlyProgram(
   }
 }
 
+const AWK_OPTIONS_WITH_VALUE = new Set(["-F", "-v", "-f", "-i"]);
+const GIT_BLAME_OPTIONS_WITH_VALUE = new Set(["-L", "-S", "--contents", "--date"]);
+const FD_OPTIONS_WITH_VALUE = new Set(["-e", "-t", "-E", "-d", "-x", "-X", "--exec", "--type"]);
+const JQ_OPTIONS_WITH_TWO_VALUES = new Set(["--arg", "--argjson", "--slurpfile", "--rawfile"]);
+// Output redirection, pipes to commands, and system() are how an awk script writes.
+const AWK_WRITES = /system\s*\(|>|\|/u;
+
+function awkScriptReadsOnly(parsed: ParsedArguments, script: string | undefined): boolean {
+  return (
+    !parsed.options.has("-f") &&
+    !parsed.options.has("-i") &&
+    script !== undefined &&
+    !AWK_WRITES.test(script)
+  );
+}
+
+function jqArguments(args: ReadonlyArray<string>): ParsedArguments {
+  const rest: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (JQ_OPTIONS_WITH_TWO_VALUES.has(args[index]!)) index += 2;
+    else rest.push(args[index]!);
+  }
+  return parsePosixArguments(rest, new Set(["-f", "--from-file", "--indent"]));
+}
+
 function isReadOnlyPipeFilter(program: string, args: ReadonlyArray<string>): boolean {
+  if (program === "awk" || program === "gawk") {
+    const parsed = parsePosixArguments(args, AWK_OPTIONS_WITH_VALUE);
+    return awkScriptReadsOnly(parsed, parsed.positionals[0]);
+  }
+  if (program === "jq") return true;
   if (!PIPE_FILTER_PROGRAMS.has(program)) return false;
   if (program === "sed") return sedPrintsOnly(parsePosixArguments(args));
   if (program === "sort") return !args.some((arg) => /^(?:-o|--output)/u.test(arg));
@@ -1708,14 +1772,17 @@ function isReadOnlyPipeFilter(program: string, args: ReadonlyArray<string>): boo
 
 const HARMLESS_REDIRECTIONS = new Set(["2>/dev/null", "2>&1", "2>$null", "2>nul"]);
 
-function hasUnsafeToken(tokens: ReadonlyArray<string>): boolean {
+// awk and jq programs are brace blocks: `awk '{print $1}'`, `jq '{name}'`.
+const BRACE_PROGRAMS = new Set(["awk", "gawk", "jq"]);
+
+function hasUnsafeToken(tokens: ReadonlyArray<string>, program: string): boolean {
   return tokens.some(
     (token, index) =>
       (!HARMLESS_REDIRECTIONS.has(token.toLowerCase()) &&
         indexAfterShellRedirection(tokens, index) !== null) ||
       token.includes("`") ||
       token.includes("$(") ||
-      token.includes("{") ||
+      (token.includes("{") && !BRACE_PROGRAMS.has(program)) ||
       /^[<>]?\(/u.test(token),
   );
 }
@@ -1748,13 +1815,14 @@ export function readOnlyCommandActions(command: string): ReadOnlyCommandAction[]
     const { firstCommand, remainingCommand, separator } = splitFirstShellCommand(rest);
     if (separator === "&" || separator === "|&") return null;
     const tokens = tokenizeShellCommand(firstCommand);
-    if (!tokens || tokens.length === 0 || hasUnsafeToken(tokens)) return null;
+    if (!tokens || tokens.length === 0) return null;
     const args = tokens.slice(1).filter((token) => !HARMLESS_REDIRECTIONS.has(token.toLowerCase()));
     const program = tokens[0]!
       .split(/[\\/]/u)
       .at(-1)!
       .toLowerCase()
       .replace(/\.exe$/u, "");
+    if (hasUnsafeToken(tokens, program)) return null;
     // A leading `cd dir &&` only sets where the rest runs.
     if (
       segment === 0 &&

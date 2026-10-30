@@ -12,22 +12,16 @@ import {
   workRunHeader,
   type WorkRunHeaderRule,
 } from "@marp/client-runtime/work-log/event-presentation";
-import { resolveWorkGroupScrollAnchor } from "@marp/client-runtime/work-log/scroll-anchor";
 import { responseStalled } from "@marp/client-runtime/work-log/live-cards";
-import { observeResize } from "~/lib/observeResize";
 import { observeVisibleAnimation } from "../../lib/visibleAnimation";
 import { tickTextContent } from "../../lib/tickTextContent";
-import { memo, use, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { LegendList, type LegendListRef } from "@legendapp/list/react";
+import { memo, use, useState, type ReactNode } from "react";
 import { workEntryDisplayIndicatesToolFailure } from "../../session-logic";
 import { ChevronRightIcon, Minimize2Icon, XIcon } from "lucide-react";
 import { DiffStatLabel } from "./DiffStatLabel";
 import { Button } from "../ui/button";
-import { getVirtualizedScrollFadeClassName } from "../ui/scroll-area";
 import {
   liveWorkEntryLabel,
-  resolveWorkGroupScrollIndex,
-  shouldFollowWorkGroupAppend,
   workEntryIsVisibleInGroup,
   type MessagesTimelineRow,
 } from "./MessagesTimeline.logic";
@@ -38,7 +32,6 @@ import { cn } from "~/lib/utils";
 import {
   TimelineRowCtx,
   TimelineRowActivityCtx,
-  WorkGroupViewCtx,
   type TimelineWorkEntry,
   type TimelineRow,
 } from "./timelineRowContext";
@@ -94,29 +87,13 @@ export const WorkGroupSection = memo(function WorkGroupSection({
   if (isExpandedToolGroup && nonEmptyEntries.every((entry) => entry.itemType === "reasoning")) {
     return <ReasoningTraceContent entries={nonEmptyEntries} />;
   }
-  if (isExpandedToolGroup && nonEmptyEntries.length <= INLINE_RUN_STEP_LIMIT) {
-    return (
-      <WorkLogList>
-        {nonEmptyEntries.map((workEntry) => (
-          <SimpleWorkEntryRow
-            key={workEntry.id}
-            workEntry={workEntry}
-            workspaceRoot={workspaceRoot}
-            onToggleEntry={onToggleStandaloneEntry}
-            compact
-          />
-        ))}
-      </WorkLogList>
-    );
-  }
   if (isExpandedToolGroup) {
     return (
-      <ExpandedWorkGroupEntries
+      <ExpandedRunSteps
         key={`${routeThreadKey}:${anchorKey}`}
-        anchorKey={anchorKey}
-        disclosureAnchorKey={disclosureAnchorKey}
         entries={nonEmptyEntries}
         workspaceRoot={workspaceRoot}
+        onToggleEntry={onToggleStandaloneEntry}
       />
     );
   }
@@ -136,166 +113,41 @@ export const WorkGroupSection = memo(function WorkGroupSection({
   );
 });
 
-/**
- * An open run renders its steps inline: a nested scroller slid them under the run header. Only
- * very long runs keep the virtualized scroller.
- */
-const INLINE_RUN_STEP_LIMIT = 50;
+/** An open run flows in the page scroll; a very long one reveals older steps a page at a time. */
+const RUN_STEP_PAGE = 50;
 
-const compactWorkEntryHeight = 28;
-
-function ExpandedWorkGroupEntries({
-  anchorKey,
-  disclosureAnchorKey,
+function ExpandedRunSteps({
   entries,
   workspaceRoot,
+  onToggleEntry,
 }: {
-  anchorKey: string;
-  disclosureAnchorKey: string;
   entries: TimelineWorkEntry[];
   workspaceRoot: string | undefined;
+  onToggleEntry: (collapsed: boolean) => void;
 }) {
-  const { workGroupViewState: viewState, onToggleWorkEntry } = use(TimelineRowCtx);
-  const [initialScrollIndex] = useState(() =>
-    resolveWorkGroupScrollIndex(entries, viewState.scrollPositions.get(anchorKey)),
-  );
-  const [restoringPosition, setRestoringPosition] = useState(initialScrollIndex !== undefined);
-  const listRef = useRef<LegendListRef>(null);
-  const [expandedContentHeight, setExpandedContentHeight] = useState(0);
-  const [fades, setFades] = useState({ top: false, bottom: false, viewportHeight: 0 });
-  const [appendState, setAppendState] = useState({ entries, follow: false });
-  // Capture the pre-change edge once per incoming array, before new layout
-  // metrics arrive. Edge/viewport changes never turn a status update into a follow.
-  if (appendState.entries !== entries) {
-    setAppendState({
-      entries,
-      follow:
-        fades.viewportHeight > 0 &&
-        shouldFollowWorkGroupAppend(appendState.entries, entries, fades.bottom ? Infinity : 0),
-    });
-  }
-
-  const groupView = {
-    state: viewState,
-    onToggleEntry: (collapsed: boolean) => onToggleWorkEntry(disclosureAnchorKey, collapsed),
-  };
-  const updateScrollFades = () => {
-    const element = listRef.current?.getScrollableNode();
-    if (!element) return;
-    const distanceFromEnd = element.scrollHeight - element.clientHeight - element.scrollTop;
-    const viewportHeight = element.clientHeight;
-    const top = element.scrollTop > 1;
-    const bottom = distanceFromEnd > 1;
-    setFades((previous) =>
-      previous.top === top &&
-      previous.bottom === bottom &&
-      previous.viewportHeight === viewportHeight
-        ? previous
-        : { top, bottom, viewportHeight },
-    );
-  };
-
-  const handleScroll = () => {
-    const state = listRef.current?.getState();
-    const position = state && resolveWorkGroupScrollAnchor(state);
-    if (position) {
-      viewState.scrollPositions.set(anchorKey, {
-        entryId: position.rowId,
-        offset: position.offsetWithinRow,
-      });
-    }
-    updateScrollFades();
-  };
-
-  const handleLoad = () => {
-    const list = listRef.current;
-    const element = list?.getScrollableNode();
-    if (initialScrollIndex && list && element) {
-      // Bootstrap can report the restored target before the DOM has applied it.
-      // Reconcile once at load, before releasing the measured anchor row.
-      const offset = Math.max(
-        0,
-        Math.min(list.getState().scroll, element.scrollHeight - element.clientHeight),
-      );
-      if (Math.abs(element.scrollTop - offset) > 1) {
-        void list.scrollToOffset({ offset, animated: false });
-      }
-    }
-    setRestoringPosition(false);
-  };
-
-  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- observes the list scroller and its content with ResizeObserver to update scroll fades
-  useLayoutEffect(() => {
-    const element = listRef.current?.getScrollableNode();
-    if (!element) return;
-    updateScrollFades();
-    const content = element.firstElementChild;
-    return observeResize(content ? [element, content] : element, updateScrollFades);
-  }, [updateScrollFades]);
-
-  const renderEntry = ({ item }: { item: TimelineWorkEntry }) => (
-    <SimpleWorkEntryRow key={item.id} workEntry={item} workspaceRoot={workspaceRoot} compact />
-  );
-
-  const updateExpandedContentHeight = () => {
-    const state = listRef.current?.getState();
-    let height = 0;
-    for (const entryId of viewState.expandedEntries) {
-      if (state?.indexByKey(entryId) === undefined) continue;
-      height += Math.max(
-        0,
-        (state.sizes.get(entryId) ?? compactWorkEntryHeight) - compactWorkEntryHeight,
-      );
-    }
-    setExpandedContentHeight(height);
-  };
-
-  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- reads expanded row sizes from LegendList's measured state after layout
-  useLayoutEffect(updateExpandedContentHeight, [entries, updateExpandedContentHeight]);
-
+  const [shownCount, setShownCount] = useState(RUN_STEP_PAGE);
+  const hiddenCount = Math.max(0, entries.length - shownCount);
   return (
-    <WorkGroupViewCtx value={groupView}>
-      <WorkLogList>
-        <LegendList
-          ref={listRef}
-          data={entries}
-          extraData={workspaceRoot}
-          keyExtractor={workEntryKey}
-          renderItem={renderEntry}
-          estimatedItemSize={compactWorkEntryHeight}
-          drawDistance={240}
-          recycleItems
-          {...(initialScrollIndex ? { initialScrollIndex } : {})}
-          maintainScrollAtEnd={
-            appendState.follow ? { animated: false, on: { dataChange: true } } : false
-          }
-          maintainScrollAtEndThreshold={1 / Math.max(1, fades.viewportHeight)}
-          // Measure the restored row even when an intra-row offset puts its
-          // estimated bounds outside the list's small bootstrap render window.
-          {...(restoringPosition && initialScrollIndex
-            ? { alwaysRender: { indices: [initialScrollIndex.index] } }
-            : {})}
-          maintainVisibleContentPosition
-          onLoad={handleLoad}
-          onScroll={handleScroll}
-          onLayout={updateScrollFades}
-          onItemSizeChanged={updateExpandedContentHeight}
-          tabIndex={0}
-          role="region"
-          aria-label="Tool calls"
-          data-tool-group-scroll
-          style={{ maxHeight: `calc(min(18rem, 50dvh) + ${expandedContentHeight}px)` }}
-          className={cn(
-            "scrollbar-gutter-stable scroll-py-6 overflow-x-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
-            getVirtualizedScrollFadeClassName(fades),
-          )}
+    <WorkLogList>
+      {hiddenCount > 0 ? (
+        <WorkLogButton
+          onClick={() => setShownCount((count) => count + RUN_STEP_PAGE)}
+          icon={<span className="size-4" />}
+          label={`${hiddenCount} earlier ${hiddenCount === 1 ? "step" : "steps"}`}
         />
-      </WorkLogList>
-    </WorkGroupViewCtx>
+      ) : null}
+      {entries.slice(hiddenCount).map((workEntry) => (
+        <SimpleWorkEntryRow
+          key={workEntry.id}
+          workEntry={workEntry}
+          workspaceRoot={workspaceRoot}
+          onToggleEntry={onToggleEntry}
+          compact
+        />
+      ))}
+    </WorkLogList>
   );
 }
-
-const workEntryKey = (entry: TimelineWorkEntry) => entry.id;
 
 export function WorkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "working" }> }) {
   const { isCompacting, isPreparingWorktree, backgroundWorktreeSetup, awaitingUser } =

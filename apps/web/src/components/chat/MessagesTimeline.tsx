@@ -5,7 +5,7 @@ import { AudioPreviewUnmountContext } from "../files/AudioPreview";
 import { ThreadFindTimelineContext } from "./ThreadFindProvider";
 import { MarkdownFindContext } from "./markdownFindContext";
 import { useChatCanvas } from "./ChatCanvasContext";
-import { WorkLogBlock } from "./WorkLog";
+import { WorkLogBlock, WorkLogButton } from "./WorkLog";
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
 import type { RuntimeRequestId, WorktreeSetupSnapshot } from "@marp/contracts";
 import { deriveTimelineMinimapItems } from "./timelineMinimapItems";
@@ -155,7 +155,6 @@ function timelineListStateFor(identity: string): {
     identity,
     rememberedPosition,
     workGroupViewState: rememberedPosition?.disclosures?.workGroupState ?? {
-      scrollPositions: new Map(),
       expandedEntries: new Set(),
     },
   };
@@ -1768,33 +1767,39 @@ function TurnFoldTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "turn-
     ctx.onToggleTurnFold(row.runId),
   );
 
+  // Same row as a run header, so the fold's icon and title share the steps' icon column.
   return (
-    <div className="group/timeline-row pb-1">
-      <button
-        type="button"
+    <div className="pb-1">
+      <WorkLogButton
         aria-expanded={row.expanded}
         aria-label={row.title === row.label ? row.label : `${row.title} · ${row.label}`}
+        aria-busy={loading}
         data-scroll-anchor-ignore
         onClick={toggle}
-        aria-busy={loading}
-        className="relative flex h-8 w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 text-left text-sm text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-secondary-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
-      >
-        <ChevronRightIcon
-          aria-hidden
-          className={cn(
-            "size-3.5 shrink-0 motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out",
-            row.expanded && "rotate-90",
-          )}
-        />
-        <WrenchIcon aria-hidden className="size-3.5 shrink-0" />
-        <span className="min-w-0 truncate">
-          {row.title}
-          {error ? ` · ${error}` : ""}
-        </span>
-        {row.duration ? (
-          <span className="ms-auto shrink-0 tabular-nums">{row.duration}</span>
-        ) : null}
-      </button>
+        icon={<WrenchIcon aria-hidden className="size-4 shrink-0 stroke-2 text-icon-muted" />}
+        label={
+          <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+            <span className="truncate">
+              {row.title}
+              {error ? ` · ${error}` : ""}
+            </span>
+            <ChevronRightIcon
+              aria-hidden
+              className={cn(
+                "size-3 shrink-0 text-icon-muted motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out",
+                row.expanded && "rotate-90",
+              )}
+            />
+          </span>
+        }
+        trailing={
+          row.duration ? (
+            <span className="shrink-0 pe-1 text-xs text-muted-foreground tabular-nums">
+              {row.duration}
+            </span>
+          ) : null
+        }
+      />
       {loading ? <WorkHistorySkeleton /> : null}
     </div>
   );

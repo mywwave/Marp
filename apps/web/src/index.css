@@ -2558,6 +2558,10 @@ code {
       );
     }
   }
+  /* The tray already sits in the chat lane; its timeline fills it, edge-aligned with its header. */
+  [data-subagent-preview] .messages-timeline-scroll {
+    padding-inline: max(0px, calc(1rem - var(--chat-timeline-gutter, 0px)));
+  }
 }
 
 /* A workspace area with no control of its own takes F6 focus itself; keep that visible. */

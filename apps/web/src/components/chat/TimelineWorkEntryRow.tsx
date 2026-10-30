@@ -58,7 +58,6 @@ import { SubagentNotificationLink } from "./V2LifecycleRow";
 import {
   TimelineRowCtx,
   TimelineRowActivityCtx,
-  WorkGroupViewCtx,
   type TimelineWorkEntry,
 } from "./timelineRowContext";
 import {
@@ -221,11 +220,10 @@ type WorkEntryRowProps = {
 
 export const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: WorkEntryRowProps) {
   const ctx = use(TimelineRowCtx);
-  const groupView = use(WorkGroupViewCtx);
   const item = props.workEntry.projectedItem?.item;
   const pendingApproval =
     item?.type === "approval_request" ? ctx.pendingApprovals.get(item.requestId) : undefined;
-  const onToggleEntry = groupView?.onToggleEntry ?? props.onToggleEntry;
+  const onToggleEntry = props.onToggleEntry;
   const approvalResolved = useApprovalResolved(
     pendingApproval !== undefined,
     onToggleEntry && (() => onToggleEntry(true)),
@@ -274,23 +272,15 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
     workEntry.projectedItem?.item.type === "notification"
       ? notificationChildThreadId(workEntry.projectedItem.item.source)
       : undefined;
-  const groupView = use(WorkGroupViewCtx);
   // A thought the user opened while it streamed stays open once it is done.
   const [expanded, setExpanded] = useState(
     () =>
-      (
-        groupView?.state ?? (workEntry.itemType === "reasoning" ? ctx.workGroupViewState : null)
-      )?.expandedEntries.has(workEntry.id) ?? false,
+      workEntry.itemType === "reasoning" &&
+      ctx.workGroupViewState.expandedEntries.has(workEntry.id),
   );
   const toggleExpanded = () => {
     const next = !expanded;
-    if (groupView) {
-      groupView.onToggleEntry(!next);
-      if (next) groupView.state.expandedEntries.add(workEntry.id);
-      else groupView.state.expandedEntries.delete(workEntry.id);
-    } else {
-      props.onToggleEntry?.(!next);
-    }
+    props.onToggleEntry?.(!next);
     setExpanded(next);
   };
   const failureItem = workEntry.projectedItem?.item;

@@ -229,6 +229,7 @@ function SubagentTranscript({
         }
         latestRun={activityRun}
         runningRunId={runtime?.activeRunId ?? null}
+        runlessWorkActive={runlessWorkStartedAt !== null}
         turnDiffSummaries={NO_TURN_DIFFS}
         runs={projection?.runs ?? NO_MESSAGES}
         routeThreadKey={threadKey}

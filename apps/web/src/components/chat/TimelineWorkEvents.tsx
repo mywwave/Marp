@@ -21,7 +21,7 @@ import {
   useFileContextMenu,
   type FileContextMenuAction,
 } from "../../fileContextMenu";
-import { formatWorkspaceRelativePath } from "../../filePathDisplay";
+import { formatWorkspaceRelativePath, timelinePathParts } from "../../filePathDisplay";
 import { writeTextToClipboard } from "../../hooks/useCopyToClipboard";
 import { useClientSettings } from "../../hooks/useSettings";
 import { useRenderedAppearance } from "../../hooks/useTheme";
@@ -86,7 +86,7 @@ function splitDisplayPath(path: string) {
 }
 
 function PathLabel({ path, workspaceRoot }: { path: string; workspaceRoot: string | undefined }) {
-  const { name, dir } = splitDisplayPath(formatWorkspaceRelativePath(path, workspaceRoot));
+  const { name, dir } = timelinePathParts(path, workspaceRoot);
   return (
     <>
       <span className="shrink-0 font-mono text-xs text-foreground">{name}</span>
@@ -663,8 +663,13 @@ export function CommandCard({
   const headerLabel = (
     <>
       <span className="truncate">{header}</span>
-      {description && summary ? (
-        <span className="shrink-0 text-muted-foreground">{summary}</span>
+      {description && summary && summary.toLowerCase() !== description.toLowerCase() ? (
+        <>
+          <span aria-hidden className="shrink-0 text-muted-foreground">
+            ·
+          </span>
+          <span className="min-w-0 shrink-[2] truncate text-muted-foreground">{summary}</span>
+        </>
       ) : null}
     </>
   );

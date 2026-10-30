@@ -26,7 +26,7 @@ import type { PendingApproval } from "../../session-logic";
 import { type ChatFileAttachment } from "../../types";
 import { ExpandedImagePreview } from "./ExpandedImagePreview";
 import { type AssistantCitationTarget } from "./AssistantCitationSource";
-import { type MessagesTimelineRow, type WorkGroupScrollAnchor } from "./MessagesTimeline.logic";
+import { type MessagesTimelineRow } from "./MessagesTimeline.logic";
 import { type TimestampFormat } from "@marp/contracts/settings";
 import type { TurnItemDetailSource } from "../../state/queries";
 import { type HandoffTimelineRun } from "./V2LifecycleRow";
@@ -124,14 +124,8 @@ export const TimelineRowCtx = createContext<TimelineRowSharedState>(null!);
 export const TimelineRowActivityCtx = createContext<TimelineRowActivityState>(null!);
 
 export interface WorkGroupViewState {
-  scrollPositions: Map<string, WorkGroupScrollAnchor>;
   expandedEntries: Set<string>;
 }
-
-export const WorkGroupViewCtx = createContext<{
-  state: WorkGroupViewState;
-  onToggleEntry: (collapsed: boolean) => void;
-} | null>(null);
 
 export type TimelineWorkEntry = Extract<
   MessagesTimelineRow,

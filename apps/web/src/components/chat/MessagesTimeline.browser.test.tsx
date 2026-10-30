@@ -1544,6 +1544,22 @@ describe("MessagesTimeline live runs", () => {
     await vi.waitFor(() => expect(compactRows()).toHaveLength(30));
   });
 
+  it("opens a very long run in the page scroll and pages in its older steps", async () => {
+    setup();
+    const { entries, props } = liveCommandRun(80);
+    await using screen = await renderTimeline(entries, props);
+    const compactRows = () =>
+      screen.container.querySelectorAll<HTMLElement>('[data-command-row="compact"]');
+
+    await click(await vi.waitFor(() => screen.button("76 earlier steps")));
+    await vi.waitFor(() => expect(screen.buttons("30 earlier steps")).toHaveLength(1));
+    expect(compactRows()).toHaveLength(50);
+    expect(screen.container.querySelector('[role="region"][aria-label="Tool calls"]')).toBeNull();
+
+    await click(screen.button("30 earlier steps"));
+    await vi.waitFor(() => expect(compactRows()).toHaveLength(80));
+  });
+
   it("swaps the planning row for the first step without moving the label", async () => {
     setup();
     const fixture = makeStreamingTimelineFixture();
