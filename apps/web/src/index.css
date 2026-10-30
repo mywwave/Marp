@@ -678,6 +678,36 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(marp-mob
   }
 }
 
+/* Cursor's TextRoll: a changed label rolls up, the old text out above and the new in below.
+   The outgoing copy is dropped under reduced motion, so the swap is instant. */
+@keyframes text-roll-in {
+  from {
+    translate: 0 calc(100% + 0.375rem);
+  }
+}
+
+@keyframes text-roll-out {
+  to {
+    translate: 0 calc(-100% - 0.375rem);
+  }
+}
+
+@utility text-roll-in {
+  animation: text-roll-in 300ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility text-roll-out {
+  animation: text-roll-out 300ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    display: none;
+  }
+}
+
 /* A thread's rows hide for the frame or two the list takes to land, then fade in.
    The delayed reveal is a fail-safe: the list never stays hidden if settling stalls. */
 @keyframes timeline-settle-reveal {

@@ -1,4 +1,4 @@
-import { type ReactNode, useEffectEvent, useLayoutEffect, useState } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useLayoutEffect, useState } from "react";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "~/lib/utils";
 import { type TimestampFormat } from "@marp/contracts/settings";
@@ -52,6 +52,57 @@ export function ActivityShimmerOverlay({ children }: { children: ReactNode }) {
     >
       <span className="live-activity-focus-counter block">
         <span className="live-activity-focus-aligned block text-foreground">{children}</span>
+      </span>
+    </span>
+  );
+}
+
+const TEXT_ROLL_MS = 300;
+
+/**
+ * Cursor's TextRoll: when `rollKey` changes, the old label rolls up and out while the new one rolls
+ * in from below. A remount starts settled, so only a change the user watches rolls.
+ */
+export function RollingText({ rollKey, children }: { rollKey: string; children: ReactNode }) {
+  const [roll, setRoll] = useState<{
+    key: string;
+    node: ReactNode;
+    previous: ReactNode;
+    sequence: number;
+  }>(() => ({ key: rollKey, node: children, previous: null, sequence: 0 }));
+  if (roll.key !== rollKey) {
+    setRoll({ key: rollKey, node: children, previous: roll.node, sequence: roll.sequence + 1 });
+  }
+  const rolling = roll.previous !== null;
+  // oxlint-disable-next-line marp/no-unreasoned-state-sync -- drops the outgoing label once its roll has played
+  useEffect(() => {
+    if (!rolling) return;
+    const { sequence } = roll;
+    const timer = window.setTimeout(
+      () =>
+        setRoll((current) =>
+          current.sequence === sequence ? { ...current, previous: null } : current,
+        ),
+      TEXT_ROLL_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [rolling, roll]);
+  return (
+    <span className="inline-grid max-w-full overflow-hidden align-top">
+      {rolling ? (
+        <span
+          key={`out-${roll.sequence}`}
+          aria-hidden
+          className="text-roll-out col-start-1 row-start-1 min-w-0 truncate"
+        >
+          {roll.previous}
+        </span>
+      ) : null}
+      <span
+        key={`in-${roll.sequence}`}
+        className={cn("col-start-1 row-start-1 min-w-0 truncate", rolling && "text-roll-in")}
+      >
+        {children}
       </span>
     </span>
   );

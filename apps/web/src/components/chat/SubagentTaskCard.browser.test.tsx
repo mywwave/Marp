@@ -17,6 +17,9 @@ it("holds each status label before the next replaces it, on one line", async () 
 
   // Fast steps in between are skipped; the newest shows once the hold ends.
   await act(() => vi.advanceTimersByTime(700));
+  // The old label rolls out above the new one, then leaves.
+  expect(status()[0]?.textContent).toBe("Reading main.tsxRunning tests");
+  await act(() => vi.advanceTimersByTime(300));
   expect(status()[0]?.textContent).toBe("Running tests");
   expect(status()).toHaveLength(1);
 });

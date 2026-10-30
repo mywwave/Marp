@@ -37,6 +37,7 @@ import {
 } from "./timelineRowContext";
 import {
   ActivityShimmerOverlay,
+  RollingText,
   useApprovalResolved,
   useSpinnerFinished,
 } from "./TimelineRowParts";
@@ -281,6 +282,7 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
 
 function LiveActivityRow({
   label,
+  labelKey,
   iconName,
   toolIcon,
   failed = false,
@@ -289,6 +291,8 @@ function LiveActivityRow({
   spinner = false,
 }: {
   label: ReactNode;
+  /** A new key rolls the label, as Cursor's status line does. */
+  labelKey?: string | undefined;
   iconName?: WorkEntryIconName | undefined;
   toolIcon?: ToolActivityIcon | undefined;
   failed?: boolean;
@@ -307,7 +311,9 @@ function LiveActivityRow({
       className="relative min-h-7 w-fit max-w-full min-w-0 overflow-hidden rounded-md text-sm leading-relaxed"
     >
       <LiveActivityContent
-        label={label}
+        label={
+          labelKey === undefined ? label : <RollingText rollKey={labelKey}>{label}</RollingText>
+        }
         iconName={iconName}
         toolIcon={toolIcon}
         failed={failed}
@@ -319,7 +325,9 @@ function LiveActivityRow({
         <ActivityShimmerOverlay>
           {/* The sweep copies the label only; a second spinner would double the animation. */}
           <LiveActivityContent
-            label={label}
+            label={
+              labelKey === undefined ? label : <RollingText rollKey={labelKey}>{label}</RollingText>
+            }
             iconName={iconName}
             toolIcon={toolIcon}
             highlighted
@@ -462,9 +470,6 @@ export function LiveWorkEntryTimelineRow({
   const grouped = row.groupedEntries.length > 1;
   const heldEntry = useHeldLiveEntry(row.entry, row.groupedEntries);
   const entry = grouped ? heldEntry : row.entry;
-  // The step this row mounted with replaces "Planning" or a remount in place; later steps fade in.
-  const [mountedEntryId] = useState(entry.id);
-  const stepEnters = entry.id !== mountedEntryId;
   const threadTarget = useThreadReadTarget(entry, ctx.activeThreadEnvironmentId);
   const label = liveWorkEntryLabel(entry, ctx.workspaceRoot, row.active);
   const threadLabel = threadReadLabel(label, threadTarget);
@@ -582,20 +587,16 @@ export function LiveWorkEntryTimelineRow({
       ) : (
         <>
           <button
-            key={entry.id}
             type="button"
-            data-live={stepEnters || undefined}
             data-live-status
-            className={cn(
-              "group/live-work flex min-h-7 w-full max-w-full cursor-pointer items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
-              stepEnters && "live-enter",
-            )}
+            className="group/live-work flex min-h-7 w-full max-w-full cursor-pointer items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
             aria-label={failed && !waiting ? `${stepText}, tool call failed` : undefined}
             aria-expanded={thoughtText ? thoughtOpen : row.expanded}
             onClick={thoughtText ? toggleThought : toggleGroup}
           >
             <LiveActivityRow
               label={waiting ?? stepLabel}
+              labelKey={waiting ?? stepText}
               iconName={waiting ? undefined : workEntryIconName(entry)}
               toolIcon={waiting ? undefined : (entry.toolIcon ?? entry.toolSource?.icon)}
               failed={failed && !waiting}
@@ -674,7 +675,9 @@ function WorkGroupHeader(props: {
       }
       label={
         <span className="flex min-w-0 items-center gap-1">
-          <span className="truncate">{props.label}</span>
+          <span className="min-w-0 truncate">
+            <RollingText rollKey={props.label}>{props.label}</RollingText>
+          </span>
           {props.stats ? (
             <DiffStatLabel
               additions={props.stats.additions}

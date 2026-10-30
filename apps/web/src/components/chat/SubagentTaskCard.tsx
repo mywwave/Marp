@@ -23,7 +23,7 @@ import { Button } from "../ui/button";
 import { Spinner } from "../ui/spinner";
 import { AgentElapsed } from "./AgentElapsed";
 import { SubagentPreviewContext } from "./subagentPreviewContext";
-import { ActivityShimmerOverlay } from "./TimelineRowParts";
+import { ActivityShimmerOverlay, RollingText } from "./TimelineRowParts";
 
 type SubagentItem = Extract<OrchestrationV2TurnItem, { readonly type: "subagent" }>;
 
@@ -47,7 +47,7 @@ function useHeldValue<T>(value: T, minHoldMs = STEP_MIN_HOLD_MS): T {
   return shown;
 }
 
-/** The status text: held between swaps, faded in on change, swept while live. */
+/** The status text: held between swaps, rolled on change, swept while live. */
 export function SubagentStatusText({
   label,
   shimmer,
@@ -58,18 +58,18 @@ export function SubagentStatusText({
   failed?: boolean;
 }) {
   const shown = useHeldValue(label);
+  const text = <RollingText rollKey={shown}>{shown}</RollingText>;
   return (
     <span
-      key={shown}
       ref={shimmer ? observeVisibleAnimation : undefined}
       data-subagent-status-text
       className={cn(
-        "relative min-w-0 max-w-1/2 shrink-0 overflow-hidden truncate transition-opacity duration-fast ease-out starting:opacity-0 motion-reduce:transition-none",
+        "relative min-w-0 max-w-1/2 shrink-0 overflow-hidden truncate",
         failed ? "text-destructive" : "text-muted-foreground",
       )}
     >
-      {shown}
-      {shimmer ? <ActivityShimmerOverlay>{shown}</ActivityShimmerOverlay> : null}
+      {text}
+      {shimmer ? <ActivityShimmerOverlay>{text}</ActivityShimmerOverlay> : null}
     </span>
   );
 }
