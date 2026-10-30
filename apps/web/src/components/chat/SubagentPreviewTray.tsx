@@ -6,7 +6,7 @@ import {
   deriveThreadActivityRun,
   deriveThreadStructureRuntime,
 } from "@marp/client-runtime/state/thread-execution";
-import { subagentCardState } from "@marp/client-runtime/work-log/live-cards";
+import { subagentCardState, subagentStatusLabel } from "@marp/client-runtime/work-log/live-cards";
 import type { ScopedThreadRef, ThreadId } from "@marp/contracts";
 import { formatModelSlugName } from "@marp/shared/model";
 import { ExternalLinkIcon, XIcon } from "lucide-react";
@@ -29,15 +29,6 @@ export type SubagentTranscriptSettings = Pick<
   TimelineProps,
   "onImageExpand" | "markdownCwd" | "resolvedTheme" | "timestampFormat" | "workspaceRoot"
 >;
-
-const STATE_LABELS = {
-  running: "Working",
-  waiting: "Waiting",
-  done: "Done",
-  failed: "Failed",
-  stopped: "Stopped",
-  idle: "Idle",
-} as const;
 
 /**
  * A subagent's read-only timeline in a tray above the composer, at the chat's width, over a scrim
@@ -158,7 +149,7 @@ function SubagentPreviewLayer({
                     : "shrink-0 text-xs text-muted-foreground"
                 }
               >
-                {STATE_LABELS[state]}
+                {state === "running" ? "Working" : subagentStatusLabel(state, null, true)}
               </span>
             )}
             <span className="ms-auto flex shrink-0 items-center gap-0.5">

@@ -21,6 +21,7 @@ import {
   toolGroupSummaryKind,
   contextCompactionTokenCounts,
   type ToolGroupSummaryKind,
+  workEntryWasSkipped,
 } from "@marp/client-runtime/work-log/presentation";
 import {
   workRunHeader,
@@ -523,6 +524,8 @@ type MessagesTimelineRowContent =
       preActivity?: true;
       /** The live turn's last event, so a long silence reads as waiting for the provider. */
       lastActivityAt?: string;
+      /** The turn's newest step is a subagent that is still working. */
+      waitingForSubagent?: true;
     }
   | {
       kind: "work-toggle";
@@ -572,7 +575,7 @@ type MessagesTimelineRowContent =
       label: string;
       tokenCounts: ReturnType<typeof contextCompactionTokenCounts>;
       active: boolean;
-      /** Replaces "Context compacted" when Marp compacted without being asked. */
+      /** Replaces "Chat context summarized" when Marp compacted without being asked. */
       title?: string;
       failed?: true;
       /** The provider's reason, when a failed compaction gave one. */
@@ -1723,7 +1726,7 @@ export function deriveMessagesTimelineRows(input: {
     const reason = compactionRuns.get(runId);
     if (reason !== undefined) return IDLE_COMPACTION_TITLES[reason];
     const age = resumeCompactionAgeByEntryId.get(entryId);
-    return age ? `Context compacted after ${age} idle` : undefined;
+    return age ? `Chat context summarized after ${age} idle` : undefined;
   };
   const activeCompactionEntry = timelineEntries.find(
     (entry): entry is Extract<TimelineEntry, { kind: "work" }> =>
@@ -2058,7 +2061,8 @@ export function deriveMessagesTimelineRows(input: {
             ...(groupToolIcon ? { toolIcon: groupToolIcon } : {}),
             hasFailure:
               latestToolEntry !== undefined &&
-              workEntryDisplayIndicatesToolFailure(latestToolEntry),
+              workEntryDisplayIndicatesToolFailure(latestToolEntry) &&
+              !workEntryWasSkipped(latestToolEntry),
           });
           if (expanded) {
             nextRows.push(
@@ -2147,8 +2151,8 @@ export function deriveMessagesTimelineRows(input: {
           label: pending
             ? reason
               ? IDLE_COMPACTING_LABELS[reason]
-              : "Compacting context"
-            : "Context compaction",
+              : "Summarizing chat context"
+            : "Chat context summary",
           tokenCounts: null,
           active: pending,
         });
@@ -2271,16 +2275,15 @@ export function deriveMessagesTimelineRows(input: {
     } else {
       const idleWait = activeTurnWait(timelineEntries, unsettledRunId);
       // The working row opens the active turn; with nothing after it the turn has no visible activity.
-      // A live subagent's own row already shows the turn waiting on it, so no idle row repeats that.
       const preActivity = nextRows.at(-1)?.kind === "working";
-      if (!idleWait.waitingForSubagent)
-        nextRows.push({
-          kind: "thinking",
-          id: LIVE_ACTIVITY_ROW_ID,
-          createdAt: input.activeTurnStartedAt ?? null,
-          ...(preActivity ? { preActivity: true as const } : {}),
-          ...(idleWait.lastActivityAt === null ? {} : { lastActivityAt: idleWait.lastActivityAt }),
-        });
+      nextRows.push({
+        kind: "thinking",
+        id: LIVE_ACTIVITY_ROW_ID,
+        createdAt: input.activeTurnStartedAt ?? null,
+        ...(preActivity ? { preActivity: true as const } : {}),
+        ...(idleWait.lastActivityAt === null ? {} : { lastActivityAt: idleWait.lastActivityAt }),
+        ...(idleWait.waitingForSubagent ? { waitingForSubagent: true as const } : {}),
+      });
     }
   }
 
@@ -2547,7 +2550,8 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.groupId === bt.groupId &&
         a.expanded === bt.expanded &&
         a.preActivity === bt.preActivity &&
-        a.lastActivityAt === bt.lastActivityAt
+        a.lastActivityAt === bt.lastActivityAt &&
+        a.waitingForSubagent === bt.waitingForSubagent
       );
     }
     case "worktree-setup":

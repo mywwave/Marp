@@ -8,14 +8,14 @@ import {
 
 /** The working row while Marp's own compaction runs. */
 export const IDLE_COMPACTING_LABELS = {
-  beforeCacheExpires: "Compacting before the cache expires…",
-  onReturn: "Compacting…",
+  beforeCacheExpires: "Summarizing chat context before the cache expires",
+  onReturn: "Summarizing chat context",
 } satisfies Record<OrchestrationV2IdleCompaction, string>;
 
-/** Leads the finished compaction's token counts, in place of "Context compacted". */
+/** Leads the finished compaction's token counts, in place of "Chat context summarized". */
 export const IDLE_COMPACTION_TITLES = {
-  beforeCacheExpires: "Context automatically compacted before cache expiry",
-  onReturn: "Context compacted before sending",
+  beforeCacheExpires: "Chat context summarized before the cache expired",
+  onReturn: "Chat context summarized before sending",
 } satisfies Record<OrchestrationV2IdleCompaction, string>;
 
 const LEGACY_AUTOMATION_PREFIX = /^\[Triggered by schedule task: [^\r\n]+\]\r?\n\r?\n/;

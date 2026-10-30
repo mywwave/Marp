@@ -69,14 +69,13 @@ export function contextCompactionTokenCounts(
 }
 
 export function contextCompactionLabel(item: CompactionLabelItem): string {
-  if (item.status === "failed") return "Context compaction failed";
-  if (item.status === "cancelled" || item.status === "interrupted")
-    return "Context compaction stopped";
-  if (isOrchestrationV2WorkActive(item.status)) return "Compacting context";
+  if (item.status === "failed") return "Summarization failed";
+  if (item.status === "cancelled" || item.status === "interrupted") return "Summarization stopped";
+  if (isOrchestrationV2WorkActive(item.status)) return "Summarizing chat context";
   const tokens = contextCompactionTokenCounts(item);
   return tokens
-    ? `Context compacted ${tokens.before} → ${tokens.after} tokens`
-    : "Context compacted";
+    ? `Chat context summarized ${tokens.before} → ${tokens.after} tokens`
+    : "Chat context summarized";
 }
 
 export interface WorkLogPresentationEntry {
@@ -293,6 +292,14 @@ function workEntryIndicatesToolFailureFromOutput(
 
 export function workEntryIndicatesToolFailure(entry: WorkLogPresentationEntry): boolean {
   return workEntryIndicatesToolFailureFromOutput(entry, true);
+}
+
+/** The user declined the step, so it never ran: Cursor shows a dimmed "Skipped", not a failure. */
+export function workEntryWasSkipped(entry: WorkLogPresentationEntry): boolean {
+  return (
+    entry.toolLifecycleStatus === "declined" ||
+    entry.structuredPayload?.toolNonExecutionKind === "denied"
+  );
 }
 
 export function workEntryDisplayIndicatesToolFailure(entry: WorkLogPresentationEntry): boolean {

@@ -26,7 +26,7 @@ it("opens the docked plan upward by a known height without moving its header", a
   const card = screen.container.querySelector<HTMLElement>("[data-plan-card]")!;
   const collapsedHeader = header.getBoundingClientRect();
   const collapsedHeight = card.getBoundingClientRect().height;
-  await expect.element(screen.getByText("· 1 of 3")).toBeVisible();
+  await expect.element(screen.getByText("Write the card, 2 of 3")).toBeVisible();
 
   await userEvent.click(header);
   await expect.element(screen.getByRole("list", { name: "Plan steps" })).toBeVisible();

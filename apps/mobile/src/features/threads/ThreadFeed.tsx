@@ -1203,8 +1203,8 @@ function ThreadAutomationMessageRow(props: {
 
 /** Leads with why Marp compacted, when it did so without being asked. */
 function compactionLabel(label: string, title: string | undefined) {
-  return title !== undefined && label.startsWith("Context compacted")
-    ? title + label.slice("Context compacted".length)
+  return title !== undefined && label.startsWith("Chat context summarized")
+    ? title + label.slice("Chat context summarized".length)
     : label;
 }
 
@@ -1543,9 +1543,9 @@ function renderFeedEntry(
         <ThreadContextDivider
           label={
             !active
-              ? "Context compaction"
+              ? "Chat context summary"
               : reason === undefined
-                ? "Compacting context"
+                ? "Summarizing chat context"
                 : IDLE_COMPACTING_LABELS[reason]
           }
           icon="arrow.down.right.and.arrow.up.left"

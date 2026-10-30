@@ -3,6 +3,7 @@ import { scopeThreadRef } from "@marp/client-runtime/environment";
 import type { ThreadStructureTurnItem } from "@marp/client-runtime/state/models";
 import {
   latestRunTodoList,
+  planProgressTitle,
   presentPlanProgress,
   type PlanProgress,
 } from "@marp/client-runtime/work-log/live-cards";
@@ -102,7 +103,6 @@ export function PlanProgressCard({
   stopDisabled?: boolean;
 }) {
   const [expanded, setExpanded] = useState(!docked);
-  const count = `${progress.done} of ${progress.total}`;
   const list = expanded ? <StepList progress={progress} /> : null;
   return (
     <section
@@ -125,15 +125,9 @@ export function PlanProgressCard({
           className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-field ps-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
         >
           <ListTodoIcon aria-hidden className="size-4 shrink-0 text-icon-muted" />
-          <span className="shrink-0 font-medium text-foreground">Plan</span>
-          <span className="shrink-0 text-muted-foreground tabular-nums">
-            · {docked ? count : `${count} done`}
+          <span className="min-w-0 truncate text-foreground tabular-nums">
+            {planProgressTitle(progress, docked)}
           </span>
-          {!expanded && progress.current ? (
-            <span className="min-w-0 truncate text-muted-foreground">
-              · {progress.current.text}
-            </span>
-          ) : null}
           <ChevronUpIcon
             aria-hidden
             className={cn(

@@ -361,7 +361,7 @@ function CompactingLabel(props: { readonly onLayout: (event: LayoutChangeEvent) 
         tintColorClassName="foreground"
         type="monochrome"
       />
-      <Text className="font-marp-medium text-xs text-foreground">Compacting…</Text>
+      <Text className="font-marp-medium text-xs text-foreground">Summarizing chat context</Text>
     </StatusLabelRow>
   );
 }

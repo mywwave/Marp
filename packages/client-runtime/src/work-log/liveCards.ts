@@ -102,6 +102,15 @@ export function presentPlanProgress(
   };
 }
 
+/** Cursor's to-do title: docked, the step in progress and its place; else how many are done. */
+export function planProgressTitle(progress: PlanProgress, docked: boolean): string {
+  const running = progress.steps.find((step) => step.state === "running");
+  if (docked && running) return `${running.text}, ${progress.done + 1} of ${progress.total}`;
+  if (progress.done === 0) return `${progress.total} To-dos`;
+  const count = `${progress.done} of ${progress.total}`;
+  return docked ? `${count} To-dos Completed` : `${count} Done`;
+}
+
 export type SubagentCardState = "running" | "waiting" | "done" | "failed" | "stopped" | "idle";
 
 export function subagentCardState(status: OrchestrationV2TurnItem["status"]): SubagentCardState {
@@ -163,8 +172,6 @@ function subagentProgressStep(progress: string | null | undefined): string | nul
   );
 }
 
-const GENERIC_CHILD_END = /^Child task ended with status\b/iu;
-
 /**
  * The live subagent's current step: the provider's own progress line, else what its child thread
  * shows (a request waiting on you, then its latest reply), else nothing to say yet.
@@ -181,7 +188,7 @@ export function subagentCurrentStep(input: {
   if (state !== "running" && state !== "waiting") return null;
   const request = input.child?.pendingRuntimeRequest;
   if (request != null && request.blocking !== false) {
-    return request.kind === "user_input" ? "Waiting for your answer" : "Waiting for approval";
+    return request.kind === "user_input" ? "Waiting for response" : "Waiting for approval";
   }
   const progress = subagentProgressStep(input.progress);
   if (progress !== null) return progress;
@@ -190,9 +197,23 @@ export function subagentCurrentStep(input: {
   return state === "waiting" ? "Waiting" : null;
 }
 
-export function subagentResultSummary(result: string | null | undefined): string | null {
-  const line = firstLine(result, 200);
-  return line === null || GENERIC_CHILD_END.test(line) ? null : line;
+const SUBAGENT_STATE_LABELS = {
+  running: "Planning next moves",
+  waiting: "Waiting",
+  done: "Completed",
+  failed: "Stopped with error",
+  stopped: "Stopped",
+  idle: "Idle",
+} as const satisfies Record<SubagentCardState, string>;
+
+/** Cursor's subagent status: the live step, "Starting up" before its thread exists, else how it ended. */
+export function subagentStatusLabel(
+  state: SubagentCardState,
+  step: string | null,
+  started: boolean,
+): string {
+  if (state !== "running" && state !== "waiting") return SUBAGENT_STATE_LABELS[state];
+  return step ?? (started ? SUBAGENT_STATE_LABELS[state] : "Starting up");
 }
 
 export type BackgroundTaskState = "running" | "done" | "failed" | "stopped";

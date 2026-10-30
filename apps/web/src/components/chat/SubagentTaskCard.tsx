@@ -4,7 +4,7 @@ import { formatSubagentDisplayTitle } from "@marp/client-runtime/state/subagent-
 import {
   subagentCardState,
   subagentCurrentStep,
-  subagentResultSummary,
+  subagentStatusLabel,
   type SubagentCardState,
 } from "@marp/client-runtime/work-log/live-cards";
 import type { EnvironmentId, OrchestrationV2TurnItem, ThreadId } from "@marp/contracts";
@@ -26,15 +26,6 @@ import { SubagentPreviewContext } from "./subagentPreviewContext";
 import { ActivityShimmerOverlay } from "./TimelineRowParts";
 
 type SubagentItem = Extract<OrchestrationV2TurnItem, { readonly type: "subagent" }>;
-
-const STATE_LABELS = {
-  running: "Working",
-  waiting: "Waiting",
-  done: "Done",
-  failed: "Failed",
-  stopped: "Stopped",
-  idle: "Idle",
-} as const satisfies Record<SubagentCardState, string>;
 
 /** Fast steps would flicker past unread; each label stays at least this long. */
 const STEP_MIN_HOLD_MS = 700;
@@ -142,11 +133,7 @@ export function SubagentTaskRow({
     progress: agent?.progress ?? item.progress,
     child: child?.source,
   });
-  const label = live
-    ? (step ?? STATE_LABELS[state])
-    : state === "done"
-      ? (subagentResultSummary(agent?.result ?? item.result) ?? STATE_LABELS.done)
-      : STATE_LABELS[state];
+  const label = subagentStatusLabel(state, step, childThreadId !== null);
   const timing = {
     status,
     startedAt: isoOrNull(agent?.startedAt ?? item.startedAt),

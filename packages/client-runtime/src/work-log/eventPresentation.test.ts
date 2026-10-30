@@ -158,9 +158,14 @@ describe("workEventAction", () => {
     expect(action && workEventActionText(action)).toBe(text);
   });
 
-  it("uses the loading verb while live; a failed command still ran, a failed read was attempted", () => {
+  it("uses the loading verb while live; a failed command still ran, a declined one was skipped", () => {
     expect(workEventAction(command("node build.mjs"), true)?.verb).toBe("Running");
     expect(workEventAction(command("node build.mjs", { exitCode: 1 }))?.verb).toBe("Ran");
+    const declined = entry(
+      { type: "command_execution", input: "node build.mjs", toolNonExecutionKind: "denied" },
+      { toolLifecycleStatus: "failed", tone: "error" },
+    );
+    expect(workEventAction(declined)?.verb).toBe("Skipped");
     expect(workEventAction(command("pnpm test"), true)?.verb).toBe("Running tests");
   });
 });

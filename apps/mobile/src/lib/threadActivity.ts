@@ -349,8 +349,8 @@ export function threadFeedCompactionLabels(feed: ReadonlyArray<ThreadFeedEntry>)
           (age === undefined
             ? undefined
             : {
-                title: `Context compacted after ${age} idle`,
-                compacting: "Compacting…",
+                title: `Chat context summarized after ${age} idle`,
+                compacting: "Summarizing chat context",
               });
         if (labels) labelsByEntryId.set(entry.id, labels);
         pendingResumeAgeByRunId.delete(entry.runId);

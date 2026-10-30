@@ -16,6 +16,7 @@ import {
   summarizeToolGroup,
   toolGroupAction,
   workEntryDisplayIndicatesToolFailure,
+  workEntryWasSkipped,
   type WorkLogPresentationEntry,
 } from "@marp/client-runtime/work-log/presentation";
 
@@ -439,13 +440,16 @@ export function workEventAction(
   const kind = workEventKind(entry);
   if (kind === null) return null;
   const phase = workEventPhase(entry, live);
+  const skipped = workEntryWasSkipped(entry);
   // Like Cursor: a command that exited non-zero still ran; another failed step was "attempted".
   const verbOf = (verbs: Record<WorkEventPhase, string>) =>
-    phase !== "error"
-      ? verbs[phase]
-      : kind === "shell"
-        ? verbs.completed
-        : `${verbs.error} attempted`;
+    skipped
+      ? "Skipped"
+      : phase !== "error"
+        ? verbs[phase]
+        : kind === "shell"
+          ? verbs.completed
+          : `${verbs.error} attempted`;
   const command = kind === "shell" ? entry.command?.trim() : undefined;
   const intent = command ? commandIntent(command) : null;
   if (intent !== null) {

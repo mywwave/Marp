@@ -294,8 +294,8 @@ it("binds a persisted resume answer only to the next compaction in its run", () 
     );
     expect(compactRows).toHaveLength(2);
     expect(labels.get(compactRows[0]!.id)).toEqual({
-      title: "Context compacted after 2h 10m idle",
-      compacting: "Compacting…",
+      title: "Chat context summarized after 2h 10m idle",
+      compacting: "Summarizing chat context",
     });
     expect(labels.get(compactRows[1]!.id)).toBeUndefined();
   }

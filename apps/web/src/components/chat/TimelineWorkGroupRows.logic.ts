@@ -28,3 +28,8 @@ export function preActivityLabel(startIso: string | null, nowMs: number): string
     ? "Taking a little while…"
     : "Planning next moves";
 }
+
+export const AWAITING_USER_LABELS = {
+  approval: "Waiting for approval",
+  input: "Waiting for response",
+} as const;

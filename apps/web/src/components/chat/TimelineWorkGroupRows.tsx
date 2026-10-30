@@ -12,6 +12,7 @@ import {
   type WorkRunHeaderRule,
 } from "@marp/client-runtime/work-log/event-presentation";
 import { responseStalled } from "@marp/client-runtime/work-log/live-cards";
+import { workEntryWasSkipped } from "@marp/client-runtime/work-log/presentation";
 import { observeVisibleAnimation } from "../../lib/visibleAnimation";
 import { tickTextContent } from "../../lib/tickTextContent";
 import { memo, use, useEffect, useState, type ReactNode } from "react";
@@ -56,7 +57,7 @@ import {
 import { toolGroupSummaryIconName, workEntryIconName } from "./TimelineWorkEntryRow.logic";
 import { WorkEventLabel, WorkingTimer } from "./TimelineWorkEvents";
 import { CommandOutputTail, useCommandOutputStreaming } from "./CommandOutputPanel";
-import { preActivityLabel } from "./TimelineWorkGroupRows.logic";
+import { AWAITING_USER_LABELS, preActivityLabel } from "./TimelineWorkGroupRows.logic";
 
 export const WorkGroupSection = memo(function WorkGroupSection({
   anchorKey,
@@ -159,7 +160,7 @@ export function WorkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: 
   const label = isPreparingWorktree ? (
     "Setting up worktree…"
   ) : compacting ? (
-    <CompactingLabel createdAt={row.createdAt} />
+    <CompactingLabel />
   ) : (
     "Working"
   );
@@ -225,17 +226,11 @@ function BackgroundWorktreeSetupChip({ snapshot }: { snapshot: WorktreeSetupSnap
   );
 }
 
-function CompactingLabel({ createdAt }: { createdAt: string | null }) {
+function CompactingLabel() {
   return (
     <span className="inline-flex items-center gap-1.5">
       <Minimize2Icon aria-hidden="true" className="size-3" />
-      {createdAt ? (
-        <span>
-          Compacting for <WorkingTimer createdAt={createdAt} />
-        </span>
-      ) : (
-        "Compacting…"
-      )}
+      Summarizing chat context
     </span>
   );
 }
@@ -245,11 +240,15 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
   const { isCompacting, isPreparingWorktree, awaitingUser } = use(TimelineRowActivityCtx);
   if (isPreparingWorktree || isCompacting) return <WorkLogRow label="" />;
   if (row.preActivity) {
-    if (awaitingUser) return null;
+    if (awaitingUser)
+      return <LiveActivityRow label={AWAITING_USER_LABELS[awaitingUser]} active shimmer />;
     const label = (
       <span ref={tickTextContent((nowMs) => preActivityLabel(row.createdAt, nowMs), true)} />
     );
     return <LiveActivityRow label={label} active shimmer />;
+  }
+  if (row.waitingForSubagent && !awaitingUser) {
+    return <LiveActivityRow label="Waiting for subagent" active shimmer />;
   }
   // A failed group keeps this disclosure while an approval waits, but nothing is thinking then.
   const live = ctx.pendingApprovals.size === 0;
@@ -290,7 +289,7 @@ function LiveActivityRow({
   spinner = false,
 }: {
   label: ReactNode;
-  iconName?: WorkEntryIconName;
+  iconName?: WorkEntryIconName | undefined;
   toolIcon?: ToolActivityIcon | undefined;
   failed?: boolean;
   active?: boolean;
@@ -479,9 +478,19 @@ export function LiveWorkEntryTimelineRow({
   );
   // A streaming thought stays closed, as in Cursor, until the user opens it.
   const [thoughtToggle, setThoughtToggle] = useState<{ id: string; open: boolean } | null>(null);
-  if (pendingApproval) return <TimelinePendingApprovalRow approval={pendingApproval} />;
+  // As in Cursor, the status line keeps saying what the turn is blocked on.
+  const waiting = awaitingUser === null ? null : AWAITING_USER_LABELS[awaitingUser];
+  const waitingStatus = waiting ? <LiveActivityRow label={waiting} active shimmer /> : null;
+  if (pendingApproval) {
+    return (
+      <div className="flex min-w-0 flex-col">
+        <TimelinePendingApprovalRow approval={pendingApproval} />
+        {waitingStatus}
+      </div>
+    );
+  }
 
-  const failed = workEntryDisplayIndicatesToolFailure(entry);
+  const failed = workEntryDisplayIndicatesToolFailure(entry) && !workEntryWasSkipped(entry);
   const toggleGroup = () => ctx.onToggleWorkGroup(row.groupId, row.id);
   // Waiting on the user is not work in progress: no spinner or sweep.
   const live = row.active && !awaitingUser;
@@ -560,13 +569,16 @@ export function LiveWorkEntryTimelineRow({
         />
       ) : null}
       {grouped && row.expanded ? null : !grouped && workEntryShowsAsCard(entry) ? (
-        <SimpleWorkEntryRow
-          workEntry={entry}
-          workspaceRoot={ctx.workspaceRoot}
-          live={toolIsRunning}
-          shimmer={toolIsRunning}
-          onToggleEntry={(collapsed) => ctx.onToggleWorkEntry(row.id, collapsed)}
-        />
+        <>
+          <SimpleWorkEntryRow
+            workEntry={entry}
+            workspaceRoot={ctx.workspaceRoot}
+            live={toolIsRunning}
+            shimmer={toolIsRunning}
+            onToggleEntry={(collapsed) => ctx.onToggleWorkEntry(row.id, collapsed)}
+          />
+          {waitingStatus}
+        </>
       ) : (
         <>
           <button
@@ -578,17 +590,17 @@ export function LiveWorkEntryTimelineRow({
               "group/live-work flex min-h-7 w-full max-w-full cursor-pointer items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
               stepEnters && "live-enter",
             )}
-            aria-label={failed ? `${stepText}, tool call failed` : undefined}
+            aria-label={failed && !waiting ? `${stepText}, tool call failed` : undefined}
             aria-expanded={thoughtText ? thoughtOpen : row.expanded}
             onClick={thoughtText ? toggleThought : toggleGroup}
           >
             <LiveActivityRow
-              label={stepLabel}
-              iconName={workEntryIconName(entry)}
-              toolIcon={entry.toolIcon ?? entry.toolSource?.icon}
-              failed={failed}
+              label={waiting ?? stepLabel}
+              iconName={waiting ? undefined : workEntryIconName(entry)}
+              toolIcon={waiting ? undefined : (entry.toolIcon ?? entry.toolSource?.icon)}
+              failed={failed && !waiting}
               active={row.active}
-              shimmer={live}
+              shimmer={live || waiting !== null}
               spinner={toolIsRunning}
             />
           </button>

@@ -439,7 +439,7 @@ describe("deriveMessagesTimelineRows", () => {
       });
       expect(runningRows.find((row) => row.kind === "context-compaction")).toMatchObject({
         active: true,
-        label: "Compacting context",
+        label: "Summarizing chat context",
       });
       expect(runningRows.some((row) => row.kind === "thinking")).toBe(false);
 
@@ -458,7 +458,7 @@ describe("deriveMessagesTimelineRows", () => {
       });
       expect(completedRows.find((row) => row.kind === "context-compaction")).toMatchObject({
         active: false,
-        label: "Context compacted 899K → 19K tokens",
+        label: "Chat context summarized 899K → 19K tokens",
         tokenCounts: { before: "899K", after: "19K" },
       });
       expect(completedRows.at(-1)?.kind).toBe("thinking");
@@ -524,11 +524,11 @@ describe("deriveMessagesTimelineRows", () => {
         {
           kind: "context-compaction",
           active: true,
-          label: "Compacting before the cache expires…",
+          label: "Summarizing chat context before the cache expires",
         },
-        "Context automatically compacted before cache expiry",
+        "Chat context summarized before the cache expired",
       ],
-      ["onReturn", { kind: "working", compacting: true }, "Context compacted before sending"],
+      ["onReturn", { kind: "working", compacting: true }, "Chat context summarized before sending"],
       [undefined, { kind: "context-compaction", active: true }, undefined],
     ] as const) {
       const prompt = compactPrompt(reason);
@@ -731,13 +731,13 @@ describe("deriveMessagesTimelineRows", () => {
       { kind: "working", compacting: true, createdAt: DateTime.formatIso(compactionStartedAt) },
     ]);
     expect(liveRows("completed")).toMatchObject([
-      { kind: "context-compaction", title: "Context compacted after 1h 5m idle" },
+      { kind: "context-compaction", title: "Chat context summarized after 1h 5m idle" },
     ]);
     const laterRows = rowsFor("running", true);
     const dividers = laterRows.filter((row) => row.kind === "context-compaction");
     expect(dividers).toHaveLength(2);
     expect(dividers[0]).toMatchObject({
-      title: "Context compacted after 1h 5m idle",
+      title: "Chat context summarized after 1h 5m idle",
       active: false,
     });
     expect(dividers[1]).toMatchObject({ active: true });
@@ -795,7 +795,7 @@ describe("deriveMessagesTimelineRows", () => {
     };
 
     expect(liveRowsFor([prompt, compaction, interruptResult])).toMatchObject([
-      { kind: "context-compaction", label: "Context compaction stopped" },
+      { kind: "context-compaction", label: "Summarization stopped" },
     ]);
     // Stopped before the provider started: no compaction row says so, so the interrupt stays.
     expect(liveRowsFor([prompt, interruptResult]).map((row) => row.id)).toContain(
@@ -1850,7 +1850,7 @@ describe("deriveMessagesTimelineRows", () => {
     expect(rows.some((row) => row.kind === "thinking")).toBe(false);
   });
 
-  it("lets a live subagent's own row say the turn waits on it, with no idle row", () => {
+  it("says the turn waits on a live subagent, as Cursor's status line does", () => {
     const runId = "turn-subagent" as never;
     const derive = (status: string) =>
       deriveMessagesTimelineRows({
@@ -1885,8 +1885,12 @@ describe("deriveMessagesTimelineRows", () => {
 
     const waiting = derive("running");
     expect(waiting.some((row) => row.id === "subagent-entry")).toBe(true);
-    expect(waiting.some((row) => row.kind === "thinking")).toBe(false);
-    expect(derive("completed").some((row) => row.kind === "thinking")).toBe(true);
+    expect(waiting.find((row) => row.kind === "thinking")).toMatchObject({
+      waitingForSubagent: true,
+    });
+    expect(derive("completed").find((row) => row.kind === "thinking")).not.toHaveProperty(
+      "waitingForSubagent",
+    );
   });
 
   it("keeps an actually running tool in the shared activity row", () => {

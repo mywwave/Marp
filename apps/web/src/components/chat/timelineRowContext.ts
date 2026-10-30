@@ -113,7 +113,7 @@ export interface TimelineRowActivityState {
   isWorking: boolean;
   isCompacting: boolean;
   isRevertingCheckpoint: boolean;
-  awaitingUser: boolean;
+  awaitingUser: "approval" | "input" | null;
   isPreparingWorktree: boolean;
   latestRunId: RunId | null;
   backgroundWorktreeSetup: WorktreeSetupSnapshot | null;

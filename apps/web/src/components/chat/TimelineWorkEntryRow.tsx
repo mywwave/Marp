@@ -18,6 +18,7 @@ import {
   resolveViewedImageAsset,
   toolGroupAction,
   workEntryViewedImagePath,
+  workEntryWasSkipped,
 } from "@marp/client-runtime/work-log/presentation";
 import {
   turnItemHasDetail,
@@ -344,7 +345,11 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
     );
   }
   const action = workEventAction(workEntry, props.live === true);
-  const cardItem = workEntry.projectedItem?.item ?? workEntry.structuredPayload;
+  // A declined step never ran: one dimmed line, as in Cursor, instead of its card.
+  const skipped = workEntryWasSkipped(workEntry);
+  const cardItem = skipped
+    ? undefined
+    : (workEntry.projectedItem?.item ?? workEntry.structuredPayload);
   if (cardItem?.type === "file_change" && workEventIsFileChange(action?.kind ?? null)) {
     return (
       <FileEditRow
@@ -371,7 +376,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
   const iconConfig = workToneIcon(workEntry.tone);
   const showWarningIndicator = workEntry.sourceActivityKind === "runtime.warning";
   const showFailedIndicator =
-    !showWarningIndicator && workEntryDisplayIndicatesToolFailure(workEntry);
+    !showWarningIndicator && !skipped && workEntryDisplayIndicatesToolFailure(workEntry);
   const showDestructiveRowStyle =
     !showWarningIndicator &&
     showFailedIndicator &&
@@ -463,13 +468,15 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
             ? "text-icon-muted"
             : iconConfig.className,
   );
-  const headingClass = showWarningIndicator
-    ? "font-medium text-warning"
-    : showDestructiveRowStyle
-      ? "font-medium text-destructive"
-      : workLogEntryIsToolLike(workEntry)
-        ? "text-secondary-label"
-        : "text-foreground/80";
+  const headingClass = skipped
+    ? "text-muted-foreground"
+    : showWarningIndicator
+      ? "font-medium text-warning"
+      : showDestructiveRowStyle
+        ? "font-medium text-destructive"
+        : workLogEntryIsToolLike(workEntry)
+          ? "text-secondary-label"
+          : "text-foreground/80";
   const threadLabel = isReasoning ? null : threadReadLabel(previewText, threadTarget);
   const actionLabel = !threadLabel && !questionHeading && action ? action : null;
   const accessiblePreview = [

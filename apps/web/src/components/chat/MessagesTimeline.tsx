@@ -1189,7 +1189,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
     isCompacting: compactionAwaitingRow,
     isRevertingCheckpoint,
     backgroundWorktreeSetup,
-    awaitingUser: awaitingUser !== null,
+    awaitingUser,
     isPreparingWorktree,
     latestRunId: latestRun?.runId ?? null,
   };
@@ -1687,8 +1687,8 @@ function ContextCompactionTimelineRow({
   row: Extract<TimelineRow, { kind: "context-compaction" }>;
 }) {
   const label =
-    row.title && row.label.startsWith("Context compacted")
-      ? row.title + row.label.slice("Context compacted".length)
+    row.title && row.label.startsWith("Chat context summarized")
+      ? row.title + row.label.slice("Chat context summarized".length)
       : row.label;
   const content = (
     <span className="flex min-w-0 items-center gap-1.5">
@@ -1699,7 +1699,7 @@ function ContextCompactionTimelineRow({
       )}
       {row.tokenCounts ? (
         <>
-          {row.title ?? "Context compacted"} {row.tokenCounts.before}
+          {row.title ?? "Chat context summarized"} {row.tokenCounts.before}
           <ArrowRightIcon aria-hidden="true" className="size-3" />
           {row.tokenCounts.after} tokens
         </>
