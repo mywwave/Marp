@@ -721,16 +721,16 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
               </TooltipPopup>
             </Tooltip>
             <div className="flex items-center gap-0.5">
+              {/* One edit control: inline where it can carry the message, else the composer. */}
               {inlineEdit !== null ? (
                 <EditUserMessageButton
                   buttonRef={editButtonRef}
                   blockedReason={inlineEdit.blockedReason}
                   onEdit={startEditing}
                 />
-              ) : null}
-              {typeof revertTurnCount === "number" && (
+              ) : typeof revertTurnCount === "number" ? (
                 <RevertUserMessageButton turnCount={revertTurnCount} messageId={row.message.id} />
-              )}
+              ) : null}
               {resolvedContext.text && (
                 <MessageCopyButton
                   text={contextClipboardFragment ? resolvedContext.text : plainText}

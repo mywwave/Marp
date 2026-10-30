@@ -581,6 +581,35 @@ describe("MessagesTimeline automation prompts", () => {
     await click(screen.button(/^Automation/));
     expect(screen.buttons("Edit from here")).toHaveLength(1);
   });
+
+  it("offers one edit control on a prompt that can be edited in place", async () => {
+    setup();
+    const runId = RunId.make("run-1");
+    await using screen = await renderTimeline(
+      [
+        message("Fix the retry loop", { runId, inputIntent: "turn_start" }, "user-1"),
+        message("Done", { role: "assistant", runId }, "assistant-1"),
+      ],
+      {
+        supportsConversationRollback: true,
+        threadStartCheckpointReady: true,
+        onEditUserMessage: vi.fn(),
+        turnDiffSummaries: [
+          {
+            runId,
+            checkpointTurnCount: 1,
+            checkpointRef: "checkpoint-1" as never,
+            status: "ready",
+            files: [],
+            assistantMessageId: MessageId.make("assistant-1"),
+            completedAt: CREATED_AT,
+          },
+        ],
+      },
+    );
+    expect(screen.buttons("Edit message")).toHaveLength(1);
+    expect(screen.buttons("Edit from here")).toHaveLength(0);
+  });
 });
 
 const SENDER_THREAD_ID = ThreadId.make("thread-sender");
