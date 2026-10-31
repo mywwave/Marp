@@ -13,13 +13,14 @@ import { ChatMarkdownAssetImage } from "./ChatMarkdownMedia";
 import { MEDIA_GRID_IMAGE_CLASS_NAME, MEDIA_GRID_IMAGE_STYLE, MediaGrid } from "./MediaGrid";
 import { timelineMediaCaption } from "./timelineMedia.logic";
 import { McpAppFrame } from "./McpAppFrame";
+import { checkpointFileTotals } from "@marp/client-runtime/state/thread-checkpoints";
+import { useAssistantMessageText } from "../../state/entities";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { AssistantCitationSource } from "./AssistantCitationSource";
 import { resolveAssistantMessageCopyState } from "./MessagesTimeline.logic";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "~/lib/utils";
 import { shortcutLabelForCommand } from "~/keybindings";
-import { summarizeTurnDiffStats } from "~/lib/turnDiffStats";
 import { primaryServerKeybindingsAtom } from "~/state/server";
 import { Kbd } from "../ui/kbd";
 import { Spinner } from "../ui/spinner";
@@ -31,7 +32,13 @@ import { MESSAGE_HEADING_LEVEL, MessageAuthorHeading } from "./TimelineRowParts"
 
 export function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" }> }) {
   const ctx = use(TimelineRowCtx);
-  const messageText = row.message.text || (row.message.streaming ? "" : "(empty response)");
+  // The timeline holds a streaming message's row while only its text grows.
+  const liveText = useAssistantMessageText(
+    row.message.streaming ? ctx.threadRef : null,
+    row.projectedItem?.item.id,
+  );
+  const text = liveText ?? row.message.text;
+  const messageText = text || (row.message.streaming ? "" : "(empty response)");
 
   return (
     <>
@@ -93,8 +100,9 @@ function CheckpointDivider({
   const ctx = use(TimelineRowCtx);
   const activity = use(TimelineRowActivityCtx);
   const onOpenTurnDiff = ctx.onOpenTurnDiff;
-  const fileCount = turnSummary.files.length;
-  const files = `${fileCount} ${fileCount === 1 ? "file" : "files"}`;
+  // Huge checkpoints ship a prefix of their files; the totals still count all of them.
+  const totals = checkpointFileTotals(turnSummary);
+  const files = `${totals.count} ${totals.count === 1 ? "file" : "files"}`;
   return (
     <div
       role="group"
@@ -107,7 +115,8 @@ function CheckpointDivider({
       </span>
       {onOpenTurnDiff ? (
         <TurnChangesPill
-          turnSummary={turnSummary}
+          additions={totals.additions}
+          deletions={totals.deletions}
           files={files}
           onOpen={() => onOpenTurnDiff(turnSummary.runId)}
         />
@@ -128,17 +137,19 @@ function CheckpointDivider({
 }
 
 function TurnChangesPill({
-  turnSummary,
+  additions,
+  deletions,
   files,
   onOpen,
 }: {
-  turnSummary: TurnDiffSummary;
+  additions: number;
+  deletions: number;
   files: string;
   onOpen: () => void;
 }) {
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const shortcutLabel = shortcutLabelForCommand(keybindings, "diff.reviewTurn");
-  const stat = summarizeTurnDiffStats(turnSummary.files);
+  const stat = { additions, deletions };
   return (
     <Tooltip>
       <TooltipTrigger

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vite-plus/test";
 import { resolveComposerControlsOwnership } from "./composerControlsOwnership";
 
 const base = {
-  hasTraits: true,
   planModeUiEnabled: false,
   collapsed: false,
   measuredHiddenBlockCount: 0,
@@ -15,16 +14,15 @@ describe("resolveComposerControlsOwnership", () => {
     expect(result).toMatchObject({
       accessDisplay: "label",
       hiddenBlockIds: [],
-      effortOwnsModeShortcut: false,
+      pickerOwnsModeShortcut: false,
     });
   });
 
-  it("never leaves an empty overflow menu: the effort chip overflows with the chip", () => {
+  it("gives an overflowed chip's Permissions to the overflow menu when it has no Plan toggle", () => {
     const result = resolveComposerControlsOwnership({ ...base, measuredHiddenBlockCount: 1 });
-    expect(result.hiddenBlockIds).toEqual(["traits", "mode"]);
+    expect(result.hiddenBlockIds).toEqual(["mode"]);
     expect(result.overflowShowsPermissions).toBe(true);
-    // One composer.mode target: the overflow menu, not the overflowed effort chip.
-    expect(result.effortOwnsModeShortcut).toBe(false);
+    expect(result.pickerOwnsModeShortcut).toBe(false);
   });
 
   it("overflows only the chip when the Plan toggle gives the overflow menu content", () => {
@@ -34,19 +32,9 @@ describe("resolveComposerControlsOwnership", () => {
       measuredHiddenBlockCount: 1,
     });
     expect(result.hiddenBlockIds).toEqual(["mode"]);
-    // Permissions stay in the visible effort menu, which now answers composer.mode.
+    // Permissions stay in the model picker, which now answers composer.mode.
     expect(result.overflowShowsPermissions).toBe(false);
-    expect(result.effortOwnsModeShortcut).toBe(true);
-  });
-
-  it("moves Permissions into the overflow for models without traits", () => {
-    const overflowed = resolveComposerControlsOwnership({
-      ...base,
-      hasTraits: false,
-      measuredHiddenBlockCount: 1,
-    });
-    expect(overflowed.hiddenBlockIds).toEqual(["mode"]);
-    expect(overflowed.overflowShowsPermissions).toBe(true);
+    expect(result.pickerOwnsModeShortcut).toBe(true);
   });
 
   it("shows the chip as an icon in the compacted row", () => {

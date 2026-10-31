@@ -80,7 +80,10 @@ export function readWorkspaceOpenState(input: {
       : undefined;
   const state: WorkspaceOpenState = {
     ...(file === undefined ? {} : { file }),
-    ...(diff === null ? {} : { diff: diff.kind === "tool-call" ? "turn" : diff.kind }),
+    // The message context has no shape for a reviewed local commit, so that view is not sent.
+    ...(diff === null || diff.kind === "commit"
+      ? {}
+      : { diff: diff.kind === "tool-call" ? "turn" : diff.kind }),
     ...(selection === undefined || selectionPath === undefined || selection.startLine < 1
       ? {}
       : {

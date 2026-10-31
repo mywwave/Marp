@@ -230,5 +230,5 @@ if ($interactive) { [Console]::Error.Write("`r$esc[2K") }
 if (($env:PATH -split ";") -notcontains $binDir) {
   Write-Host "  Add $binDir to your PATH, then run ${bold}marp$reset.`n"
 } else {
-  Write-Host "  Run ${bold}marp$reset to get started.`n"
+  Write-Host "  Run ${bold}marp$reset to use Marp here, or ${bold}marp up$reset to use it from your other devices.`n"
 }

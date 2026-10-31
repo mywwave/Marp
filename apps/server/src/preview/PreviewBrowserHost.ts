@@ -73,7 +73,7 @@ export class PreviewBrowserRootError extends Schema.TaggedError<PreviewBrowserRo
   {},
 ) {
   override get message(): string {
-    return "Chrome will not start its sandbox as root, so Marp's browser cannot run while the Marp server runs as root. Run the server as a nonroot user (for example `User=` in its systemd service), or set `MARP_SERVER_BROWSER_SANDBOX=0` to run the browser unsandboxed as root.";
+    return "Marp server is running as root; Chrome's sandbox cannot start. Run Marp as a nonroot user. Otherwise set `MARP_SERVER_BROWSER_SANDBOX=0` in the Marp server's environment and restart the server; this disables Chrome's sandbox. Manual: `MARP_SERVER_BROWSER_SANDBOX=0 marp serve`. Systemd: add `Environment=MARP_SERVER_BROWSER_SANDBOX=0` under `[Service]`, reload systemd, then restart the service. `marp browser setup` cannot fix root sandboxing.";
   }
 }
 

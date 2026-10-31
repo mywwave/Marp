@@ -1,4 +1,5 @@
 import { parseThreadLinkHref } from "@marp/shared/threadLinks";
+import { isAttachmentOnlyBootstrapPrompt } from "@marp/shared/composerContextReferences";
 import type { Nodes } from "mdast";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
@@ -26,7 +27,7 @@ export function deriveTimelineMinimapItems(
     items.push({
       id: row.id,
       rowIndex: index,
-      userText: row.message.text,
+      userText: isAttachmentOnlyBootstrapPrompt(row.message.text) ? "" : row.message.text,
       assistantText: resolveFinalAssistantTextForTurn(rows, index),
     });
   }

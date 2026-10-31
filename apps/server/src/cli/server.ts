@@ -69,13 +69,15 @@ export const runDefaultServerCommand = Effect.fn("server.runDefaultServerCommand
 });
 
 export const startCommand = Command.make("start", { ...sharedServerCommandFlags }).pipe(
-  Command.withDescription("Run the Marp server."),
+  Command.withDescription("Same as `marp`."),
+  Command.unlisted,
   Command.withHandler((flags) => runServerCommand(flags, { rejectRunningServer: true })),
 );
 
 export const serveCommand = Command.make("serve", { ...sharedServerCommandFlags }).pipe(
+  Command.withShortDescription("Run Marp in this terminal, with no browser."),
   Command.withDescription(
-    "Run the Marp server without opening a browser and print headless pairing details.",
+    "Run Marp in this terminal without opening a browser, and print pairing details. The background service runs this. To set up access from your other devices, run `marp up`.",
   ),
   Command.withHandler((flags) =>
     runServerCommand(flags, {

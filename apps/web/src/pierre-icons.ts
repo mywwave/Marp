@@ -176,6 +176,7 @@ export const MARP_PIERRE_ICONS = {
     kt: "marp-file-icon-kotlin",
     kts: "marp-file-icon-kotlin",
     lua: "marp-file-icon-lua",
+    luau: "marp-file-icon-lua",
     php: "marp-file-icon-php",
     ps1: "marp-file-icon-powershell",
     psm1: "marp-file-icon-powershell",
@@ -184,6 +185,9 @@ export const MARP_PIERRE_ICONS = {
     scala: "marp-file-icon-scala",
     toml: "marp-file-icon-toml",
     xml: "marp-file-icon-xml",
+    xsd: "marp-file-icon-xml",
+    xsl: "marp-file-icon-xml",
+    xslt: "marp-file-icon-xml",
   },
 } satisfies FileTreeIcons;
 

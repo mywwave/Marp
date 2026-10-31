@@ -26,6 +26,7 @@ import {
   resolveThreadLastVisitedAt,
   shouldCreateNewThreadInCurrentProject,
 } from "../Sidebar.logic";
+import { pickableProjectGroups } from "@marp/client-runtime/state/project-grouping";
 import { ProjectFavicon } from "../ProjectFavicon";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
@@ -113,7 +114,11 @@ export function SidebarCollapsedRail(props: { underWindowControls: boolean }) {
   const startNewThread = () => {
     if (
       boringSidebarEnabled ||
-      shouldCreateNewThreadInCurrentProject(false, projectGroups.length)
+      shouldCreateNewThreadInCurrentProject(
+        false,
+        pickableProjectGroups(projectGroups).length,
+        projectGroups.length,
+      )
     ) {
       void startNewThreadFromContext({
         activeDraftThread: newThreadContext.activeDraftThread,

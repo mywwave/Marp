@@ -1,9 +1,10 @@
-import type {
-  EnvironmentId,
-  EnvironmentMachineKind,
-  ProjectId,
-  ScopedThreadRef,
-  ThreadId,
+import {
+  isListedThreadLineage,
+  type EnvironmentId,
+  type EnvironmentMachineKind,
+  type ProjectId,
+  type ScopedThreadRef,
+  type ThreadId,
 } from "@marp/contracts";
 import { foldSearchQuery, rankSearchItems, scoreThreadSearch } from "@marp/shared/paletteSearch";
 
@@ -30,7 +31,7 @@ export interface ComposerThreadItem {
 
 /**
  * Threads to reference from the composer, matched and ranked like the command
- * palette, without subagent threads. The agent reads threads on its own server
+ * palette, without subagent or side chat threads. The agent reads threads on its own server
  * and on the machines it links to, so candidates stay within those, and a linked
  * machine's threads say which machine they are on. The composer's project ranks first.
  */
@@ -54,7 +55,7 @@ export function matchComposerThreadItems(input: {
         input.linkedEnvironments.has(shell.environmentId)) &&
       shell.id !== input.excludeThreadId &&
       shell.archivedAt === null &&
-      shell.lineage.relationshipToParent !== "subagent",
+      isListedThreadLineage(shell.lineage),
   );
   return rankSearchItems(candidates, (shell, options) => {
     const match = scoreThreadSearch(query, threadSearchSubject(shell, null), input.now, {

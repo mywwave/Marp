@@ -64,7 +64,7 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
     />
   ) : null;
 
-  // The chip opens the same Permissions toggle used in the effort menu.
+  // The chip opens the same Permissions toggle used in the model picker and the overflow menu.
   const permissionsTooltip = `Permissions: ${runtimeModeOption.label}. ${runtimeModeOption.description}`;
   const permissionsChip = (
     <Menu
@@ -205,7 +205,7 @@ export function ComposerInteractionModeSection(props: {
 /**
  * Permission modes as one horizontal toggle, with the shown mode named below.
  * Each segment is a real menu radio item, so arrow keys reach it from the rest of the menu
- * and a pick closes the menu. Lives inside a Menu: the permissions chip, the effort menu,
+ * and a pick closes the menu. Lives inside a Menu: the permissions chip, the model picker,
  * or the overflow menu.
  */
 export function ComposerPermissionsSection(props: {
@@ -231,7 +231,7 @@ export function ComposerPermissionsSection(props: {
         onValueChange={(value: RuntimeMode) => {
           if (value !== props.runtimeMode) props.onRuntimeModeChange(value);
         }}
-        className="flex gap-0.5 rounded-lg bg-input/40 p-0.5"
+        className="flex rounded-lg bg-input/40 p-0.5"
         // Menus navigate with Up/Down only; the row reads horizontally, so Left/Right move too.
         onKeyDown={(event) => {
           if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -260,7 +260,7 @@ export function ComposerPermissionsSection(props: {
               onPointerLeave={() => setPreviewMode(null)}
               onFocus={() => setPreviewMode(option.mode)}
               onBlur={() => setPreviewMode(null)}
-              className="flex h-6 flex-1 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none data-checked:bg-input/72 data-checked:text-foreground data-highlighted:text-foreground not-data-checked:data-highlighted:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+              className="flex h-6 flex-1 cursor-pointer items-center justify-center text-muted-foreground outline-none first:rounded-l-md last:rounded-r-md data-checked:bg-input/72 data-checked:text-foreground data-highlighted:text-foreground not-data-checked:data-highlighted:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             >
               <OptionIcon aria-hidden="true" className="size-3.5" />
             </MenuPrimitive.RadioItem>

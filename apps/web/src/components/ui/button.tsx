@@ -29,6 +29,8 @@ const buttonVariants = cva(
         lg: "h-10 px-[calc(--spacing(5)-1px)]",
         micro:
           "h-5 gap-1 px-[calc(--spacing(2)-1px)] text-[11px] sm:text-[11px] [&_svg:not([class*='size-'])]:size-3 sm:[&_svg:not([class*='size-'])]:size-3",
+        multiline:
+          "min-h-9 px-[calc(--spacing(4)-1px)] py-[calc(--spacing(1.5)-1px)] whitespace-normal",
         sm: "h-8 gap-1.5 px-[calc(--spacing(3)-1px)] sm:h-7",
         "sm-multiline":
           "min-h-8 gap-1.5 px-[calc(--spacing(2.5)-1px)] py-[calc(--spacing(1)-1px)] whitespace-normal sm:min-h-7",

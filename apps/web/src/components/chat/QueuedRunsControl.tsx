@@ -1,7 +1,10 @@
 import { scopeThreadRef } from "@marp/client-runtime/environment";
 import { deriveThreadQueueWorkflowState } from "@marp/client-runtime/state/thread-workflows";
 import { assistantCitationsToPlainText } from "@marp/shared/assistantCitations";
-import { replaceComposerContextReferences } from "@marp/shared/composerContextReferences";
+import {
+  isAttachmentOnlyBootstrapPrompt,
+  replaceComposerContextReferences,
+} from "@marp/shared/composerContextReferences";
 import type {
   ChatAttachment as ContractChatAttachment,
   EnvironmentId,
@@ -268,11 +271,13 @@ export function QueuedRunsControl({
       <ol className="flex flex-col items-end gap-3" id={queueListId}>
         {rows.map(({ item, closing }) => {
           const position = closing ? -1 : livePosition++;
-          const previewText = assistantCitationsToPlainText(
-            replaceComposerContextReferences(item.text, (reference) =>
-              reference.kind === "image" && item.thumbnails.length > 0 ? "" : reference.label,
-            ),
-          ).trim();
+          const previewText = isAttachmentOnlyBootstrapPrompt(item.text)
+            ? ""
+            : assistantCitationsToPlainText(
+                replaceComposerContextReferences(item.text, (reference) =>
+                  reference.kind === "image" && item.thumbnails.length > 0 ? "" : reference.label,
+                ),
+              ).trim();
           const isEditing = item.runId !== null && item.runId === props.editingRunId;
           const canEdit =
             item.runId !== null &&

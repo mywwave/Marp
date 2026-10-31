@@ -4,7 +4,8 @@
     "modules": ["MarpNativeControlsModule", "MarpKeyboardCommandsModule"],
     "appDelegateSubscribers": [
       "MarpWorkspaceOrientationSubscriber",
-      "MarpMenuDismissTouchGateSubscriber"
+      "MarpMenuDismissTouchGateSubscriber",
+      "MarpBackgroundGraceSubscriber"
     ]
   },
   "android": {

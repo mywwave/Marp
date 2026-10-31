@@ -38,6 +38,7 @@ import {
 } from "../panelAnimations";
 import { BackgroundThreadAnnouncer } from "./BackgroundThreadAnnouncer";
 import { openStopThreadsDialog, StopThreadsDialog } from "./StopThreadsDialog";
+import { HistorySwipeNavigation } from "./HistorySwipeNavigation";
 import ThreadSidebar from "./Sidebar";
 import { SidebarBrandWidthProbe } from "./sidebar/SidebarChrome";
 import { SidebarCollapsedRail } from "./sidebar/SidebarCollapsedRail";
@@ -482,7 +483,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
         defaultOpen={readPersistedSidebarOpen()}
         style={sidebarProviderStyle}
       >
-        <SidebarBrandWidthProbe onWidthChange={setBrandWidth} />
+        <SidebarBrandWidthProbe isElectron={isElectron} onWidthChange={setBrandWidth} />
         <Sidebar
           side="left"
           variant="inset"
@@ -512,6 +513,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
         <BackgroundThreadAnnouncer />
         <StopThreadsDialog />
         <SidebarControl />
+        {isElectron ? <HistorySwipeNavigation /> : null}
       </SidebarProvider>
     </PanelAnimationSuppressionProvider>
   );

@@ -980,7 +980,7 @@ export const SETTINGS_SEARCH_ITEMS = [
     to: "/settings/source-control",
     scope: "device",
     searchTerms: [
-      `pr links ${SOURCE_CONTROL_HOST_LABELS} browser external click default pull request view panel`,
+      `pr commit links ${SOURCE_CONTROL_HOST_LABELS} browser external click default pull request view panel`,
     ],
   },
   {

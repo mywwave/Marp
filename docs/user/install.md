@@ -29,6 +29,7 @@ line to add. Set `MARP_CHANNEL=nightly` to install the nightly train, or
 | ------------------------------------------------ | ------------------------------------------------------------------------- |
 | Start the server and open the web app            | `marp`                                                                    |
 | Start the server without a browser               | `marp serve`                                                              |
+| Use it from your other devices                   | `marp up` ([details](./remote-access.md))                                 |
 | Keep it running in the background (macOS, Linux) | `marp service install` ([details](./background-service.md))               |
 | Move to the newest release                       | `marp update`                                                             |
 | Reclaim database space                           | `marp doctor` ([details](./background-service.md#reclaim-database-space)) |

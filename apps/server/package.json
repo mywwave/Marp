@@ -1,6 +1,6 @@
 {
   "name": "marp",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -77,6 +77,9 @@
     "@effect/vitest": "catalog:",
     "@marp/contracts": "workspace:*",
     "@marp/provider-testing": "workspace:*",
+    "@marp/secret-provider-core": "workspace:*",
+    "@marp/secret-provider-definitions": "workspace:*",
+    "@marp/secret-provider-onepassword": "workspace:*",
     "@marp/shared": "workspace:*",
     "@marp/source-control-testing": "workspace:*",
     "@marp/ssh": "workspace:*",

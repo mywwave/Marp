@@ -49,6 +49,7 @@ const minimalDesktopFlags = (baseDir: string) => ({
   logWebSocketEvents: Option.none<boolean>(),
   tailscaleServeEnabled: Option.none<boolean>(),
   tailscaleServePort: Option.none<number>(),
+  lan: Option.none<boolean>(),
 });
 
 const encodeDesktopBootstrap = Schema.encodeEffect(Schema.fromJsonString(DesktopBackendBootstrap));
@@ -231,6 +232,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         logWebSocketEvents: Option.none<boolean>(),
         tailscaleServeEnabled: Option.none<boolean>(),
         tailscaleServePort: Option.none<number>(),
+        lan: Option.none<boolean>(),
       };
       const layerConfig = ConfigProvider.layer(
         ConfigProvider.fromEnv({
@@ -277,6 +279,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         logWebSocketEvents: Option.none<boolean>(),
         tailscaleServeEnabled: Option.none<boolean>(),
         tailscaleServePort: Option.none<number>(),
+        lan: Option.none<boolean>(),
       };
       const layerConfig = ConfigProvider.layer(
         ConfigProvider.fromEnv({ env: { MARP_DEV_AUTH_TOKEN: secret } }),
@@ -332,6 +335,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           logWebSocketEvents: Option.some(false),
           tailscaleServeEnabled: Option.none(),
           tailscaleServePort: Option.none(),
+          lan: Option.none(),
         },
         Option.none(),
       ).pipe(
@@ -408,6 +412,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           logWebSocketEvents: Option.none(),
           tailscaleServeEnabled: Option.none(),
           tailscaleServePort: Option.none(),
+          lan: Option.none(),
         },
         Option.some("Debug"),
       ).pipe(
@@ -557,6 +562,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           logWebSocketEvents: Option.none(),
           tailscaleServeEnabled: Option.none(),
           tailscaleServePort: Option.none(),
+          lan: Option.none(),
         },
         Option.none(),
       ).pipe(
@@ -605,6 +611,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           logWebSocketEvents: Option.none(),
           tailscaleServeEnabled: Option.none(),
           tailscaleServePort: Option.none(),
+          lan: Option.none(),
         },
         Option.none(),
       ).pipe(
@@ -645,6 +652,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           logWebSocketEvents: Option.none(),
           tailscaleServeEnabled: Option.none(),
           tailscaleServePort: Option.none(),
+          lan: Option.none(),
         },
         Option.none(),
         {
@@ -707,6 +715,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           logWebSocketEvents: Option.none(),
           tailscaleServeEnabled: Option.none(),
           tailscaleServePort: Option.none(),
+          lan: Option.none(),
         },
         Option.none(),
       ).pipe(
@@ -746,6 +755,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
     logWebSocketEvents: Option.none<boolean>(),
     tailscaleServeEnabled: Option.none<boolean>(),
     tailscaleServePort: Option.none<number>(),
+    lan: Option.none<boolean>(),
   });
 
   it.effect(
@@ -867,7 +877,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       }),
   );
 
-  it.effect("listens on private networks only under the service launcher with no host set", () =>
+  it.effect("listens on private networks per MARP_LAN, else under the service launcher", () =>
     Effect.gen(function* () {
       const { join } = yield* Path.Path;
       const baseDir = join(NodeOS.tmpdir(), "marp-cli-config-service-host");
@@ -897,6 +907,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           }),
         );
 
+      // A service installed before MARP_LAN existed.
       expect(yield* resolveHost({ connected: true })).toEqual({
         host: "0.0.0.0",
         privateNetworkOnly: true,
@@ -905,6 +916,14 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       expect(yield* resolveHost({ connected: true, env: { MARP_HOST: "127.0.0.1" } })).toEqual({
         host: "127.0.0.1",
         privateNetworkOnly: undefined,
+      });
+      expect(yield* resolveHost({ connected: true, env: { MARP_LAN: "false" } })).toEqual({
+        host: undefined,
+        privateNetworkOnly: undefined,
+      });
+      expect(yield* resolveHost({ connected: false, env: { MARP_LAN: "true" } })).toEqual({
+        host: "0.0.0.0",
+        privateNetworkOnly: true,
       });
       // Without the launcher's IPC channel the context was inherited, e.g. by
       // `marp serve` started from an agent inside the service.

@@ -48,6 +48,25 @@ it("reads the served Marp home back out of a rendered unit or plist", () => {
   expect(BootService.bootServiceBaseDirOf("[Service]\nExecStart=/x\n")).toBeUndefined();
 });
 
+it("protects the server unit from agents under CPU and memory pressure", () => {
+  const unit = BootService.renderBootServiceUnit({
+    program: ["/home/theo/.marp/runtime/versions/1.2.3/marp", "__service-launcher"],
+    baseDir: "/home/theo/.marp",
+    logPath: "/home/theo/.marp/userdata/logs/boot-service.log",
+    unitPath: "/home/theo/.config/systemd/user/marp.service",
+  });
+  const service = unit.slice(unit.indexOf("[Service]"), unit.indexOf("[Install]"));
+  for (const line of [
+    "CPUWeight=1000",
+    "IOWeight=1000",
+    "MemoryLow=1536M",
+    "OOMScoreAdjust=100",
+    "OOMPolicy=continue",
+  ]) {
+    expect(service.split("\n")).toContain(line);
+  }
+});
+
 it.each([
   ["a unit", '/home/theo/Marp "Data"/100%\\x', BootService.renderBootServiceUnit],
   [

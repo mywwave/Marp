@@ -8,6 +8,7 @@ import { derivePendingUserInputProgress } from "../../pendingUserInput";
 import { CheckboxMark } from "../ui/checkbox";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { cn } from "~/lib/utils";
+import { isInSideChatPane } from "~/lib/sideChatPane";
 import { ComposerBanner } from "./ComposerBanner";
 import { questionShortcutOptionIndex } from "./decisionCardKeys";
 import ChatMarkdown from "../ChatMarkdown";
@@ -155,6 +156,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
   useEffect(() => {
     if (!activeQuestion || responseDisabled || isCollapsed || backgroundThread) return;
     const handler = (event: globalThis.KeyboardEvent) => {
+      if (isInSideChatPane(event.target)) return;
       const optionIndex = questionShortcutOptionIndex(event, activeQuestion.options.length);
       if (optionIndex === null) return;
       const option = activeQuestion.options[optionIndex];
@@ -186,7 +188,11 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
         className="px-4 pt-1.5"
       >
         <ComposerBanner.Content>
-          <span className="shrink-0 text-muted-foreground">{activeQuestion.header}</span>
+          <span
+            className={cn("min-w-0 truncate text-muted-foreground", isCollapsed && "max-w-1/2")}
+          >
+            {activeQuestion.header}
+          </span>
           {isCollapsed ? (
             <>
               <ComposerBanner.Separator />

@@ -31,6 +31,7 @@ import {
   isWslSettingsRowVisible,
   missingTailscaleEndpointDescription,
   resolveLocalVersionStatusLabel,
+  resolveTailscaleServeBaseUrl,
 } from "./ConnectionsSettings.logic";
 import { Tabs, TabsCount, TabsList, TabsTab } from "../ui/tabs";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
@@ -381,20 +382,11 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
     parsedTailscaleServePort >= 1 &&
     parsedTailscaleServePort <= 65_535;
 
-  const pendingTailscaleServeBaseUrl = (() => {
-    if (!pendingTailscaleServeEndpoint) return null;
-    if (!isTailscaleServePortValid) return pendingTailscaleServeEndpoint.httpBaseUrl;
-    if (parsedTailscaleServePort === DEFAULT_TAILSCALE_SERVE_PORT) {
-      return pendingTailscaleServeEndpoint.httpBaseUrl;
-    }
-    try {
-      const url = new URL(pendingTailscaleServeEndpoint.httpBaseUrl);
-      url.port = String(parsedTailscaleServePort);
-      return url.toString().replace(/\/$/u, "");
-    } catch {
-      return pendingTailscaleServeEndpoint.httpBaseUrl;
-    }
-  })();
+  const pendingTailscaleServeBaseUrl = resolveTailscaleServeBaseUrl(
+    pendingTailscaleServeEndpoint,
+    parsedTailscaleServePort,
+    isTailscaleServePortValid,
+  );
 
   const handleDesktopServerExposureChange = async (checked: boolean) => {
     if (
@@ -1597,6 +1589,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
       {hasCloudPublicConfig() ? (
         <RemoveMarpConnectEnvironmentDialog
           environmentLabel={pendingMarpConnectRemoval?.label ?? null}
+          environmentId={pendingMarpConnectRemoval?.environmentId ?? null}
           onCancel={() => setPendingMarpConnectRemoval(null)}
           onConfirm={() => {
             if (!pendingMarpConnectRemoval) return;
