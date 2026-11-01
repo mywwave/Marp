@@ -27,6 +27,8 @@ const EXTRA_OWNERS = [
   [/^native\/browser-secret\//, ["@marp/desktop"]],
   [/^native\/kde-snap-shot\//, ["@marp/desktop"]],
   [/^native\/libghostty-vt\//, ["@marp/web"]],
+  // apps/server/src/cloud/ConnectReachability.test.ts checks the guide's headings.
+  [/^docs\/user\/marp-connect-troubleshooting\.md$/, ["marp"]],
 ];
 const RUST = /^native\/(resource-monitor|kde-snap-shot|hyprland-snap-shot)\//;
 
@@ -86,11 +88,11 @@ function readWorkspace() {
 
 // [] means inert; null means unknown and requires every job.
 function ownersOf(file, packages) {
-  if (INERT.some((pattern) => pattern.test(file))) return [];
+  const extra = EXTRA_OWNERS.flatMap(([pattern, names]) => (pattern.test(file) ? names : []));
+  if (INERT.some((pattern) => pattern.test(file))) return extra;
   // A manifest can change dependencies or versions other packages read.
   if (path.posix.basename(file) === "package.json") return null;
   if (RUNS_EVERYTHING.some((pattern) => pattern.test(file))) return null;
-  const extra = EXTRA_OWNERS.flatMap(([pattern, names]) => (pattern.test(file) ? names : []));
   // scripts/build-desktop-artifact.test.ts reads the crates' sources.
   if (RUST.test(file)) return ["@marp/scripts", ...extra];
 

@@ -35,7 +35,6 @@ const makeEnvironment = (path: Path.Path, overrides: Record<string, unknown> = {
     isDevelopment: false,
     displayName: "Marp (Alpha)",
     linuxDesktopEntryName: "com.marp.Marp.desktop",
-    linuxWmClass: "marp",
     linuxApplicationsDir: "/home/alice/.local/share/applications",
     desktopLauncherPath: Option.none(),
     appImagePath: Option.some("/home/alice/Applications/Marp.AppImage"),

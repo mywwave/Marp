@@ -128,6 +128,5 @@ const decodeNpmReleaseMigrationManifest = Schema.decodeUnknownOption(NpmReleaseM
 
 /** Highest database migration a release's server knows, from its npm `marp` manifest. */
 export function npmReleaseDatabaseMigration(manifest: unknown): number | undefined {
-  return Option.getOrUndefined(decodeNpmReleaseMigrationManifest(manifest))?.marp
-    .databaseMigration;
+  return Option.getOrUndefined(decodeNpmReleaseMigrationManifest(manifest))?.marp.databaseMigration;
 }
