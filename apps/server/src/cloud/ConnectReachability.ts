@@ -68,10 +68,11 @@ export function classifyReachability(
   const restart = "Restart Marp. If it stays, run `marp connect` again.";
 
   if (!facts.managedTunnelConfigured) {
+    // A running server reads the link `marp connect` stores only at startup.
     return fail(
       "not_linked",
       "The server has not set up a Marp Connect tunnel.",
-      "Run `marp connect`, then restart the server (`marp service restart`) so it applies the link.",
+      "Run `marp connect`, then restart Marp so it applies the link.",
     );
   }
   if (connector === null) {

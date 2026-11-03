@@ -256,7 +256,11 @@ def leaks() -> None:
         if line.startswith("+++ "):
             path = line[6:]
         elif line.startswith("+") and re.search(r"t3", line, re.I) and not KEPT_T3.search(line):
-            if path in SKIP_FILES or any(p in (path or "") for p in NO_REBRAND_PARTS):
+            if (
+                path in SKIP_FILES
+                or any(p in (path or "") for p in NO_REBRAND_PARTS)
+                or (path or "").startswith(".agents/skills/marp-upstream-sync/")
+            ):
                 continue
             if re.search(r"(?<![A-Za-z0-9])[tT]3(?![0-9])|[a-z_]T3[A-Z_]|_t3[A-Z]", line):
                 print(f"{path}: {line[1:].strip()[:160]}")

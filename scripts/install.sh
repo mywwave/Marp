@@ -20,6 +20,14 @@ set -eu
 repo="mywwave/Marp"
 base_url="${MARP_RELEASE_BASE_URL:-https://github.com/${repo}/releases/download}"
 marp_home="${MARP_HOME:-$HOME/.marp}"
+case "$marp_home" in
+  /*) ;;
+  *)
+    # Preserve cwd's trailing newlines; trim only pwd's newline and the sentinel.
+    marp_cwd="$(pwd -P && printf .)"
+    marp_home="${marp_cwd%??}/$marp_home"
+    ;;
+esac
 bin_dir="${MARP_INSTALL_BIN_DIR:-$HOME/.local/bin}"
 
 fail() {

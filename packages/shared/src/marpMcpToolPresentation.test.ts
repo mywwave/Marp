@@ -16,6 +16,8 @@ describe("resolveMarpMcpToolPresentation", () => {
         "mcp__marp__",
         "mcp__marp__",
         "Marp.",
+        "marp-direct.",
+        "mcp__marp_direct__",
         "marp/",
         "marp:",
         "mcp_marp_",

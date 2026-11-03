@@ -54,6 +54,12 @@ RULES = [
     (r"t3Code", "marp"),
     (r"t3code", "marp"),
     (r"__t3(?=[A-Z])", "__marp"),
+    (r"__t3-", "__marp-"),
+    (r"(?<![A-Za-z0-9])_t3/", "_marp/"),
+    # Regex sources that match the old MCP server name ("t3[-_ ]?code").
+    (r"t3\[-_ \]\?code", "marp"),
+    # SCREAMING_CASE parts (CODEX_T3_DIRECT).
+    (r"(?<=[A-Z0-9]_)T3(?=_|\b)", "MARP"),
     (r"(?<![A-Za-z0-9_])T3_", "MARP_"),
     (r"(?<![A-Za-z0-9_])t3_", "marp_"),
     # Uppercase T3 as a word or a camelCase part (useT3Foo, T3Composer).

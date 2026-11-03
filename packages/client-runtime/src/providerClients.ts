@@ -11,6 +11,7 @@ import { modelShortName } from "@marp/provider-core/modelShortName";
 import { cursorClient } from "@marp/provider-cursor/client";
 import { fxClient } from "@marp/provider-fx/client";
 import { grokClient } from "@marp/provider-grok/client";
+import { kiroClient } from "@marp/provider-kiro/client";
 import { museClient } from "@marp/provider-muse/client";
 import { openCodeClient } from "@marp/provider-opencode/client";
 import { piClient } from "@marp/provider-pi/client";
@@ -41,6 +42,7 @@ export const providerClients = makeProviderClientRegistry([
     acpRegistryAgentIds: ["antigravity-acp"],
     settingsSchema: AntigravitySettings,
   },
+  kiroClient,
   museClient,
   piClient,
   acpRegistryClient,

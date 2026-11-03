@@ -690,6 +690,9 @@ export const OrchestratorMcpScheduledTask = Schema.Struct({
       "Public URL for the sender. Absent: no Marp Connect tunnel. The user must enable Marp Connect remote access.",
   }),
   webhookSignature: Schema.optional(Schema.Literals(["none", "set"])),
+  blockedByPolicy: Schema.optional(Schema.String).annotate({
+    description: "Present when an administrator's policy stops this task from running.",
+  }),
 });
 export type OrchestratorMcpScheduledTask = typeof OrchestratorMcpScheduledTask.Type;
 

@@ -137,8 +137,6 @@ export function SidebarSectionHeader(props: {
     >
       <button
         type="button"
-        role="treeitem"
-        tabIndex={-1}
         data-sidebar-row={`shelf:${shelf}`}
         aria-expanded={props.toggle.expanded}
         onClick={props.toggle.onToggle}
@@ -241,8 +239,6 @@ export function SidebarFolderMoreRow(props: {
     <li className="list-none">
       <button
         type="button"
-        role="treeitem"
-        tabIndex={-1}
         data-sidebar-row={`${folderRowId}:more`}
         data-sidebar-parent={folderRowId}
         onClick={() => props.onToggle(props.group)}

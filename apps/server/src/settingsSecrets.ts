@@ -12,6 +12,7 @@ import {
 import { acpRegistryClient } from "@marp/provider-acp-registry/client";
 import { cursorClient } from "@marp/provider-cursor/client";
 import { grokClient } from "@marp/provider-grok/client";
+import { kiroClient } from "@marp/provider-kiro/client";
 import { museClient } from "@marp/provider-muse/client";
 import { openCodeClient } from "@marp/provider-opencode/client";
 import { piClient } from "@marp/provider-pi/client";
@@ -28,7 +29,15 @@ const providerSecretFields = new Map([
   ["codex", secretSettingsFields(CodexSettings)],
   ["claudeAgent", secretSettingsFields(ClaudeSettings)],
   ["antigravity", secretSettingsFields(AntigravitySettings)],
-  ...[cursorClient, grokClient, museClient, openCodeClient, piClient, acpRegistryClient].map(
+  ...[
+    cursorClient,
+    grokClient,
+    kiroClient,
+    museClient,
+    openCodeClient,
+    piClient,
+    acpRegistryClient,
+  ].map(
     (definition) =>
       [definition.driverKind, secretSettingsFields(definition.settingsSchema)] as const,
   ),

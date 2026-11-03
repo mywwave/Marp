@@ -10,7 +10,8 @@ import {
   ThreadId,
 } from "@marp/contracts";
 import * as Context from "effect/Context";
-import * as Crypto from "effect/Crypto";
+import * as Digest from "effect/crypto/Digest";
+import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Base64Url from "effect/encoding/Base64Url";
@@ -158,9 +159,9 @@ export class CheckpointServiceV2 extends Context.Service<
 const checkpointRefsForScope = Effect.fn("checkpointRefsForScope")(function* (
   scopeId: CheckpointScopeId,
 ) {
-  const crypto = yield* Crypto.Crypto;
+  const crypto = yield* Digest.Digest;
   const digest = yield* crypto
-    .digest("SHA-256", new TextEncoder().encode(scopeId))
+    .digest(Digest.sha256, new TextEncoder().encode(scopeId))
     .pipe(Effect.orDie);
   return `${CHECKPOINT_REFS_PREFIX}/${Base64Url.encode(Hex.encode(digest).slice(0, 32))}`;
 });
@@ -278,14 +279,18 @@ function makeCheckpoint(input: {
 export const layer: Layer.Layer<
   CheckpointServiceV2,
   never,
-  CheckpointStore.CheckpointStore | Crypto.Crypto | IdAllocator.IdAllocatorV2
+  | CheckpointStore.CheckpointStore
+  | Digest.Digest
+  | SecureRandom.SecureRandom
+  | IdAllocator.IdAllocatorV2
 > = Layer.effect(
   CheckpointServiceV2,
   Effect.gen(function* () {
     const checkpointStore = yield* CheckpointStore.CheckpointStore;
-    const crypto = yield* Crypto.Crypto;
+    const crypto = yield* Digest.Digest;
+    const random = yield* SecureRandom.SecureRandom;
     const checkpointRefFor = (input: Parameters<typeof checkpointRefForScopeOrdinal>[0]) =>
-      checkpointRefForScopeOrdinal(input).pipe(Effect.provideService(Crypto.Crypto, crypto));
+      checkpointRefForScopeOrdinal(input).pipe(Effect.provideService(Digest.Digest, crypto));
     const idAllocator = yield* IdAllocator.IdAllocatorV2;
     const workspaceLocks = yield* KeyedLock.make<string>();
     const withWorkspaceLock = <A, E, R>(cwd: string, effect: Effect.Effect<A, E, R>) =>
@@ -620,9 +625,9 @@ export const layer: Layer.Layer<
         }
         // A scratch capture includes untracked files, which `git diff <ref>` alone cannot see.
         const scopeRefs = yield* checkpointRefsForScope(input.scope.id).pipe(
-          Effect.provideService(Crypto.Crypto, crypto),
+          Effect.provideService(Digest.Digest, crypto),
         );
-        const scratchId = yield* crypto.randomUUIDv4();
+        const scratchId = yield* random.uuidV4();
         const toCheckpointRef = CheckpointRef.make(`${scopeRefs}/workspace-${scratchId}`);
         return yield* Effect.gen(function* () {
           yield* checkpointStore.captureCheckpoint({ cwd, checkpointRef: toCheckpointRef });

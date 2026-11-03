@@ -1,3 +1,4 @@
+import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
 import * as HostProcess from "@marp/shared/HostProcess";
@@ -56,7 +57,7 @@ vi.mock("./connect.ts", async (importOriginal) => {
   };
 });
 
-it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))(
+it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))(
   "marp up with Marp Connect",
   (it) => {
     it.effect.each([

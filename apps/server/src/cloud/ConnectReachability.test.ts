@@ -65,6 +65,13 @@ describe("classifyReachability", () => {
       classifyReachability(facts({ connector: notConnected, edgeReachable: true }), checkedAt),
     ).toMatchObject({ cause: "connector_not_ready" });
   });
+
+  it("does not point an unlinked server at a background service it may not have", () => {
+    // Desktop and `marp serve` run the server without a background service.
+    const result = classifyReachability(facts({ managedTunnelConfigured: false }), checkedAt);
+    expect(result).toMatchObject({ cause: "not_linked" });
+    expect(result.status === "unreachable" && result.fix).not.toContain("marp service");
+  });
 });
 
 describe("Marp Connect troubleshooting links", () => {

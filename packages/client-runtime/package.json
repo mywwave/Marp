@@ -543,6 +543,7 @@
     "@marp/provider-cursor": "workspace:*",
     "@marp/provider-fx": "workspace:*",
     "@marp/provider-grok": "workspace:*",
+    "@marp/provider-kiro": "workspace:*",
     "@marp/provider-muse": "workspace:*",
     "@marp/provider-opencode": "workspace:*",
     "@marp/provider-pi": "workspace:*",

@@ -74,6 +74,7 @@ const contextInput = {
     logsDir: "/home/u/.marp/userdata/logs",
     serviceLogPath: "/home/u/.marp/userdata/logs/boot-service.log",
     desktopBackendLogGlob: "/home/u/.marp/userdata/logs/server-child*.log*",
+    relayClientLogPath: "/home/u/.marp/userdata/logs/relay-client.ndjson",
     serverTracePath: "/home/u/.marp/userdata/logs/server.trace.ndjson",
     providerEventLogPath: "/home/u/.marp/userdata/logs/provider/events.log",
     terminalLogsDir: "/home/u/.marp/userdata/logs/terminals",

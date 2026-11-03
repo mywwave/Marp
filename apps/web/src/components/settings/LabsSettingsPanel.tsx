@@ -1,5 +1,6 @@
 import { useAuth } from "@clerk/react";
 import { Link } from "@tanstack/react-router";
+import { managedCapabilityDenial } from "@marp/contracts";
 
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useMarpConnectAuthPrompt } from "../clerk/useMarpConnectAuthPrompt";
@@ -9,6 +10,8 @@ import { ScopedSwitch } from "./ScopedSwitch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
+import { useOptionalSettingsScope } from "./SettingsScopeContext";
+import { firstManagedDenial, usePrimaryManagedPolicy } from "~/state/managedPolicy";
 
 /** Features still settling in. Legacy composer behavior lives on the Chat page. */
 export function LabsSettingsPanel() {
@@ -89,11 +92,22 @@ function GuestLinksRowWithSignIn() {
 function GuestLinksRow() {
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
+  const scope = useOptionalSettingsScope();
+  const primaryPolicy = usePrimaryManagedPolicy();
+  // Guests arrive through Marp Connect, so a policy that turns Connect off turns this off too.
+  const connectDenial = firstManagedDenial(
+    scope
+      ? scope.connectedEnvironments.map((environment) => environment.serverConfig?.managedPolicy)
+      : [primaryPolicy],
+    (policy) => managedCapabilityDenial(policy, "connect"),
+  );
   return (
     <SettingsRow
       serverScoped
       {...searchableSetting("guest-links")}
       settingKeys={["guestSharingEnabled"]}
+      // Turning guest links off still works without Marp Connect.
+      managed={settings.guestSharingEnabled ? undefined : connectDenial}
       description={
         <>
           Share a thread with a guest who watches it live in their browser and sends messages you

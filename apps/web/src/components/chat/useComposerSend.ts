@@ -56,7 +56,6 @@ import {
 } from "../../composer-logic";
 import { resolvePlanFollowUpSubmission } from "../../proposedPlan";
 import { type ChatMessage } from "../../types";
-import { recordPromptSent } from "../GitHubStarPrompt";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { newMessageId, newThreadId } from "~/lib/utils";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
@@ -765,8 +764,6 @@ export function useComposerSend(input: ComposerSendInput) {
         interactionMode: followUp.interactionMode,
       });
       if (!followUpSent) {
-        promptRef.current = followUpPromptSnapshot;
-        composerTerminalContextsRef.current = [...followUpTerminalContexts];
         restorePlanFollowUpComposer({
           snapshot: {
             prompt: followUpPromptSnapshot,
@@ -775,6 +772,14 @@ export function useComposerSend(input: ComposerSendInput) {
             previewAnnotations: followUpPreviewAnnotations,
             threadContexts: followUpThreadContexts,
             environmentContexts: followUpEnvironmentContexts,
+          },
+          draftHasUserContent: composerDraftHasUserContent(
+            useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
+          ),
+          routeIsCurrent: currentRouteThreadKeyRef.current === routeThreadKey,
+          writeComposerRefs: (snapshot) => {
+            promptRef.current = snapshot.prompt;
+            composerTerminalContextsRef.current = [...snapshot.terminalContexts];
           },
           writePrompt: (prompt) => setComposerDraftPrompt(composerDraftTarget, prompt),
           writeTerminalContexts: (contexts) =>
@@ -1440,7 +1445,6 @@ export function useComposerSend(input: ComposerSendInput) {
         ) {
           handleNewThreadInActiveProject();
         }
-        void recordPromptSent(environmentId);
       }
     }
 

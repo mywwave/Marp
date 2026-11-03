@@ -87,7 +87,8 @@ function tool(
   return { displayName, labels, icon, summaryAction };
 }
 
-const MARP_MCP_SERVER_ALIASES = new Set(["marp"]);
+// Codex registers "marp-direct" for Marp tools kept out of Code Mode.
+const MARP_MCP_SERVER_ALIASES = new Set(["marp", "marp-direct", "marp_direct"]);
 
 const MARP_MCP_TOOLS: Readonly<Record<string, MarpMcpToolDefinition>> = {
   link_pull_request: tool(
@@ -409,7 +410,9 @@ function resolveMarpMcpToolName(value: string): string | null {
       : null;
   }
 
-  const namespaceMatch = /^(?<server>marp)(?:[.:/]|\s*·\s*)(?<tool>.+)$/i.exec(label);
+  const namespaceMatch = /^(?<server>marp[-_]direct|marp)(?:[.:/]|\s*·\s*)(?<tool>.+)$/i.exec(
+    label,
+  );
   if (namespaceMatch?.groups) {
     return namespaceMatch.groups.tool ?? null;
   }

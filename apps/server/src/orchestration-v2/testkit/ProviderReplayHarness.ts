@@ -1,7 +1,12 @@
 import * as OtelEnvironment from "@marp/shared/otelEnvironment";
 import { DEFAULT_SIGNAL_EXPORT } from "@marp/shared/observability";
+import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import type { ProviderDriverKind, ProviderReplayTranscript } from "@marp/contracts";
+import type {
+  ManagedPolicyDocument,
+  ProviderDriverKind,
+  ProviderReplayTranscript,
+} from "@marp/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -15,6 +20,7 @@ import * as CheckpointStore from "../../checkpointing/CheckpointStore.ts";
 import * as ServerConfig from "../../config.ts";
 import * as SqlitePersistence from "../../persistence/Sqlite.ts";
 import * as ServerSettings from "../../serverSettings.ts";
+import * as ManagedPolicy from "../../policy/ManagedPolicy.ts";
 import * as ThreadManagementService from "../ThreadManagementService.ts";
 import * as McpProviderSessions from "@marp/provider-core/server/McpProviderSessions";
 import * as McpSessionRegistryTestkit from "../../mcp/McpSessionRegistry.testkit.ts";
@@ -195,6 +201,7 @@ export function runOrchestratorV2ProviderReplayScenario<
     readonly runContinuationWorker?: boolean;
     readonly recoverOnStartup?: boolean;
     readonly continueThreadsAfterServerUpdate?: boolean;
+    readonly managedPolicy?: ManagedPolicyDocument;
   } = {},
 ): Effect.Effect<
   OrchestratorV2ScenarioResult,
@@ -237,6 +244,7 @@ export function layerProviderReplay<Transcript extends ProviderReplayTranscript,
     readonly runContinuationWorker?: boolean;
     readonly recoverOnStartup?: boolean;
     readonly continueThreadsAfterServerUpdate?: boolean;
+    readonly managedPolicy?: ManagedPolicyDocument;
     readonly replayGate?: ProviderReplayGate;
   } = {},
 ): Layer.Layer<
@@ -270,6 +278,7 @@ export function layerWithRegistry<Error>(
     readonly runContinuationWorker?: boolean;
     readonly recoverOnStartup?: boolean;
     readonly continueThreadsAfterServerUpdate?: boolean;
+    readonly managedPolicy?: ManagedPolicyDocument;
   } = {},
 ): Layer.Layer<
   | Orchestrator.OrchestratorV2
@@ -283,7 +292,7 @@ export function layerWithRegistry<Error>(
     ServerConfig.ServerConfig,
     makeReplayServerConfig(scenario.name).pipe(Effect.orDie),
   ).pipe(Layer.provide(NodeServices.layer));
-  const layerRuntime =
+  const layerRuntimeBase =
     scenario.runtimePolicyOverride === undefined
       ? RuntimePolicy.layer
       : RuntimePolicy.layerWithOverride(scenario.runtimePolicyOverride).pipe(
@@ -296,12 +305,19 @@ export function layerWithRegistry<Error>(
   const layerProvidedRegistry = registryLayer.pipe(
     Layer.provide(Layer.merge(layerContinuationRequests, McpProviderSessions.layer)),
   );
-  const layerServerSettings = ServerSettings.layerTest({
-    responseStreamingMode: "turn",
-    ...(options.continueThreadsAfterServerUpdate === undefined
-      ? {}
-      : { continueThreadsAfterServerUpdate: options.continueThreadsAfterServerUpdate }),
-  }).pipe(Layer.orDie);
+  const layerServerSettings = Layer.unwrap(
+    Effect.map(ManagedPolicy.fromDocument("/test/policy.json", options.managedPolicy), (policy) =>
+      ServerSettings.layerTest(
+        {
+          responseStreamingMode: "turn",
+          ...(options.continueThreadsAfterServerUpdate === undefined
+            ? {}
+            : { continueThreadsAfterServerUpdate: options.continueThreadsAfterServerUpdate }),
+        },
+        policy.summary,
+      ),
+    ),
+  ).pipe(Layer.orDie);
   const layerStores = Layer.mergeAll(
     EventStore.layer,
     ProjectionStore.layer,
@@ -312,6 +328,9 @@ export function layerWithRegistry<Error>(
   ).pipe(Layer.provide(layerDatabase));
   const layerEventSinkProvided = EventSink.layerFromStores.pipe(
     Layer.provide(Layer.mergeAll(layerStores, layerDatabase)),
+  );
+  const layerRuntime = RuntimePolicy.layerEnforcingCeiling.pipe(
+    Layer.provide(Layer.merge(layerRuntimeBase, layerServerSettings)),
   );
   const layerCommandReceiptStoreProvided = CommandReceiptStore.layer.pipe(
     Layer.provide(layerDatabase),
@@ -329,7 +348,7 @@ export function layerWithRegistry<Error>(
         ThreadCommandExecutor.layer,
         GitVcsDriver.layer.pipe(
           Layer.provide(layerServerConfig),
-          Layer.provide(NodeServices.layer),
+          Layer.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
         ),
       ),
     ),
@@ -337,11 +356,11 @@ export function layerWithRegistry<Error>(
   const layerVcsDriverRegistry = VcsDriverRegistry.layer.pipe(
     Layer.provide(VcsProcess.layer),
     Layer.provide(layerServerConfig),
-    Layer.provide(NodeServices.layer),
+    Layer.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
   );
   const layerCheckpointStore = CheckpointStore.layer.pipe(
     Layer.provide(layerVcsDriverRegistry),
-    Layer.provide(NodeServices.layer),
+    Layer.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
   );
   const layerCheckpointServiceProvided = CheckpointService.layer.pipe(
     Layer.provide(Layer.mergeAll(layerCheckpointStore, IdAllocator.layer)),
@@ -520,7 +539,10 @@ export function layerWithRegistry<Error>(
     layerEventSinkProvided,
     layerContinuationWorkerProvided,
     layerCommandOutputHubProvided,
-  ).pipe(Layer.provide(ProviderTurnStartServiceTestkit.layer), Layer.provide(NodeServices.layer));
+  ).pipe(
+    Layer.provide(ProviderTurnStartServiceTestkit.layer),
+    Layer.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
+  );
 
   if (options.runEffectWorker === false) {
     return layerReplayRuntime;

@@ -82,8 +82,6 @@ export const SidebarProjectFolderHeader = memo(function SidebarProjectFolderHead
     >
       <button
         type="button"
-        role="treeitem"
-        tabIndex={-1}
         data-sidebar-row={rowId}
         aria-expanded={!collapsed}
         draggable={reorder !== undefined}

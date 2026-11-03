@@ -99,7 +99,8 @@ Fix:
 
 ## Sign-in, account, or link problems
 
-Marp Connect does not have an active link between your account and the host.
+This device's Marp Connect sign-in is not ready yet, or Marp Connect does not have
+an active link between your account and the host.
 
 - **The host is linked to a different account.** Sign in to the same Marp Connect
   account on this device and on the host. On the host, run `marp connect logout`,
@@ -107,10 +108,14 @@ Marp Connect does not have an active link between your account and the host.
 - **Marp Connect is off on the host, or the host only publishes agent activity.**
   On the host, open **Settings > Machines** and turn **Marp Connect** on, or
   run `marp connect`.
-- **The host was linked, but the server did not apply the link yet.** Run
-  `marp service restart` on the host, or restart `marp serve`.
+- **The host was linked, but the server did not apply the link yet.** Restart
+  the server on the host: quit and reopen the Marp desktop app, run
+  `marp service restart`, or stop `marp serve` and run it again.
 - **This device's sign-in expired, or the host no longer accepts this
   device.** Sign out of Marp Connect and sign in again.
+- **This device is still loading its Marp Connect sign-in.** Wait a moment;
+  Marp retries on its own. If it keeps waiting, reload or restart Marp on
+  this device.
 - **Your account reached its tunnel limit.** Remove an environment you do not
   use from your Marp account's Marp Connect page, or
   [link a paid T3 Chat account](./remote-access.md#more-machines-with-t3-chat)
@@ -151,3 +156,7 @@ If none of this helps, open an issue on
 - The text from **Copy diagnostics** in the environment's **Details**.
 - The output of `marp connect status` on the host.
 - The trace ID, if one is shown.
+- If the tunnel dropped earlier, the host's tunnel log, `relay-client.ndjson`
+  in the logs folder (`~/.marp/userdata/logs` by default). It records when the
+  tunnel connected, warned, exited, and restarted, with the tunnel token
+  removed.
