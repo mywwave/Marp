@@ -4,6 +4,11 @@ import UIKit
 enum MarpComposerClipboard {
   static let fragmentType = "app.marp.context-fragment"
 
+  // Pasted thread links become chips in JS; packages/shared/src/threadLinks.ts parses them.
+  static func hasThreadLink(_ text: String) -> Bool {
+    text.contains("marp-thread://v2/") || text.contains("https://app.t3.codes/threads/")
+  }
+
   static func write(text: String, fragment: String) {
     var items: [String: Any] = ["public.utf8-plain-text": text]
     if let data = fragment.data(using: .utf8),
@@ -126,6 +131,9 @@ public class MarpComposerEditorModule: Module {
       }
       AsyncFunction("setSelection") { (view: MarpComposerEditorView, start: Int, end: Int) in
         view.setSelection(start: start, end: end)
+      }
+      AsyncFunction("readState") { (view: MarpComposerEditorView) -> [String: Any] in
+        view.readState()
       }
     }
   }

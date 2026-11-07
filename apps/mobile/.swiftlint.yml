@@ -1,10 +1,10 @@
 included:
   - ios/Marp
   - modules/marp-composer-editor/ios
-  - modules/marp-highlights/ios
   - modules/marp-native-controls/ios
   - modules/marp-terminal/ios
   - modules/marp-review-diff/ios
+  - modules/marp-voice-transcription/ios
 
 excluded:
   - ios/Pods

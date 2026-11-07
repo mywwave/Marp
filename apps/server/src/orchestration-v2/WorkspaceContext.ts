@@ -220,7 +220,7 @@ function renderOpenState(open: WorkspaceOpenState | undefined): string | undefin
 }
 
 const walkFiles = (cwd: string) =>
-  Effect.tryPromise(async () => {
+  Effect.promise(async () => {
     const files: string[] = [];
     let partial = false;
     const visit = async (relative: string, depth: number): Promise<void> => {

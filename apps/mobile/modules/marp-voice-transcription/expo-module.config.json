@@ -1,0 +1,10 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["MarpVoiceTranscriptionModule"],
+    "podspecPath": "ios/MarpVoiceTranscription.podspec"
+  },
+  "android": {
+    "modules": ["expo.modules.marpvoicetranscription.MarpVoiceTranscriptionModule"]
+  }
+}

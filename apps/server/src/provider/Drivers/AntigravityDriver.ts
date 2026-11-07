@@ -1,5 +1,10 @@
 import * as McpProviderSessions from "@marp/provider-core/server/McpProviderSessions";
-import { AntigravitySettings, ProviderDriverKind, ProviderSetupError } from "@marp/contracts";
+import {
+  AntigravitySettings,
+  ProviderDriverKind,
+  ProviderSetupError,
+  settingsSecretLiteral,
+} from "@marp/contracts";
 import * as HostProcess from "@marp/shared/HostProcess";
 import { resolveSelfInvocation } from "@marp/shared/nodeRuntime";
 import {
@@ -121,7 +126,8 @@ export const AntigravityDriver: ProviderDriver<
     const settings = { ...config, enabled } satisfies AntigravitySettings;
     const auth: AntigravityAuthConfig = {
       authMethod: settings.authMethod,
-      apiKey: settings.apiKey,
+      // The instance registry has already read a referenced key from its secret provider.
+      apiKey: settingsSecretLiteral(settings.apiKey),
       gcpProject: settings.gcpProject,
       gcpLocation: settings.gcpLocation,
     };

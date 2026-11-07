@@ -7,7 +7,6 @@ import {
   type PreviewAnnotationPayload,
 } from "@marp/contracts";
 import * as Schema from "effect/Schema";
-import { threadChipCopyTarget } from "@marp/client-runtime/thread-reference";
 import { upgradeLegacyContextMessage } from "@marp/shared/composerContextLegacy";
 import { threadContextRecord } from "@marp/shared/composerContextReferences";
 
@@ -26,6 +25,7 @@ import {
   previewAnnotationFromRecord,
   pullRequestContextKindLabel,
   resolveUserMessageContext,
+  reviewCommentContextLabel,
   selectedMessageContextFragment,
   reviewCommentContextRecord,
   terminalContextRecord,
@@ -221,6 +221,14 @@ describe("composerContextRecords", () => {
     expect(image).toMatchObject({ attachmentId: "uploaded-image" });
   });
 
+  it("shortens a long annotation comment label without splitting an emoji", () => {
+    const record = previewAnnotationContextRecord({
+      ...annotation,
+      comment: `${"a".repeat(46)}😀 and make the button bigger`,
+    });
+    expect(record.label).toBe(`${"a".repeat(46)}…`);
+  });
+
   it("restores multiple edits on one target without parsing display strings", () => {
     const styleChanges = [
       ...annotation.styleChanges,
@@ -258,7 +266,7 @@ describe("composerContextRecords", () => {
     expect(removeInlineContextReference(prompt, reference.contextId).prompt).toBe("prose tail");
   });
 
-  it("clamps an oversized review selection so the record still encodes", () => {
+  it("clamps oversized review and terminal selections so the records still encode", () => {
     const build = (diffLength: number) =>
       reviewCommentContextRecord({
         id: "rc-big",
@@ -279,6 +287,21 @@ describe("composerContextRecords", () => {
     expect(overLimit.diff.endsWith("… truncated …")).toBe(true);
     expect(() => decodeMessageContext({ version: 1, records: [atLimit] })).not.toThrow();
     expect(() => decodeMessageContext({ version: 1, records: [overLimit] })).not.toThrow();
+
+    const terminal = terminalContextRecord({
+      id: "term-big",
+      threadId: ThreadId.make("t"),
+      createdAt: "2026-01-01T00:00:00.000Z",
+      terminalId: "default",
+      terminalLabel: "Terminal 1",
+      lineStart: 1,
+      lineEnd: 2_000,
+      text: `${"t".repeat(63_985)}${"😀".repeat(8)}`,
+    });
+    expect(terminal.text).toBe(`${"t".repeat(63_985)}\n… truncated …`);
+    expect(decodeMessageContext({ version: 1, records: [terminal] }).records).toMatchObject([
+      { kind: "terminal", text: terminal.text },
+    ]);
   });
 
   it("finds the destination collision for different legacy terminal messages", () => {
@@ -381,6 +404,25 @@ describe("pullRequestContextKindLabel", () => {
   });
 });
 
+describe("reviewCommentContextLabel", () => {
+  const selection = (sectionId: string) => ({
+    id: "selection",
+    sectionId,
+    sectionTitle: "Review",
+    filePath: "apps/web/src/page.tsx",
+    startIndex: 0,
+    endIndex: 0,
+    rangeLabel: "+12 to +18",
+    text: "",
+    diff: "",
+  });
+
+  it("names the pull request a selection came from", () => {
+    expect(reviewCommentContextLabel(selection("pull-request:42"))).toBe("#42 page.tsx L12 to L18");
+    expect(reviewCommentContextLabel(selection("turn-diff"))).toBe("page.tsx L12 to L18");
+  });
+});
+
 describe("producer ids that do not fit the grammar", () => {
   it("folds review comment ids and keeps the raw id in the draft shape", () => {
     const record = reviewCommentContextRecord({
@@ -445,13 +487,12 @@ describe("selectedMessageContextFragment", () => {
 });
 
 describe("threadContextReference", () => {
-  it("writes the same titled reference that Copy thread puts on the clipboard", () => {
+  it("writes a titled reference with the title flattened", () => {
     const ref = { environmentId: EnvironmentId.make("env"), threadId: ThreadId.make("abc-123") };
     const title = "Fix [login]\nflow";
     const mention = formatInlineContextReference(
       threadContextReference(threadContextRecord(ref, title)),
     );
-    expect(mention).toBe(threadChipCopyTarget(ref, title).value);
     expect(mention).toBe("[Fix login flow](marp-context://v1/thread/thread_abc-123)");
   });
 });

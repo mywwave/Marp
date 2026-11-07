@@ -1,4 +1,9 @@
-import type { ProviderInteractionMode, RuntimeMode } from "@marp/contracts";
+import {
+  managedRuntimeModeDenial,
+  type ManagedPolicySummary,
+  type ProviderInteractionMode,
+  type RuntimeMode,
+} from "@marp/contracts";
 import {
   BugIcon,
   ListChecksIcon,
@@ -82,3 +87,14 @@ export const interactionModeConfig: Record<
     icon: SplitIcon,
   },
 };
+
+export function resolveRuntimeModeOptions(
+  modes: ReadonlyArray<RuntimeMode>,
+  managedPolicy: ManagedPolicySummary | undefined,
+) {
+  return modes.map((mode) => {
+    const option = { mode, ...runtimeModeConfig[mode] };
+    const disabledReason = managedRuntimeModeDenial(managedPolicy, mode);
+    return disabledReason === undefined ? option : { ...option, disabledReason };
+  });
+}

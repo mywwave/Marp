@@ -68,6 +68,7 @@
         "@marp/web",
         "@napi-rs/keyring",
         "ffi-rs",
+        "transcribe-cpp",
       ],
     },
     "apps/desktop": {
@@ -118,10 +119,13 @@
       // Fonts are configured as asset paths; Expo autolinks the native packages.
       "ignoreDependencies": [
         "@expo-google-fonts/dm-sans",
-        "@marp/mobile-highlights-native",
         "@marp/mobile-review-diff-native",
         "@marp/mobile-terminal-native",
       ],
+    },
+    "apps/mobile/modules/marp-highlights": {
+      // Nitrogen discovers HybridObject specifications by filename.
+      "entry": ["src/*.nitro.ts!"],
     },
     "apps/mobile/modules/marp-source-text": {
       // React Native codegen discovers component specifications by filename.

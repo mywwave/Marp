@@ -12,7 +12,10 @@ import {
   hasQueuedTurnStart,
   QUEUED_TURN_START_GRACE_MS,
 } from "@marp/client-runtime/state/thread-settled";
-import { resolveSettledThreadTimestamp } from "@marp/client-runtime/state/thread-sort";
+import {
+  resolveSettledThreadTimestamp,
+  resolveThreadActivityTimestamp,
+} from "@marp/client-runtime/state/thread-sort";
 import { type EnvironmentThreadSearchMatch } from "@marp/client-runtime/state/thread-search";
 import { scopeThreadRef, scopedThreadKey } from "@marp/client-runtime/environment";
 import {
@@ -97,7 +100,7 @@ import { useThreadRunningTerminalIds } from "../../state/terminalSessions";
 import { PullRequestGlyph } from "../pullRequest/pullRequestIcons";
 import { Button } from "../ui/button";
 import { Kbd } from "../ui/kbd";
-import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuShortcut, MenuTrigger } from "../ui/menu";
+import { Menu, MenuItem, MenuItemDetail, MenuPopup, MenuSeparator, MenuTrigger } from "../ui/menu";
 import { Spinner } from "../ui/spinner";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { MiddleTruncate } from "../ui/middle-truncate";
@@ -341,7 +344,7 @@ export function SnoozeMenuButton(props: {
             }}
           >
             {preset.label}
-            <MenuShortcut>{preset.whenLabel}</MenuShortcut>
+            <MenuItemDetail>{preset.whenLabel}</MenuItemDetail>
           </MenuItem>
         ))}
         {presets.length > 0 ? <MenuSeparator /> : null}
@@ -638,27 +641,29 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     thread.settledOverride !== "settled";
   // Spoken with the title; the row itself shows only the status family's mark.
   const statusLabel =
-    status === "working"
-      ? thread.goal?.status === "active"
-        ? "Goal"
-        : "Working"
-      : status === "waiting"
-        ? "Waiting"
-        : status === "approval"
-          ? "Approval needed"
-          : status === "input"
-            ? "Question"
-            : status === "request"
-              ? "Guest request"
-              : status === "limited"
-                ? "Usage limit"
-                : status === "failed"
-                  ? "Failed"
-                  : isWoke
-                    ? "Woke"
-                    : isUnread
-                      ? "Done"
-                      : null;
+    status === "preparing"
+      ? "Setting up"
+      : status === "working"
+        ? thread.goal?.status === "active"
+          ? "Goal"
+          : "Working"
+        : status === "waiting"
+          ? "Waiting"
+          : status === "approval"
+            ? "Approval needed"
+            : status === "input"
+              ? "Question"
+              : status === "request"
+                ? "Guest request"
+                : status === "limited"
+                  ? "Usage limit"
+                  : status === "failed"
+                    ? "Failed"
+                    : isWoke
+                      ? "Woke"
+                      : isUnread
+                        ? "Done"
+                        : null;
 
   const branchMismatch = resolveLocalCheckoutBranchMismatch({
     effectiveEnvMode: thread.worktreePath === null ? "local" : "worktree",
@@ -1314,7 +1319,7 @@ export const SidebarSearchResultRow = memo(function SidebarSearchResultRow(props
                 />
               </span>
               <span className="w-8 shrink-0 text-right text-xs text-muted-foreground/55 tabular-nums">
-                <RelativeTimeLabel timestamp={threadTimeTimestamp(thread)} />
+                <RelativeTimeLabel timestamp={resolveThreadActivityTimestamp(thread)} />
               </span>
             </span>
             {props.searchMatch ? (

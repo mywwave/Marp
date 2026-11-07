@@ -16,6 +16,10 @@ public class MarpTerminalModule: Module {
         view.writeOutput(data, reset: reset)
       }
 
+      AsyncFunction("resetInput") { (view: MarpTerminalView) in
+        view.resetInputField()
+      }
+
       Prop("terminalKey") { (view: MarpTerminalView, terminalKey: String) in
         view.terminalKey = terminalKey
       }

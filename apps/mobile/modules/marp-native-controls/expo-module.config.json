@@ -13,7 +13,8 @@
       "expo.modules.marpnativecontrols.MarpNativeControlsModule",
       "expo.modules.marpnativecontrols.MarpWorkspaceNavigationModule",
       "expo.modules.marpnativecontrols.MarpKeyboardCommandsModule",
-      "expo.modules.marpnativecontrols.MarpFoldPostureModule"
+      "expo.modules.marpnativecontrols.MarpFoldPostureModule",
+      "expo.modules.marpnativecontrols.MarpSecretInputModule"
     ]
   }
 }

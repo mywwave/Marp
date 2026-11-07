@@ -19,6 +19,9 @@ class MarpTerminalModule : Module() {
         view.writeOutput(data, reset)
       }
 
+      // The Android input field already clears after every change.
+      AsyncFunction("resetInput") { _: MarpTerminalView -> }
+
       Prop("terminalKey") { view: MarpTerminalView, terminalKey: String ->
         view.terminalKey = terminalKey
       }

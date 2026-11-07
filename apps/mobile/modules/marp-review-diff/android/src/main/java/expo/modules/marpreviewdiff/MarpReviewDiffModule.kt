@@ -69,7 +69,8 @@ class MarpReviewDiffModule : Module() {
       AsyncFunction("scrollToTop") { view: MarpReviewDiffView, animated: Boolean ->
         view.scrollToTop(animated)
       }
-      AsyncFunction("setRowsJson") { view: MarpReviewDiffView, rowsJson: String ->
+      AsyncFunction("setRowsJson") { view: MarpReviewDiffView, rowsJson: String, resetKey: String ->
+        view.setContentResetKey(resetKey)
         view.setRowsJson(rowsJson)
       }
       AsyncFunction("setTokensJson") { view: MarpReviewDiffView, tokensJson: String ->

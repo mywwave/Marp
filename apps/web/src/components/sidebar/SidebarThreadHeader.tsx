@@ -16,7 +16,6 @@ import { SidebarInput, SidebarMenuButton } from "../ui/sidebar";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 
 export interface SidebarThreadHeaderProps {
-  searchFieldRef?: RefObject<HTMLDivElement | null>;
   hasProjects: boolean;
   projectScope: ReactNode;
   // A chosen project filter keeps its button in view; otherwise it shows on hover.
@@ -38,7 +37,6 @@ export interface SidebarThreadHeaderProps {
 }
 
 export function SidebarThreadHeader({
-  searchFieldRef,
   hasProjects,
   projectScope,
   projectScopeActive,
@@ -78,6 +76,7 @@ export function SidebarThreadHeader({
   const newThreadButton = (
     <button
       type="button"
+      aria-label="New thread"
       disabled={newThreadDisabled}
       onClick={onNewThread}
       className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-sm bg-card ps-3 pe-2 text-left text-sm font-medium text-foreground shadow-raised outline-none transition-shadow duration-150 hover:shadow-card focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-default disabled:opacity-64 motion-reduce:transition-none"
@@ -101,10 +100,7 @@ export function SidebarThreadHeader({
       ) : (
         newThreadButton
       )}
-      <div
-        ref={searchFieldRef}
-        className="group/search relative flex h-8 min-w-0 items-center gap-2 rounded-sm ps-3 pe-1 text-sm text-muted-foreground transition-colors duration-150 hover:bg-sidebar-row-hover focus-within:bg-sidebar-row-hover focus-within:ring-1 focus-within:ring-inset focus-within:ring-ring/70 motion-reduce:transition-none"
-      >
+      <div className="group/search relative flex h-8 min-w-0 items-center gap-2 rounded-sm ps-3 pe-1 text-sm text-muted-foreground transition-colors duration-150 hover:bg-sidebar-row-hover focus-within:bg-sidebar-row-hover focus-within:ring-1 focus-within:ring-inset focus-within:ring-ring/70 motion-reduce:transition-none">
         <SearchIcon aria-hidden className="size-4 shrink-0" />
         <SidebarInput
           ref={searchInputRef}

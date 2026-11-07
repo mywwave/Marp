@@ -13,6 +13,7 @@ real edits conflict, not the T3 -> Marp rename.
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -92,7 +93,8 @@ def plan(base: str):
             return p
         return rebrand_path(p)
 
-    for line in git("diff", "--name-status", "-M", base, UPSTREAM).splitlines():
+    # .repos is vendored and untouched by Marp: apply() copies it natively, per-file merging takes hours.
+    for line in git("diff", "--name-status", "-M", base, UPSTREAM, "--", ".", ":!.repos").splitlines():
         parts = line.split("\t")
         status = parts[0][0]
         old_path, new_path = (parts[1], parts[2]) if status == "R" else (parts[1], parts[1])
@@ -211,6 +213,12 @@ def apply() -> None:
         raise SystemExit("Start with: git merge --no-commit --no-ff -s ours " + UPSTREAM)
     base = git("merge-base", "HEAD", UPSTREAM).strip()
     report = defaultdict(list)
+    if git("diff", "--name-only", base, "HEAD", "--", ".repos").strip():
+        raise SystemExit(".repos has Marp changes; merge it by hand")
+    if git("diff", "--name-only", base, UPSTREAM, "--", ".repos").strip():
+        subprocess.run(["git", "rm", "-r", "-q", "--cached", ".repos"], check=True)
+        shutil.rmtree(".repos", ignore_errors=True)
+        subprocess.run(["git", "checkout", UPSTREAM, "--", ".repos"], check=True)
     for d in plan(base):
         kind, path = d["kind"], d["path"]
         if kind == "deleted":

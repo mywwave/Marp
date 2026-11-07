@@ -238,7 +238,8 @@ function CompactingLabel() {
 
 export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "thinking" }> }) {
   const ctx = use(TimelineRowCtx);
-  const { isCompacting, isPreparingWorktree, awaitingUser } = use(TimelineRowActivityCtx);
+  const { isCompacting, isPreparingWorktree, awaitingUser, liveAnswerPreview } =
+    use(TimelineRowActivityCtx);
   if (isPreparingWorktree || isCompacting) return <WorkLogRow label="" />;
   if (row.preActivity) {
     if (awaitingUser)
@@ -281,8 +282,8 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
     );
   const activity = (
     <LiveActivityRow
-      label={label}
-      labelKey="Thinking"
+      label={liveAnswerPreview ?? label}
+      labelKey={liveAnswerPreview === null ? "Thinking" : undefined}
       iconName="brain"
       active={live}
       shimmer={live}

@@ -21,6 +21,7 @@ describe("shouldHandleAppLink", () => {
     "marp://threads/env-1/thread-1",
     "marp://pair?pairingUrl=x",
     "marp-dev://settings/usage?tab=limits",
+    "https://app.t3.codes/threads/env/thread?prompt=Fix%20expo-development-client%20and%20marp://expo-sharing",
   ])("handles path-bearing URL %s", (url) => {
     expect(shouldHandleAppLink(url, true)).toBe(true);
   });

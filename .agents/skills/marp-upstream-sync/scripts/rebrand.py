@@ -8,7 +8,7 @@ import re
 PROTECT = [
     r"https://github\.com/pingdotgg/t3code",
     r"\[T3 Code\]",
-    r"[A-Za-z0-9.-]*\bt3\.codes\b",
+    r"[A-Za-z0-9.\\-]*\bt3\\?\.codes\b",
     r"T3 Chat",
     r"t3 chat",
     r"[A-Za-z]*T3Chat[A-Za-z]*",
@@ -47,9 +47,10 @@ RULES = [
     # Native module packages (expo.modules.t3terminal) and the dev global.
     (
         r"(?<![A-Za-z0-9_])t3(?=(?:terminal|reviewdiff|widgetexpiry|highlights|nativecontrols"
-        r"|composereditor|agentnotifications|env|dev)\b)",
+        r"|composereditor|agentnotifications|voicetranscription|env|dev)(?![a-z0-9_]))",
         "marp",
     ),
+    (r"(?<![A-Za-z0-9])T3HIGHLIGHTS", "MARPHIGHLIGHTS"),
     (r"T3Code", "Marp"),
     (r"t3Code", "marp"),
     (r"t3code", "marp"),

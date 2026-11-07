@@ -1,4 +1,3 @@
-import { threadChipCopyTarget } from "@marp/client-runtime/thread-reference";
 import { EnvironmentId, ThreadId } from "@marp/contracts";
 import {
   collectComposerContextReferences,
@@ -8,13 +7,15 @@ import { userEvent } from "vite-plus/test/browser";
 import { expect, it } from "vite-plus/test";
 
 import { render } from "../../test/render";
+import { threadContextReference } from "../lib/composerContextRecords";
+import { formatInlineContextReference } from "../lib/composerContextReferences";
 import { ThreadContextChip } from "./ThreadContextChip";
 
 it("renders a sent thread mention as a link that opens the thread", async () => {
   const ref = { environmentId: EnvironmentId.make("env"), threadId: ThreadId.make("abc-123") };
   const record = threadContextRecord(ref, "Fix login flow");
   const [occurrence] = collectComposerContextReferences(
-    `Compare with ${threadChipCopyTarget(ref, "Fix login flow").value} please`,
+    `Compare with ${formatInlineContextReference(threadContextReference(record))} please`,
   );
   expect(occurrence?.contextId).toBe(record.contextId);
 

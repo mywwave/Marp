@@ -1,7 +1,8 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { ArrowLeftIcon, XIcon } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type ReactNode } from "react";
 
+import { useNativeTitlebarHeight } from "../lib/windowControlsOverlay";
 import { useCloseAppModal } from "./sidebar/mainAppLocation";
 import { cn } from "~/lib/utils";
 import { Button } from "./ui/button";
@@ -32,6 +33,10 @@ export function AppRouteModal({
   // Focus the surface, not its first control: no stray focus ring, no phone keyboard.
   // On close, leave focus alone; returning it to the opener paints a focus ring.
   const popupRef = useRef<HTMLDivElement>(null);
+  // Clear the native window controls (macOS traffic lights, the Windows and Linux caption
+  // buttons). Below sm the modal fills the window and leaves that strip empty; up to lg its
+  // 1.5rem inset is shorter than the strip.
+  const nativeTitlebarHeight = useNativeTitlebarHeight();
 
   return (
     <DialogPrimitive.Root
@@ -53,9 +58,16 @@ export function AppRouteModal({
       <DialogPrimitive.Portal>
         <DialogBackdrop />
         <DialogPrimitive.Viewport
+          style={
+            {
+              "--app-modal-titlebar-height": `${nativeTitlebarHeight}px`,
+              "--app-modal-top-inset": `max(env(safe-area-inset-top), ${nativeTitlebarHeight}px)`,
+              "--app-modal-sm-top": `max(1.5rem, ${nativeTitlebarHeight}px)`,
+            } as CSSProperties
+          }
           className={cn(
             "fixed inset-0 z-50 flex items-center justify-center",
-            variant === "modal" && "sm:p-6 lg:p-10",
+            variant === "modal" && "sm:p-6 sm:pt-(--app-modal-sm-top) lg:p-10",
           )}
           onPointerDown={(event) => {
             backdropPressRef.current = event.target === event.currentTarget;
@@ -73,12 +85,17 @@ export function AppRouteModal({
             data-slot="dialog-popup"
             data-app-modal=""
             className={cn(
-              "relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden max-sm:pt-safe max-sm:pb-safe text-foreground outline-none transition-[opacity,scale] duration-150 ease-out [-webkit-app-region:no-drag] data-ending-style:opacity-0 data-starting-style:opacity-0",
+              "relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden max-sm:pt-(--app-modal-top-inset) max-sm:pb-safe text-foreground outline-none transition-[opacity,scale] duration-150 ease-out [-webkit-app-region:no-drag] data-ending-style:opacity-0 data-starting-style:opacity-0",
               variant === "modal"
                 ? "bg-background data-ending-style:scale-[0.985] data-starting-style:scale-[0.985] sm:max-h-[60rem] sm:max-w-[80rem] sm:rounded-2xl sm:border sm:shadow-2xl/40"
                 : "bg-chrome",
             )}
           >
+            {/* The emptied strip still moves the window, as the titlebar it replaces does. */}
+            <div
+              aria-hidden
+              className="absolute inset-x-0 top-0 hidden h-(--app-modal-titlebar-height) [-webkit-app-region:drag] max-sm:block"
+            />
             {children}
           </DialogPrimitive.Popup>
         </DialogPrimitive.Viewport>

@@ -1,6 +1,8 @@
 # Что у Marp своё — и как это не сломать при merge
 
-Сверено на merge 2026‑11‑03 (upstream до `cefb544af3`). Полный и актуальный список наших правок даёт `sync.py triage`: метки `[marp]` и `[CONFLICT]`. Здесь — решения, которые повторяются.
+Сверено на merge 2026‑11‑07 (upstream до `83a3674ffd`). Полный и актуальный список наших правок даёт `sync.py triage`: метки `[marp]` и `[CONFLICT]`. Здесь — решения, которые повторяются.
+
+`.repos/` (vendored, наших правок нет) `sync.py` не мёржит по файлам, а копирует из upstream нативным `git checkout`: пофайловый прогон 27 тысяч путей занимал часы. Если у нас появятся правки в `.repos/`, `apply` остановится.
 
 ## Наши зоны (по умолчанию `ours` + перенос сути upstream)
 
@@ -40,6 +42,9 @@
 - **Переименование переменной upstream при нашем другом имени** (evals `t3Tools` vs наш `marp`): блок `theirs`, имя наше.
 - **Effect 4.1.2:** `effect/Crypto` больше нет. Хэш — `Digest.Digest` + `Digest.sha256`, UUID — `SecureRandom.SecureRandom` + `uuidV4()`; `node:crypto` в сервере запрещён правилом `effect(nodeBuiltinImport)`. Наш код на старом API находит typecheck сервера.
 - **Заголовки настроек:** текст берите из upstream (он совпадает с подписью строки в `SettingsPanels.tsx`), маршрут и `scope` — наши.
+- **Карточка задач:** `withLatestTodoLists` выносит todo‑карточку живого запуска над композер, в ленте её строки нет. Новые upstream‑тесты ленты, что ждут такую строку, адаптируйте: `toBeUndefined()` вместо `toMatchObject`.
+- **Новые линтеры от `@effect/tsgo`:** в наших файлах, которых нет в upstream, могут появиться ошибки `effectTryWithoutCatch` и подобные. Если ошибка всё равно уходит в `catchCause`, заменяйте `Effect.tryPromise(fn)` на `Effect.promise(fn)`.
+- **Длина описания настроек ≤ 200:** ребрендинг `T3` → `Marp` удлиняет текст на 2 символа за упоминание; `marp(max-settings-description-length)` ловит это в `vp lint`.
 
 ## Известные падения тестов (Windows, до merge)
 
@@ -51,6 +56,8 @@
 - `ChatMarkdown` browser test «still rejects unsafe schemes».
 - `apps/server/src/orchestration-v2/Adapters/ClaudeAdapterV2.test.ts`: 12 «preserves … with native PDFs, images, and paths» (путь `C:\` в JSON) и «pins tool search on when the user's Claude settings choose auto» (читает настройки Claude пользователя).
 - `AntigravityAdapterV2.test.ts`: «confines file requests to the workspace of the turn in progress».
+- `apps/desktop/src/app/DesktopCliCommand.test.ts`: три теста с `PATH`, собранным через `.join(":")` (разделитель Windows — `;`): «does not treat its own launcher…», «never replaces or removes a marp it did not create», «refuses to install behind another marp that runs first».
+- `apps/server/src/cli/up.test.ts`: два «keeps service changes and access settings consistent» ждут POSIX‑кавычки в `marp pair`, а на Windows аргументы квотируются для PowerShell.
 
 ## Окружение
 
